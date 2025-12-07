@@ -1,19 +1,29 @@
-# Node modules (never push this)
-node_modules/
-
-# Environment variables (secrets)
-.env
-.env.local
-
-# Logs
-npm-debug.log
-yarn-error.log
+logs
 *.log
-
-# Build output (for frontend later)
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+frontend/node_modules/
+frontend/dist/
+frontend/dist-ssr/
+frontend/.vite/
+frontend/.env
+frontend/.env.*
+frontend/*.local
+backend/node_modules/
+backend/.env
+backend/.env.local
 dist/
 build/
-
-# OS files
+.vscode/*
+!.vscode/extensions.json
+.idea
 .DS_Store
 Thumbs.db
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?

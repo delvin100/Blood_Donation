@@ -1,0 +1,72 @@
+CREATE DATABASE IF NOT EXISTS ebloodbank CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+USE ebloodbank;
+
+SET FOREIGN_KEY_CHECKS = 0;
+DROP TABLE IF EXISTS donations;
+DROP TABLE IF EXISTS reminders;
+DROP TABLE IF EXISTS seekers;
+DROP TABLE IF EXISTS donors;
+DROP TABLE IF EXISTS admin;
+SET FOREIGN_KEY_CHECKS = 1;
+
+-- Donors Table
+CREATE TABLE donors (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  username VARCHAR(100) NOT NULL UNIQUE,
+  full_name VARCHAR(255),
+  email VARCHAR(255) UNIQUE,
+  password_hash VARCHAR(255) NOT NULL,
+  blood_type VARCHAR(50),
+  dob DATE,
+  availability ENUM('Available','Unavailable') DEFAULT 'Available',
+  phone VARCHAR(50) DEFAULT NULL,
+  gender ENUM('male','female','other') DEFAULT NULL,
+  country VARCHAR(100) DEFAULT 'India',
+  state VARCHAR(100) DEFAULT NULL,
+  district VARCHAR(100) DEFAULT NULL,
+  city VARCHAR(100) DEFAULT NULL,
+  profile_picture VARCHAR(255) DEFAULT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- Seekers Table
+CREATE TABLE seekers (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  full_name VARCHAR(255),
+  email VARCHAR(255),
+  phone VARCHAR(50),
+  blood_type VARCHAR(50),
+  required_by DATETIME,
+  country VARCHAR(100) DEFAULT 'India',
+  state VARCHAR(100),
+  district VARCHAR(100),
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- Donations
+CREATE TABLE donations (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  donor_id INT NOT NULL,
+  date DATE,
+  units DECIMAL(5,2) DEFAULT 1.00,
+  notes TEXT,
+  FOREIGN KEY (donor_id) REFERENCES donors(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- Reminders
+CREATE TABLE reminders (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  donor_id INT NOT NULL,
+  reminder_date DATETIME,
+  message VARCHAR(500),
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (donor_id) REFERENCES donors(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- Admin
+CREATE TABLE admin (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  username VARCHAR(100) NOT NULL UNIQUE,
+  password_hash VARCHAR(255) NOT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
