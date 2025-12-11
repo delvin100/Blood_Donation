@@ -1,15 +1,8 @@
-import React, { useEffect, useState } from "react";
-import API from "./api";
+import React from "react";
 import "./home.css";
 import BackToTop from "./BackToTop";
-import DonorModal from "./DonorModal";
-import SeekerModal from "./SeekerModal";
-import SearchDonorsModal from "./SearchDonorsModal";
 
 export default function Home() {
-  const [showDonorModal, setShowDonorModal] = useState(false);
-  const [showSeekerModal, setShowSeekerModal] = useState(false);
-  const [showSearchModal, setShowSearchModal] = useState(false);
 
   return (
     <div className="bg-gray-50">
@@ -211,7 +204,7 @@ export default function Home() {
               <p className="text-xl text-gray-600">Choose how you want to help save lives</p>
             </div>
             
-            <div className="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto">
+            <div className="grid md:grid-cols-2 lg:grid-cols-2 gap-8 max-w-5xl mx-auto">
               {/* Donor Card */}
               <div className="card-gradient-1 rounded-2xl shadow-xl p-8 card-hover slide-in-left">
                 <div className="text-center">
@@ -224,13 +217,13 @@ export default function Home() {
                   <p className="text-gray-600 mb-6">
                     Be a hero! Register as a blood donor and help save lives in your community.
                   </p>
-                  <button 
-                    onClick={() => setShowDonorModal(true)}
+                  <a 
+                    href="/login.html"
                     className="block text-center w-full bg-red-500 hover:bg-red-600 text-white font-semibold py-3 px-6 rounded-lg transition-colors glow-effect"
                     aria-label="Register or login as donor"
                   >
                     Register / Login as Donor
-                  </button>
+                  </a>
                 </div>
               </div>
 
@@ -246,14 +239,57 @@ export default function Home() {
                   <p className="text-gray-600 mb-6">
                     Need blood urgently? Find compatible donors in your area quickly and easily.
                   </p>
-                  <button 
-                    onClick={() => setShowSeekerModal(true)}
-                    className="w-full bg-blue-500 hover:bg-blue-600 text-white font-semibold py-3 px-6 rounded-lg transition-colors glow-effect"
-                    aria-haspopup="dialog"
+                  <a 
+                    href="/seeker.html"
+                    className="block text-center w-full bg-blue-500 hover:bg-blue-600 text-white font-semibold py-3 px-6 rounded-lg transition-colors glow-effect"
                     aria-label="Find blood"
                   >
                     Find Blood
-                  </button>
+                  </a>
+                </div>
+              </div>
+
+              {/* Organization Login */}
+              <div className="card-gradient-3 rounded-2xl shadow-xl p-8 card-hover slide-in-up">
+                <div className="text-center">
+                  <img 
+                    src="https://cdn-icons-png.flaticon.com/512/2966/2966327.png" 
+                    alt="Organization secure login" 
+                    className="w-20 h-20 rounded-full object-cover mx-auto mb-6 border-4 border-gray-200"
+                  />
+                  <h3 className="text-2xl font-bold text-gray-800 mb-4">Organization Login</h3>
+                  <p className="text-gray-600 mb-6">
+                    Access your organization dashboard to manage drives and monitor requests.
+                  </p>
+                  <a 
+                    href="/organization-login.html"
+                    className="block text-center w-full bg-gray-800 hover:bg-gray-900 text-white font-semibold py-3 px-6 rounded-lg transition-colors glow-effect"
+                    aria-label="Organization login"
+                  >
+                    Login for Organization
+                  </a>
+                </div>
+              </div>
+
+              {/* Organization Search */}
+              <div className="card-gradient-4 rounded-2xl shadow-xl p-8 card-hover slide-in-up">
+                <div className="text-center">
+                  <img 
+                    src="https://cdn-icons-png.flaticon.com/512/3141/3141805.png" 
+                    alt="Search organizations" 
+                    className="w-20 h-20 rounded-full object-cover mx-auto mb-6 border-4 border-green-100"
+                  />
+                  <h3 className="text-2xl font-bold text-gray-800 mb-4">Search Organization</h3>
+                  <p className="text-gray-600 mb-6">
+                    Find verified partner organizations to collaborate on blood donation drives.
+                  </p>
+                  <a 
+                    href="/organization-search.html"
+                    className="block text-center w-full bg-green-500 hover:bg-green-600 text-white font-semibold py-3 px-6 rounded-lg transition-colors glow-effect"
+                    aria-label="Search organization"
+                  >
+                    Search for Organization
+                  </a>
                 </div>
               </div>
             </div>
@@ -357,7 +393,7 @@ export default function Home() {
                 <li><a href="#home" className="text-gray-400 hover:text-white transition-colors">Home</a></li>
                 <li><a href="#aboutt" className="text-gray-400 hover:text-white transition-colors">About Us</a></li>
                 <li><a href="#action-cards" className="text-gray-400 hover:text-white transition-colors">Get Started</a></li>
-                <li><button onClick={() => setShowDonorModal(true)} className="text-gray-400 hover:text-white transition-colors">Donor Login</button></li>
+                <li><a href="/register.html" className="text-gray-400 hover:text-white transition-colors">Donor Login</a></li>
               </ul>
             </div>
             
@@ -389,9 +425,6 @@ export default function Home() {
       </footer>
 
       {/* Modals */}
-      <DonorModal isOpen={showDonorModal} onClose={() => setShowDonorModal(false)} />
-      <SeekerModal isOpen={showSeekerModal} onClose={() => setShowSeekerModal(false)} />
-      <SearchDonorsModal open={showSearchModal} onClose={() => setShowSearchModal(false)} />
       <BackToTop />
     </div>
   );

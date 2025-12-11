@@ -1,0 +1,186 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Login | eBloodBank</title>
+  <link rel="icon" type="image/png" href="/images/blood_drop.png" />
+  <link rel="stylesheet" href="/css/register.css" />
+</head>
+<body class="register-page">
+  <main class="auth-page">
+    <section class="auth-card register" aria-label="Sign in">
+      <div class="auth-hero image-panel">
+        <div class="panel-slides">
+          <div class="slide active" style="background-image:url('/images/b4.png');"></div>
+          <div class="slide" style="background-image:url('/images/b2.png');"></div>
+          <div class="slide" style="background-image:url('/images/b3.png');"></div>
+          <div class="panel-dots" role="tablist" aria-label="Slideshow dots">
+            <button class="dot active" aria-label="Show slide 1"></button>
+            <button class="dot" aria-label="Show slide 2"></button>
+            <button class="dot" aria-label="Show slide 3"></button>
+          </div>
+        </div>
+      </div>
+
+      <div class="auth-body">
+        <div class="form-header">
+          <div class="eyebrow">Donor portal</div>
+          <h2>Sign in to your account</h2>
+          <p>Use your credentials or Google to access your dashboard.</p>
+        </div>
+
+        <div id="login-success" class="success-banner" role="status" aria-live="polite">
+          <span class="floating-check">✓</span>
+          <div>Signed in! Redirecting to your dashboard…</div>
+        </div>
+
+        <form id="login-form" class="form" novalidate>
+          <div class="input-group">
+            <input id="loginUsername" name="username" type="text" required aria-required="true" placeholder=" " autocomplete="username" />
+            <label for="loginUsername">Username</label>
+          </div>
+
+          <div class="input-group has-toggle">
+            <input id="loginPassword" name="password" type="password" required aria-required="true" minlength="8" placeholder=" " autocomplete="current-password" />
+            <label for="loginPassword">Password</label>
+            <button type="button" class="pw-toggle" aria-label="Toggle password visibility" data-target="loginPassword">
+              <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                <path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12Z" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+                <circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="2" fill="none"/>
+              </svg>
+            </button>
+          </div>
+
+          <div class="forgot">
+            <a href="#" id="open-forgot" aria-label="Forgot password link">Forgot password?</a>
+          </div>
+
+          <div id="login-error" class="error" role="alert"></div>
+
+          <button type="submit" class="btn btn-primary" aria-label="Submit login">
+            Sign in
+          </button>
+        </form>
+
+        <div class="divider"><span>or continue with Google</span></div>
+
+        <button id="google-login" class="btn btn-google" type="button" data-mode="login" aria-label="Sign in with Google">
+          <svg width="20" height="20" viewBox="0 0 533.5 544.3" aria-hidden="true" focusable="false">
+            <path fill="#EA4335" d="M533.5 278.4c0-18.4-1.5-36.9-4.7-54.8H272v103.9h147.5c-6.4 34.6-26 63.9-55.5 83.5v69.4h89.7c52.5-48.3 79.8-119.5 79.8-201.9z"/>
+            <path fill="#34A853" d="M272 544.3c72.4 0 133.1-23.9 177.4-64.9l-89.7-69.4c-24.9 16.7-56.6 26.5-87.7 26.5-67.4 0-124.6-45.5-145-106.7h-92.4v67.1c44.7 88.4 136.4 147.4 237.4 147.4z"/>
+            <path fill="#4A90E2" d="M127 329.8c-10.4-30.9-10.4-64.3 0-95.2v-67.1H34.6c-38.6 76.8-38.6 165.6 0 242.4L127 329.8z"/>
+            <path fill="#FBBC05" d="M272 107.7c36.7-.6 71.6 13 98.4 37.9l73.4-73.4C404.9 24.3 343.8-.5 272 0 170.9 0 79.3 58.9 34.6 147.5L127 234.6C147.4 173.2 204.6 127.8 272 127.8z"/>
+          </svg>
+          Sign in with Google
+        </button>
+
+        <div class="footer">
+          New to the platform? <a href="/register.html">Create account</a>
+        </div>
+
+      </div>
+    </section>
+  </main>
+
+  <a class="back-chip" href="/#action-cards" aria-label="Back to homepage">
+    <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+      <path d="M15 5 8 12l7 7" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>
+  </a>
+
+  <script type="module" src="/js/auth.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const slides = Array.from(document.querySelectorAll('.panel-slides .slide'));
+      const dots = Array.from(document.querySelectorAll('.panel-dots .dot'));
+      let slideIdx = 0;
+
+      function setSlide(idx) {
+        slides.forEach((s, i) => s.classList.toggle('active', i === idx));
+        dots.forEach((d, i) => d.classList.toggle('active', i === idx));
+        slideIdx = idx;
+      }
+
+      dots.forEach((dot, idx) => {
+        dot.addEventListener('click', () => setSlide(idx));
+      });
+
+      setInterval(() => {
+        const next = (slideIdx + 1) % slides.length;
+        setSlide(next);
+      }, 3000);
+
+      // Forgot password modal (single-step, frontend demo)
+      const fpOpen = document.getElementById('open-forgot');
+      const fpModal = document.getElementById('fp-modal');
+      const fpClose = document.getElementById('fp-close');
+      const fpEmail = document.getElementById('fp-email');
+      const fpError = document.getElementById('fp-error');
+
+      function fpShow() {
+        if (!fpModal) return;
+        fpModal.classList.remove('hidden');
+        document.body.style.overflow = 'hidden';
+        if (fpEmail) fpEmail.value = '';
+        if (fpError) { fpError.textContent = ''; fpError.classList.add('hidden'); }
+      }
+      function fpHide() {
+        if (!fpModal) return;
+        fpModal.classList.add('hidden');
+        document.body.style.overflow = '';
+      }
+      function fpShowError(msg) {
+        if (fpError) { fpError.textContent = msg; fpError.classList.remove('hidden'); }
+      }
+
+      fpOpen?.addEventListener('click',(e)=>{ e.preventDefault(); fpShow(); });
+      fpClose?.addEventListener('click',(e)=>{ e.preventDefault(); fpHide(); });
+      fpModal?.addEventListener('click',(e)=>{ if(e.target===fpModal) fpHide(); });
+      document.getElementById('fp-send')?.addEventListener('click',()=>{
+        if (!fpEmail?.value.trim()) { fpShowError('Please enter your registered email.'); return; }
+        fpShowError('Demo: hook backend to send verification code.');
+      });
+
+      // password visibility toggle
+      document.querySelectorAll('.pw-toggle').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const targetId = btn.getAttribute('data-target');
+          const input = document.getElementById(targetId);
+          if (!input) return;
+          const isHidden = input.type === 'password';
+          input.type = isHidden ? 'text' : 'password';
+          btn.classList.toggle('active', isHidden);
+        });
+      });
+    });
+  </script>
+
+  <div id="fp-modal" class="fp-layer hidden" role="dialog" aria-modal="true" aria-label="Forgot password">
+    <div class="fp-card">
+      <button id="fp-close" class="fp-close" aria-label="Close">
+        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+          <path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </button>
+      <div class="fp-hero">
+        <div class="fp-icon-circle">
+          <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" stroke="#ef4444" fill="none" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"/>
+          </svg>
+        </div>
+        <h3>Reset Your Password</h3>
+        <p>Enter your registered email to receive a verification code.</p>
+      </div>
+      <div class="fp-body">
+        <label class="fp-label" for="fp-email">Registered Email</label>
+        <input id="fp-email" class="fp-input" type="email" placeholder="you@example.com" autocomplete="email" />
+        <div id="fp-error" class="fp-error hidden" role="alert"></div>
+        <button id="fp-send" class="fp-btn" type="button">Generate Verification Code</button>
+      </div>
+    </div>
+  </div>
+
+</body>
+</html>
+
