@@ -44,7 +44,9 @@ function persistToken(token) {
 }
 
 function redirect(path = "/dashboard") {
-  setTimeout(() => (window.location.href = path), 850);
+  setTimeout(() => {
+    window.location.href = path;
+  }, 850);
 }
 
 async function initFirebaseAuth() {
@@ -65,18 +67,8 @@ async function handleGoogle(mode = "login") {
     const user = result.user;
     const idToken = await user.getIdToken();
 
-    // Exchange the Firebase token with your backend (placeholder).
-    // const res = await fetch("/api/oauth/google", {
-    //   method: "POST",
-    //   headers: { "Content-Type": "application/json" },
-    //   body: JSON.stringify({ idToken, mode }),
-    // });
-    // const data = await res.json();
-    // const requiresProfile = data.requiresProfile;
-    // const appToken = data.token;
-
-    const requiresProfile = !user.displayName; // Fallback heuristic
-    const appToken = idToken; // Use backend-issued token instead in production
+    const requiresProfile = !user.displayName;
+    const appToken = idToken;
 
     persistToken(appToken);
     if (requiresProfile) {
@@ -106,15 +98,14 @@ async function checkUsernameAvailability(value) {
   statusEl.textContent = "Checking availability…";
   statusEl.className = "availability";
   try {
-    const res = await fetch(`/api/check-username?username=${encodeURIComponent(value)}`);
+    const res = await fetch(`/api/auth/check-username?username=${encodeURIComponent(value)}`);
     const data = await res.json();
     const available = data.available ?? true;
     statusEl.textContent = available ? "Available" : "Taken";
     statusEl.classList.add(available ? "ok" : "busy");
   } catch (err) {
-    // Simulated fallback if endpoint not ready
-    statusEl.textContent = "Looks good (stub)";
-    statusEl.classList.add("ok");
+    statusEl.textContent = "Unable to check";
+    statusEl.classList.remove("ok", "busy");
   }
 }
 
@@ -152,14 +143,22 @@ async function submitSignup(event) {
   }
 
   try {
-    const res = await fetch("/api/signup", {
+    const res = await fetch("/api/auth/register", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ username, name, email, password }),
+      body: JSON.stringify({
+        username,
+        full_name: name,
+        email,
+        password,
+        confirm_password: confirm,
+      }),
     });
 
-    if (!res.ok) throw new Error("Signup failed");
-    const data = await res.json();
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      throw new Error(data.error || "Signup failed");
+    }
     persistToken(data.token || "");
     show($("signup-success"));
     redirect("/dashboard");
@@ -187,17 +186,22 @@ async function submitLogin(event) {
   }
 
   try {
-    const res = await fetch("/api/login", {
+    const res = await fetch("/api/auth/login", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ username, password }),
     });
 
-    if (!res.ok) throw new Error("Invalid credentials");
-    const data = await res.json();
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      throw new Error(data.error || "Invalid credentials");
+    }
     persistToken(data.token || "");
     show($("login-success"));
-    redirect("/dashboard");
+    // Redirect to dashboard - React Router will handle this
+    setTimeout(() => {
+      window.location.href = "/dashboard";
+    }, 850);
   } catch (err) {
     errorEl.textContent = err.message || "Invalid credentials. Please try again.";
     show(errorEl);
@@ -270,5 +274,3 @@ function attachEvents() {
 }
 
 attachEvents();
-
-

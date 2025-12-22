@@ -259,9 +259,16 @@ a:hover {
   flex-direction: column;
 }
 
-.input-group label {
+.input-wrapper {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+}
+
+.input-wrapper label {
   position: absolute;
-  top: 14px;
+  top: 18px;
   left: 14px;
   color: var(--muted);
   pointer-events: none;
@@ -270,7 +277,9 @@ a:hover {
   padding: 0 6px;
 }
 
-.input-group input {
+.input-wrapper input {
+  width: 100%;
+  height: 56px;
   padding: 18px 14px 10px;
   border-radius: var(--radius-sm);
   border: 1px solid var(--border);
@@ -278,17 +287,17 @@ a:hover {
   outline: none;
   transition: var(--transition);
   background: #fff;
-  box-shadow: inset 0 1px 0 rgba(0,0,0,0.01);
+  box-shadow: inset 0 1px 0 rgba(0, 0, 0, 0.01);
 }
 
-.input-group input:focus {
+.input-wrapper input:focus {
   border-color: rgba(220, 38, 38, 0.7);
   box-shadow: 0 0 0 4px rgba(220, 38, 38, 0.08);
   transform: translateY(-1px) scale(1.002);
 }
 
-.input-group input:focus + label,
-.input-group input:not(:placeholder-shown) + label {
+.input-wrapper input:focus+label,
+.input-wrapper input:not(:placeholder-shown)+label {
   transform: translateY(-14px) scale(0.92);
   color: var(--primary);
 }
@@ -390,22 +399,55 @@ a:hover {
 }
 
 @keyframes shake {
-  0%, 100% { transform: translateX(0); }
-  20% { transform: translateX(-6px); }
-  40% { transform: translateX(6px); }
-  60% { transform: translateX(-6px); }
-  80% { transform: translateX(6px); }
+
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+
+  20% {
+    transform: translateX(-6px);
+  }
+
+  40% {
+    transform: translateX(6px);
+  }
+
+  60% {
+    transform: translateX(-6px);
+  }
+
+  80% {
+    transform: translateX(6px);
+  }
 }
 
 @keyframes pop {
-  0% { transform: scale(0.4); opacity: 0; }
-  60% { transform: scale(1.05); opacity: 1; }
-  100% { transform: scale(1); }
+  0% {
+    transform: scale(0.4);
+    opacity: 0;
+  }
+
+  60% {
+    transform: scale(1.05);
+    opacity: 1;
+  }
+
+  100% {
+    transform: scale(1);
+  }
 }
 
 @keyframes slide-up {
-  from { opacity: 0; transform: translateY(8px); }
-  to { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 @media (max-width: 768px) {
@@ -425,6 +467,7 @@ a:hover {
     padding: 24px 14px;
   }
 }
+
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 
 :root {
@@ -648,9 +691,9 @@ a:hover {
   flex-direction: column;
 }
 
-.input-group label {
+.input-wrapper label {
   position: absolute;
-  top: 14px;
+  top: 18px;
   left: 14px;
   color: var(--muted);
   pointer-events: none;
@@ -659,7 +702,9 @@ a:hover {
   padding: 0 6px;
 }
 
-.input-group input {
+.input-wrapper input {
+  width: 100%;
+  height: 56px;
   padding: 18px 14px 10px;
   border-radius: var(--radius-sm);
   border: 1px solid var(--border);
@@ -669,14 +714,14 @@ a:hover {
   background: #fff;
 }
 
-.input-group input:focus {
+.input-wrapper input:focus {
   border-color: rgba(220, 38, 38, 0.7);
   box-shadow: 0 0 0 4px rgba(220, 38, 38, 0.08);
   transform: translateY(-1px) scale(1.002);
 }
 
-.input-group input:focus + label,
-.input-group input:not(:placeholder-shown) + label {
+.input-wrapper input:focus+label,
+.input-wrapper input:not(:placeholder-shown)+label {
   transform: translateY(-14px) scale(0.92);
   color: var(--primary);
 }
@@ -771,22 +816,55 @@ a:hover {
 }
 
 @keyframes shake {
-  0%, 100% { transform: translateX(0); }
-  20% { transform: translateX(-6px); }
-  40% { transform: translateX(6px); }
-  60% { transform: translateX(-6px); }
-  80% { transform: translateX(6px); }
+
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+
+  20% {
+    transform: translateX(-6px);
+  }
+
+  40% {
+    transform: translateX(6px);
+  }
+
+  60% {
+    transform: translateX(-6px);
+  }
+
+  80% {
+    transform: translateX(6px);
+  }
 }
 
 @keyframes pop {
-  0% { transform: scale(0.4); opacity: 0; }
-  60% { transform: scale(1.05); opacity: 1; }
-  100% { transform: scale(1); }
+  0% {
+    transform: scale(0.4);
+    opacity: 0;
+  }
+
+  60% {
+    transform: scale(1.05);
+    opacity: 1;
+  }
+
+  100% {
+    transform: scale(1);
+  }
 }
 
 @keyframes slide-up {
-  from { opacity: 0; transform: translateY(8px); }
-  to { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 @media (max-width: 768px) {
@@ -806,4 +884,3 @@ a:hover {
     padding: 24px 14px;
   }
 }
-

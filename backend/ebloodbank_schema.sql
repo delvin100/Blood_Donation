@@ -12,10 +12,11 @@ SET FOREIGN_KEY_CHECKS = 1;
 -- Donors Table
 CREATE TABLE donors (
   id INT AUTO_INCREMENT PRIMARY KEY,
-  username VARCHAR(100) NOT NULL UNIQUE,
+  username VARCHAR(100) NULL UNIQUE,
   full_name VARCHAR(255),
   email VARCHAR(255) UNIQUE,
-  password_hash VARCHAR(255) NOT NULL,
+  password_hash VARCHAR(255) NULL,
+  google_id VARCHAR(255) UNIQUE DEFAULT NULL,
   blood_type VARCHAR(50),
   dob DATE,
   availability ENUM('Available','Unavailable') DEFAULT 'Available',
@@ -26,6 +27,8 @@ CREATE TABLE donors (
   district VARCHAR(100) DEFAULT NULL,
   city VARCHAR(100) DEFAULT NULL,
   profile_picture VARCHAR(255) DEFAULT NULL,
+  reset_code VARCHAR(4) DEFAULT NULL,
+  reset_code_expires_at DATETIME DEFAULT NULL,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 

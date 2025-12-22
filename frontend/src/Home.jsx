@@ -1,5 +1,4 @@
 import React from "react";
-import "./home.css";
 import BackToTop from "./BackToTop";
 
 export default function Home() {
@@ -21,7 +20,7 @@ export default function Home() {
                 <p className="text-red-100 text-sm">Connecting Donors, Saving Lives</p>
               </div>
             </div>
-            <nav className="hidden md:flex space-x-6" aria-label="Primary">
+            <nav className="flex space-x-6" aria-label="Primary">
               <a href="#home" className="hover:text-red-200 transition-colors">Home</a>
               <a href="#action-cards" className="hover:text-red-200 transition-colors">Donors</a>
               <a href="#action-cards" className="hover:text-red-200 transition-colors">Seekers</a>
@@ -80,7 +79,7 @@ export default function Home() {
               </p>
               
               {/* Call to Action Buttons */}
-              <div className="flex flex-col sm:flex-row gap-4 justify-center items-center fade-in">
+              <div className="flex flex-row gap-4 justify-center items-center fade-in">
                 <a href="#action-cards" className="bg-red-600 text-white px-8 py-4 rounded-full text-lg font-semibold hover:bg-red-700 transition-all duration-300 shadow-lg">
                   Get Started Today
                 </a>
@@ -150,7 +149,7 @@ export default function Home() {
               <div className="grid md:grid-cols-4 gap-8">
                 <div className="text-center card-gradient-1 p-6 rounded-xl shadow-lg card-hover">
                   <img 
-                    src="https://cgblooddonor.com/images/member.jpg" 
+                    src="/images/blood_drop.png" 
                     alt="Registration form" 
                     className="w-16 h-16 rounded-full object-cover mx-auto mb-4 border-4 border-red-100"
                   />
@@ -218,7 +217,7 @@ export default function Home() {
                     Be a hero! Register as a blood donor and help save lives in your community.
                   </p>
                   <a 
-                    href="/login.html"
+                    href="/login"
                     className="block text-center w-full bg-red-500 hover:bg-red-600 text-white font-semibold py-3 px-6 rounded-lg transition-colors glow-effect"
                     aria-label="Register or login as donor"
                   >
@@ -351,7 +350,7 @@ export default function Home() {
           <div className="container mx-auto px-6 text-center">
             <h2 className="text-4xl font-bold mb-8">Get In Touch</h2>
             <p className="text-xl mb-8">Have questions? Need help? We're here for you 24/7.</p>
-            <div className="flex flex-col md:flex-row justify-center items-center space-y-4 md:space-y-0 md:space-x-8">
+            <div className="flex flex-row justify-center items-center space-x-8">
               <div className="flex items-center space-x-2">
                 <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
                   <path d="M20 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"/>
@@ -393,7 +392,7 @@ export default function Home() {
                 <li><a href="#home" className="text-gray-400 hover:text-white transition-colors">Home</a></li>
                 <li><a href="#aboutt" className="text-gray-400 hover:text-white transition-colors">About Us</a></li>
                 <li><a href="#action-cards" className="text-gray-400 hover:text-white transition-colors">Get Started</a></li>
-                <li><a href="/register.html" className="text-gray-400 hover:text-white transition-colors">Donor Login</a></li>
+                <li><a href="/login" className="text-gray-400 hover:text-white transition-colors">Donor Login</a></li>
               </ul>
             </div>
             
