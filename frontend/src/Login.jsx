@@ -8,7 +8,7 @@ export default function Login() {
   const [showForgotModal, setShowForgotModal] = useState(false);
 
   // Forgot Password States
-  const [fpStep, setFpStep] = useState(1); // 1: Email, 2: Code, 3: New Password
+  const [fpStep, setFpStep] = useState(1); 
   const [fpEmail, setFpEmail] = useState("");
   const [fpCode, setFpCode] = useState("");
   const [fpNewPassword, setFpNewPassword] = useState("");

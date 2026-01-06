@@ -2,6 +2,32 @@ const express = require('express');
 const router = express.Router();
 const pool = require('../db');
 const authMiddleware = require('../middlewares/authMiddleware');
+const multer = require('multer');
+const path = require('path');
+
+// Multer Storage Configuration
+const storage = multer.diskStorage({
+    destination: (req, file, cb) => {
+        cb(null, 'uploads/');
+    },
+    filename: (req, file, cb) => {
+        cb(null, `profile-${req.user.id}-${Date.now()}${path.extname(file.originalname)}`);
+    }
+});
+
+const upload = multer({
+    storage: storage,
+    limits: { fileSize: 5 * 1024 * 1024 }, // 5MB limit
+    fileFilter: (req, file, cb) => {
+        const filetypes = /jpeg|jpg|png|webp/;
+        const mimetype = filetypes.test(file.mimetype);
+        const extname = filetypes.test(path.extname(file.originalname).toLowerCase());
+        if (mimetype && extname) {
+            return cb(null, true);
+        }
+        cb(new Error('Only images (jpeg, jpg, png, webp) are allowed!'));
+    }
+});
 
 // Helper to update donor availability based on 90-day rule
 const updateDonorAvailability = async (donorId) => {
@@ -204,14 +230,57 @@ router.put('/profile', authMiddleware, async (req, res) => {
     }
 });
 
+// Upload Profile Picture
+router.post('/profile-picture', authMiddleware, upload.single('profile_picture'), async (req, res) => {
+    try {
+        if (!req.file) {
+            return res.status(400).json({ error: 'Please upload an image file' });
+        }
+
+        const donorId = req.user.id;
+        const profilePicUrl = `/uploads/${req.file.filename}`;
+        const fs = require('fs');
+
+        // Delete old local picture if it exists to save space
+        const [rows] = await pool.query('SELECT profile_picture FROM donors WHERE id = ?', [donorId]);
+        if (rows.length > 0 && rows[0].profile_picture && !rows[0].profile_picture.startsWith('http')) {
+            const oldPath = path.join(__dirname, '..', rows[0].profile_picture);
+            if (fs.existsSync(oldPath)) {
+                fs.unlinkSync(oldPath);
+            }
+        }
+
+        await pool.query('UPDATE donors SET profile_picture = ? WHERE id = ?', [profilePicUrl, donorId]);
+
+        res.json({
+            message: 'Profile picture updated successfully!',
+            profile_picture: profilePicUrl
+        });
+    } catch (err) {
+        console.error('Upload Profile Pic Error:', err);
+        res.status(500).json({ error: 'Server error' });
+    }
+});
+
 // Remove Profile Picture
 router.delete('/profile/picture', authMiddleware, async (req, res) => {
     try {
         const donorId = req.user.id;
-        // Optional: delete file from storage if you want to be thorough
+        const fs = require('fs');
+
+        // Fetch current picture to delete it from disk (if it's local)
+        const [rows] = await pool.query('SELECT profile_picture FROM donors WHERE id = ?', [donorId]);
+        if (rows.length > 0 && rows[0].profile_picture && !rows[0].profile_picture.startsWith('http')) {
+            const filePath = path.join(__dirname, '..', rows[0].profile_picture);
+            if (fs.existsSync(filePath)) {
+                fs.unlinkSync(filePath);
+            }
+        }
+
         await pool.query('UPDATE donors SET profile_picture = NULL WHERE id = ?', [donorId]);
         res.json({ message: 'Profile picture removed successfully' });
     } catch (err) {
+        console.error('Remove Profile Pic Error:', err);
         res.status(500).json({ error: 'Server error' });
     }
 });

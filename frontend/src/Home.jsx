@@ -418,7 +418,7 @@ export default function Home() {
           </div>
           
           <div className="border-t border-gray-800 mt-8 pt-8 text-center text-sm text-gray-400">
-            <p>&copy; 2025 eBloodBank. All rights reserved. | Made with ❤️ for humanity</p>
+            <p>&copy; 2026 eBloodBank. All rights reserved. | Made with ❤️ for humanity</p>
           </div>
         </div>
       </footer>
