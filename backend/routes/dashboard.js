@@ -212,15 +212,32 @@ router.delete('/reminder/:id', authMiddleware, async (req, res) => {
     }
 });
 
+// Update Reminder
+router.put('/reminder/:id', authMiddleware, async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { reminder_date, message } = req.body;
+        const donorId = req.user.id;
+        await pool.query('UPDATE reminders SET reminder_date = ?, message = ? WHERE id = ? AND donor_id = ?', [reminder_date, message, id, donorId]);
+        res.json({ message: 'Reminder updated' });
+    } catch (err) {
+        res.status(500).json({ error: 'Server error' });
+    }
+});
+
 // Update Profile
 router.put('/profile', authMiddleware, async (req, res) => {
     try {
-        const { full_name, email, dob, phone, blood_type, state, district, city } = req.body;
+        const { full_name, email, dob, phone, blood_type, gender, state, district, city } = req.body;
         const donorId = req.user.id;
 
         await pool.query(
-            'UPDATE donors SET full_name = ?, email = ?, dob = ?, phone = ?, blood_type = ?, state = ?, district = ?, city = ? WHERE id = ?',
-            [full_name, email, dob, phone, blood_type, state, district, city, donorId]
+            `UPDATE donors SET 
+                full_name = COALESCE(?, full_name), 
+                email = COALESCE(?, email), 
+                dob = ?, phone = ?, blood_type = ?, gender = ?, state = ?, district = ?, city = ? 
+             WHERE id = ?`,
+            [full_name, email, dob, phone, blood_type, gender, state, district, city, donorId]
         );
 
         res.json({ message: 'Profile updated successfully' });

@@ -498,3 +498,149 @@ body {
     text-transform: uppercase;
     margin-top: 4px;
 }
+
+/* Full-Screen Modal Refinements */
+.full-screen-modal {
+    position: fixed;
+    inset: 0;
+    background: white;
+    z-index: 10000;
+    overflow-y: auto;
+    animation: slideUp 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@keyframes slideUp {
+    from {
+        transform: translateY(100%);
+        opacity: 0;
+    }
+
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+.modal-header-gradient {
+    background: linear-gradient(135deg, #ef4444 0%, #c23333 100%);
+    color: white;
+    padding: 2rem;
+}
+
+.custom-scrollbar::-webkit-scrollbar {
+    width: 6px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+    background: #e2e8f0;
+    border-radius: 10px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: #cbd5e1;
+}
+
+/* Modal Content Animations */
+.info-content-animate {
+    animation: fadeInScale 0.5s ease-out;
+}
+
+@keyframes fadeInScale {
+    from {
+        opacity: 0;
+        transform: scale(0.98);
+    }
+
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+/* Additional Stat Card Variants */
+.stat-card.blue {
+    border-top: 4px solid #3b82f6;
+}
+
+.stat-card.red {
+    border-top: 4px solid #ef4444;
+}
+
+.stat-card.yellow {
+    border-top: 4px solid #f59e0b;
+}
+
+.modern-input-group {
+    margin-bottom: 1.5rem;
+}
+
+.modern-input-group label {
+    display: block;
+    font-size: 0.875rem;
+    font-weight: 700;
+    color: #475569;
+    margin-bottom: 0.5rem;
+}
+
+.modern-input-field {
+    width: 100%;
+    padding: 1rem;
+    border: 2px solid #e2e8f0;
+    border-radius: 1rem;
+    font-size: 1rem;
+    transition: all 0.2s ease;
+}
+
+.modern-input-field:focus {
+    outline: none;
+    border-color: #ef4444;
+    box-shadow: 0 0 0 4px rgba(239, 68, 68, 0.1);
+}
+
+/* Back to Top Button */
+/* Sidebar Sub-links */
+.sidebar-link.sub-link {
+    color: #3b82f6 !important;
+    padding-top: 0.5rem !important;
+    padding-bottom: 0.5rem !important;
+    font-size: 0.875rem !important;
+    font-weight: 500 !important;
+}
+
+.sidebar-link.sub-link:hover {
+    color: #ef4444 !important;
+    background-color: #fef2f2 !important;
+}
+
+.back-to-top {
+    position: fixed;
+    bottom: 2rem;
+    right: 2rem;
+    width: 3.5rem;
+    height: 3.5rem;
+    background: #ff0000;
+    color: white;
+    border-radius: 50%;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+    cursor: pointer;
+    z-index: 1000;
+    border: none;
+    transition: none !important;
+}
+
+.back-to-top:hover {
+    background: #ff0000 !important;
+    transform: none !important;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2) !important;
+}
+
+.back-to-top.visible {
+    display: flex;
+}

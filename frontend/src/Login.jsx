@@ -8,7 +8,7 @@ export default function Login() {
   const [showForgotModal, setShowForgotModal] = useState(false);
 
   // Forgot Password States
-  const [fpStep, setFpStep] = useState(1); 
+  const [fpStep, setFpStep] = useState(1);
   const [fpEmail, setFpEmail] = useState("");
   const [fpCode, setFpCode] = useState("");
   const [fpNewPassword, setFpNewPassword] = useState("");
@@ -211,6 +211,9 @@ export default function Login() {
 
   // --- End Forgot Password Handlers ---
 
+  // Google user state for completion modal
+  const [googleUser, setGoogleUser] = useState(null);
+
   const googleLogin = useGoogleLogin({
     onSuccess: async (tokenResponse) => {
       try {
@@ -227,9 +230,11 @@ export default function Login() {
         if (data.token) {
           localStorage.setItem("authToken", data.token);
         }
+
         if (data.user && data.user.blood_type) {
           window.location.href = "/dashboard";
         } else {
+          setGoogleUser(data.user);
           setShowCompleteProfileModal(true);
         }
       } catch (err) {
@@ -630,7 +635,7 @@ export default function Login() {
         </div>
       </div>
       {showCompleteProfileModal && (
-        <CompleteProfileModal onClose={() => setShowCompleteProfileModal(false)} />
+        <CompleteProfileModal onClose={() => setShowCompleteProfileModal(false)} user={googleUser} />
       )}
     </div>
   );

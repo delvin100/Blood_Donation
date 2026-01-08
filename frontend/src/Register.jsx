@@ -78,7 +78,11 @@ export default function Register() {
     }
   };
 
+  // Google user state for completion modal
+  const [googleUser, setGoogleUser] = useState(null);
+
   const googleLogin = useGoogleLogin({
+    scope: "email profile openid",
     onSuccess: async (tokenResponse) => {
       try {
         setIsSubmitting(true);
@@ -95,9 +99,11 @@ export default function Register() {
           localStorage.setItem("authToken", data.token);
           console.log("Google Auth token set.", data.token);
         }
+
         if (data.user && data.user.blood_type) {
           window.location.href = "/dashboard";
         } else {
+          setGoogleUser(data.user);
           setShowCompleteProfileModal(true);
         }
       } catch (err) {
@@ -633,7 +639,7 @@ export default function Register() {
         </svg>
       </a>
       {console.log("showCompleteProfileModal state:", showCompleteProfileModal)}
-      {showCompleteProfileModal && <CompleteProfileModal onClose={() => setShowCompleteProfileModal(false)} />}
+      {showCompleteProfileModal && <CompleteProfileModal onClose={() => setShowCompleteProfileModal(false)} user={googleUser || { full_name: name, email: email }} />}
     </div>
   );
 }

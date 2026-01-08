@@ -2,6 +2,9 @@ import React, { useState, useEffect } from 'react';
 import '../public/css/dashboard.css';
 import CompleteProfileModal from './CompleteProfileModal';
 import InfoModal from './InfoModal';
+import EditProfileModal from './EditProfileModal';
+import ProfilePicModal from './ProfilePicModal';
+import BackToTop from './BackToTop';
 
 const formatDateHyphen = (dateStr) => {
   if (!dateStr) return '';
@@ -25,17 +28,21 @@ const Dashboard = () => {
   const [message, setMessage] = useState('');
   const [showCompleteProfile, setShowCompleteProfile] = useState(false);
   const [showProfilePicModal, setShowProfilePicModal] = useState(false);
-  const [selectedFile, setSelectedFile] = useState(null);
-  const [previewUrl, setPreviewUrl] = useState(null);
+  const [showEditProfile, setShowEditProfile] = useState(false);
   const [activeInfo, setActiveInfo] = useState(null);
-  const [showScrollTop, setShowScrollTop] = useState(false);
+
+  // Edit modals state
+  const [editingDonation, setEditingDonation] = useState(null);
+  const [editingReminder, setEditingReminder] = useState(null);
 
   // Form states
-  const [donationDate, setDonationDate] = useState(new Date().toISOString().split('T')[0]);
-  const [units, setUnits] = useState(1);
-  const [notes, setNotes] = useState('');
-  const [reminderDate, setReminderDate] = useState('');
-  const [reminderMsg, setReminderMsg] = useState('');
+  const [newDonation, setNewDonation] = useState({
+    date: new Date().toISOString().split('T')[0],
+    units: 1,
+    notes: ''
+  });
+  const [newReminder, setNewReminder] = useState({ date: '', text: '' });
+
   const [timeLeft, setTimeLeft] = useState({ days: 0, hours: 0, minutes: 0, seconds: 0 });
 
   const fetchDashboardData = async () => {
@@ -53,7 +60,15 @@ const Dashboard = () => {
       setData(jsonData);
 
       const phoneRegex = /^[0-9]{10}$/;
-      if (jsonData.user && (!jsonData.user.gender || !phoneRegex.test(jsonData.user.phone))) {
+      const isProfileIncomplete = jsonData.user && (
+        !jsonData.user.gender ||
+        !phoneRegex.test(jsonData.user.phone) ||
+        !jsonData.user.state ||
+        !jsonData.user.district ||
+        !jsonData.user.city
+      );
+
+      if (isProfileIncomplete) {
         setShowCompleteProfile(true);
       }
     } catch (err) {
@@ -66,19 +81,24 @@ const Dashboard = () => {
 
   useEffect(() => {
     fetchDashboardData();
-    const handleScroll = () => setShowScrollTop(window.scrollY > 300);
-    window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
   useEffect(() => {
     if (!data?.stats?.nextEligibleDate) return;
+    const target = new Date(data.stats.nextEligibleDate).getTime();
+    const now = new Date().getTime();
+
+    if (target <= now) {
+      setTimeLeft({ days: 0, hours: 0, minutes: 0, seconds: 0 });
+      return;
+    }
+
     const timer = setInterval(() => {
-      const now = new Date().getTime();
-      const target = new Date(data.stats.nextEligibleDate).getTime();
-      const diff = target - now;
+      const currentTime = new Date().getTime();
+      const diff = target - currentTime;
       if (diff <= 0) {
         clearInterval(timer);
+        setTimeLeft({ days: 0, hours: 0, minutes: 0, seconds: 0 });
         fetchDashboardData();
       } else {
         setTimeLeft({
@@ -99,15 +119,35 @@ const Dashboard = () => {
       const res = await fetch('/api/dashboard/donation', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-        body: JSON.stringify({ date: donationDate, units, notes })
+        body: JSON.stringify(newDonation)
       });
       const result = await res.json();
       if (!res.ok) throw new Error(result.error || 'Failed to add donation');
       setMessage('Donation recorded successfully!');
       fetchDashboardData();
-      setDonationDate(new Date().toISOString().split('T')[0]);
-      setUnits(1);
-      setNotes('');
+      setNewDonation({ date: new Date().toISOString().split('T')[0], units: 1, notes: '' });
+    } catch (err) {
+      setMessage(`Error: ${err.message}`);
+    }
+  };
+
+  const handleEditDonation = async (e) => {
+    e.preventDefault();
+    try {
+      const token = localStorage.getItem('authToken');
+      const res = await fetch(`/api/dashboard/donation/${editingDonation.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify({
+          date: editingDonation.date,
+          units: editingDonation.units,
+          notes: editingDonation.notes
+        })
+      });
+      if (!res.ok) throw new Error('Failed to update donation');
+      setMessage('Donation updated successfully!');
+      fetchDashboardData();
+      setEditingDonation(null);
     } catch (err) {
       setMessage(`Error: ${err.message}`);
     }
@@ -120,13 +160,30 @@ const Dashboard = () => {
       const res = await fetch('/api/dashboard/reminder', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-        body: JSON.stringify({ reminder_date: reminderDate, message: reminderMsg })
+        body: JSON.stringify({ reminder_date: newReminder.date, message: newReminder.text })
       });
       if (!res.ok) throw new Error('Failed to add reminder');
       setMessage('Reminder added successfully!');
       fetchDashboardData();
-      setReminderDate('');
-      setReminderMsg('');
+      setNewReminder({ date: '', text: '' });
+    } catch (err) {
+      setMessage(`Error: ${err.message}`);
+    }
+  };
+
+  const handleEditReminder = async (e) => {
+    e.preventDefault();
+    try {
+      const token = localStorage.getItem('authToken');
+      const res = await fetch(`/api/dashboard/reminder/${editingReminder.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify({ reminder_date: editingReminder.reminder_date, message: editingReminder.message })
+      });
+      if (!res.ok) throw new Error('Failed to update reminder');
+      setMessage('Reminder updated successfully!');
+      fetchDashboardData();
+      setEditingReminder(null);
     } catch (err) {
       setMessage(`Error: ${err.message}`);
     }
@@ -148,29 +205,7 @@ const Dashboard = () => {
     }
   };
 
-  const handleProfilePicUpload = async () => {
-    if (!selectedFile) return;
-    try {
-      const token = localStorage.getItem('authToken');
-      const formData = new FormData();
-      formData.append('profile_picture', selectedFile);
 
-      const res = await fetch('/api/dashboard/profile-picture', {
-        method: 'POST',
-        headers: { 'Authorization': `Bearer ${token}` },
-        body: formData
-      });
-      const result = await res.json();
-      if (!res.ok) throw new Error(result.error || 'Failed to upload picture');
-      setMessage('Profile picture updated successfully!');
-      fetchDashboardData();
-      setShowProfilePicModal(false);
-      setSelectedFile(null);
-      setPreviewUrl(null);
-    } catch (err) {
-      setMessage(`Error: ${err.message}`);
-    }
-  };
 
   const handleLogout = () => {
     localStorage.removeItem('authToken');
@@ -180,7 +215,7 @@ const Dashboard = () => {
   if (loading) return <div className="modern-bg flex items-center justify-center text-white text-2xl font-black">Loading...</div>;
   if (error) return <div className="modern-bg flex items-center justify-center text-red-200 text-2xl font-black">Error: {error}</div>;
 
-  const { user, donations, reminders } = data;
+  const { user, donations, reminders, stats } = data;
 
   const navigationContent = {
     'about-us': { title: 'About eBloodBank', content: <div className="space-y-4 text-gray-600"><p>eBloodBank.org is the world's largest voluntary blood donors organization. Our mission is to ensure that every life counts by providing a platform that connects blood donors with those in need, especially in critical times.</p><p>Since our inception, we have helped thousands of people find the right blood donor at the right time, completely free of cost.</p></div> },
@@ -210,18 +245,16 @@ const Dashboard = () => {
   return (
     <div className="modern-bg min-h-screen">
       {/* PHP Sync Header */}
-      <header className="modern-header">
-        <div className="container mx-auto px-6 py-4">
+      <header className="modern-header py-5">
+        <div className="container mx-auto px-6">
           <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-3">
-              <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center">
-                <svg className="w-6 h-6 text-red-600" fill="currentColor" viewBox="0 0 24 24">
-                  <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" />
-                </svg>
+            <div className="flex items-center space-x-4">
+              <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center shadow-lg transform transition-transform hover:scale-105">
+                <i className="fas fa-heart text-red-600 text-2xl"></i>
               </div>
               <div>
-                <h1 className="text-xl font-bold text-white">eBloodBank</h1>
-                <p className="text-white/80 text-sm">Blood Donation Portal</p>
+                <h1 className="text-2xl font-black text-white tracking-tight leading-none mb-1">eBloodBank</h1>
+                <p className="text-white/90 text-[10.5px] uppercase font-black tracking-[0.3em]">Blood Donation Portal</p>
               </div>
             </div>
           </div>
@@ -231,9 +264,9 @@ const Dashboard = () => {
       <div className="container mx-auto px-6 py-10 min-h-screen">
         <div className="flex flex-col lg:flex-row gap-8">
           {/* Sidebar */}
-          <aside className="sidebar-container shrink-0 lg:w-72 lg:sticky lg:top-8 self-start transition-all duration-300">
-            <div className="modern-card p-6 shadow-xl border-0">
-              <h3 className="text-lg font-bold text-gray-800 mb-6 flex items-center gap-3 border-b pb-4">
+          <aside className="sidebar-container shrink-0 lg:w-64 lg:sticky lg:top-6 self-start transition-all duration-300">
+            <div className="modern-card p-5 shadow-xl border-0">
+              <h3 className="text-base font-bold text-gray-800 mb-5 flex items-center gap-3 border-b pb-3">
                 <div className="w-8 h-8 rounded-full bg-red-50 flex items-center justify-center">
                   <i className="fas fa-compass text-red-500 text-sm"></i>
                 </div>
@@ -254,8 +287,8 @@ const Dashboard = () => {
                 </button>
 
                 <div className="py-2 border-t border-dashed mt-2">
-                  <div className="sidebar-link w-full text-left cursor-default opacity-100 font-black text-gray-400 text-xs uppercase tracking-wider pl-1 mb-2">
-                    Organization
+                  <div className="sidebar-link w-full text-left cursor-default opacity-100 font-bold text-red-500 text-xs uppercase tracking-wider pl-1 mb-2">
+                    <i className="fas fa-users-cog mr-2"></i> People Behind
                   </div>
                   <div className="space-y-1 pl-2">
                     <button onClick={() => openInfo('founders')} className="sidebar-link sub-link w-full text-left !ml-0 text-sm !font-medium">
@@ -273,7 +306,20 @@ const Dashboard = () => {
                   </div>
                 </div>
 
-                <h4 className="sidebar-resource-title mt-4 mb-3 text-red-400">Resources</h4>
+                <button onClick={() => openInfo('donation-facts')} className="sidebar-link w-full text-left group mt-2">
+                  <div className="w-6 h-6 rounded-full bg-blue-50 text-blue-500 flex items-center justify-center text-[10px] group-hover:bg-blue-200 transition-colors">
+                    <i className="fas fa-book"></i>
+                  </div>
+                  <span className="group-hover:translate-x-1 transition-transform">Blood Donation Facts</span>
+                </button>
+                <button onClick={() => openInfo('who-can-donate')} className="sidebar-link w-full text-left group">
+                  <div className="w-6 h-6 rounded-full bg-emerald-50 text-emerald-500 flex items-center justify-center text-[10px] group-hover:bg-emerald-200 transition-colors">
+                    <i className="fas fa-check-circle"></i>
+                  </div>
+                  <span className="group-hover:translate-x-1 transition-transform font-bold text-red-600">Who can/ Can't Donate</span>
+                </button>
+
+                <h4 className="sidebar-resource-title mt-6 mb-3 text-gray-400 font-black text-[10px] uppercase tracking-[0.2em]">Blood Donation Resources</h4>
 
                 {[
                   { key: 'donation-process', icon: 'fa-route', label: 'Donation Process' },
@@ -289,8 +335,8 @@ const Dashboard = () => {
                   { key: 'faq', icon: 'fa-question-circle', label: 'FAQ' },
                   { key: 'contact-support', icon: 'fa-headset', label: 'Contact Support' },
                 ].map(item => (
-                  <button key={item.key} onClick={() => openInfo(item.key)} className="sidebar-link w-full text-left text-gray-600 hover:text-red-600 font-medium text-sm flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-red-50 transition-all group">
-                    <i className={`fas ${item.icon} text-gray-400 group-hover:text-red-500 w-5 text-center transition-colors`}></i>
+                  <button key={item.key} onClick={() => openInfo(item.key)} className="sidebar-link w-full text-left text-gray-600 hover:text-red-600 font-medium text-base flex items-center gap-4 px-4 py-3 rounded-2xl hover:bg-red-50 transition-all group">
+                    <i className={`fas ${item.icon} text-gray-400 group-hover:text-red-500 w-6 text-center transition-colors`}></i>
                     <span className="group-hover:translate-x-1 transition-transform">{item.label}</span>
                   </button>
                 ))}
@@ -299,207 +345,207 @@ const Dashboard = () => {
           </aside>
 
           {/* Main Content Area */}
-          <div className="flex-1 space-y-6">
-            {/* Header Title */}
-            <div className="flex items-end justify-between mb-2">
-              <div>
-                <h1 className="text-4xl font-black text-white mb-2 drop-shadow-md">Donor Dashboard</h1>
-                <p className="text-blue-100 font-medium text-lg">Manage your profile and donations</p>
-              </div>
+          <div className="flex-1 space-y-5">
+            {/* Centered Header */}
+            <div className="text-center mb-8 fade-in">
+              <h1 className="text-5xl font-black text-white mb-2 drop-shadow-lg tracking-tight">Donor Dashboard</h1>
+              <p className="text-white/80 text-xl font-medium">Manage your profile and donations</p>
             </div>
 
-            {/* Alerts Area */}
-            {message && (
-              <div className="alert-blue-glass !bg-green-100/90 !text-green-800 !border-green-200 flex justify-between fade-in shadow-lg">
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 bg-green-600 rounded-full flex items-center justify-center text-white shadow">
-                    <i className="fas fa-check text-xs"></i>
-                  </div>
-                  <span className="font-semibold">{message}</span>
-                </div>
-                <button onClick={() => setMessage('')} className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-black/5 transition-colors">&times;</button>
-              </div>
-            )}
-
+            {/* Top Status Alert */}
             {donations.length === 0 && (
-              <div className="bg-white/90 backdrop-blur-sm border-l-4 border-blue-600 p-6 rounded-r-xl shadow-lg fade-in flex items-start gap-4">
-                <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center text-blue-600 shrink-0">
-                  <i className="fas fa-info-circle text-xl"></i>
+              <div className="bg-blue-100 border-2 border-blue-400 rounded-[24px] p-5 flex items-center gap-4 text-blue-900 shadow-xl shadow-blue-500/10 animate-in fade-in slide-in-from-top-4">
+                <div className="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center text-white flex-shrink-0">
+                  <i className="fas fa-info text-sm"></i>
                 </div>
-                <div>
-                  <h4 className="font-bold text-gray-800 text-lg mb-1">Welcome to your dashboard!</h4>
-                  <p className="text-gray-600">No donation history found yet. Please record your first donation below to start tracking your journey.</p>
-                </div>
+                <p className="font-bold text-base">No donation history found. Please record your first donation below to start tracking your journey.</p>
               </div>
             )}
 
-            {/* Dashboard Stats Overview */}
+            {/* Dashboard Stats Overview - 3 Column Grid */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <div className="stat-card transform hover:scale-105 transition-transform duration-300">
-                <div className="stat-number drop-shadow-sm">{donations.length}</div>
-                <div className="stat-label">Total Donations</div>
+              <div className="modern-card p-8 flex flex-col items-center justify-center text-center group hover:scale-[1.02] transition-all">
+                <span className="text-6xl font-black text-red-600 mb-2">{donations.length}</span>
+                <span className="text-sm font-bold text-gray-500 uppercase tracking-widest">Total Donations</span>
               </div>
-              <div className="stat-card transform hover:scale-105 transition-transform duration-300">
-                <div className="stat-number drop-shadow-sm">{donations.length > 0 ? formatDateHyphen(donations[0].date) : 'None'}</div>
-                <div className="stat-label">Last Donation</div>
+              <div className="modern-card p-8 flex flex-col items-center justify-center text-center group hover:scale-[1.02] transition-all">
+                <span className="text-5xl font-black text-red-600 mb-2">
+                  {donations.length > 0 ? formatDateHyphen(donations[0].date) : 'None'}
+                </span>
+                <span className="text-sm font-bold text-gray-500 uppercase tracking-widest">Last Donation</span>
               </div>
-              <div className="stat-card transform hover:scale-105 transition-transform duration-300">
-                <div className="stat-number drop-shadow-sm">{reminders.length}</div>
-                <div className="stat-label">Active Reminders</div>
+              <div className="modern-card p-8 flex flex-col items-center justify-center text-center group hover:scale-[1.02] transition-all">
+                <span className="text-6xl font-black text-red-600 mb-2">{reminders.length}</span>
+                <span className="text-sm font-bold text-gray-500 uppercase tracking-widest">Active Reminders</span>
               </div>
             </div>
 
-            <div className="modern-card p-6 bg-gradient-to-r from-white to-gray-50">
-              <div className="flex items-center justify-between">
+            {/* Hello User Section */}
+            <div className="modern-card p-8 bg-white overflow-hidden relative">
+              <div className="flex items-center justify-between relative z-10">
                 <div>
-                  <h1 className="text-2xl font-bold text-gray-800">Hello, {user.full_name}</h1>
-                  <p className="text-gray-500 text-sm mt-1">Great to have you here saving lives!</p>
+                  <h1 className="text-3xl font-black text-gray-800 uppercase">Hello, {user.full_name}</h1>
+                  <p className="text-gray-500 font-bold mt-2 text-base tracking-wide">Great to have you here saving lives!</p>
                 </div>
-                <button onClick={handleLogout} className="btn-logout-pill shadow-lg hover:shadow-red-200">
-                  <i className="fas fa-sign-out-alt mr-2"></i> Logout
+                <button onClick={handleLogout} className="bg-red-600 hover:bg-red-700 text-white px-8 py-3.5 rounded-full font-black text-sm transition-all shadow-xl hover:shadow-red-200 transform hover:-translate-y-1 flex items-center gap-2">
+                  <i className="fas fa-power-off"></i>
+                  <span>Logout</span>
                 </button>
               </div>
             </div>
 
             {/* Profile & Recovery Row */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              {/* Profile Card */}
-              <div className="modern-card p-5 flex flex-col items-center">
-                <div className="relative mb-6">
-                  <div className="profile-avatar-large overflow-hidden">
+            <div className="grid lg:grid-cols-3 gap-5">
+              {/* Profile Info Card */}
+              <div className="modern-card p-7 flex flex-col items-center">
+                <div className="flex justify-center mb-5">
+                  <div className="relative group">
                     {user.profile_picture ? (
-                      <img src={getProfilePicUrl(user.profile_picture)} className="w-full h-full object-cover" alt="Profile" />
+                      <img src={getProfilePicUrl(user.profile_picture)} className="w-24 h-24 rounded-full object-cover shadow-2xl border-4 border-white" alt="Profile" />
                     ) : (
-                      user.full_name.charAt(0)
+                      <div className="w-24 h-24 rounded-full bg-red-600 flex items-center justify-center text-white text-4xl font-black shadow-2xl">
+                        {user.full_name.charAt(0).toUpperCase()}
+                      </div>
                     )}
+                    <button onClick={() => setShowProfilePicModal(true)} className="absolute bottom-0 right-0 w-7 h-7 bg-blue-600 text-white rounded-full flex items-center justify-center shadow-lg hover:scale-110 transition-transform">
+                      <i className="fas fa-camera text-[10px]"></i>
+                    </button>
                   </div>
-                  <button onClick={() => setShowProfilePicModal(true)} className="absolute bottom-[-4px] right-[-4px] w-7 h-7 bg-blue-600 rounded-full border-2 border-white flex items-center justify-center text-white text-[10px] shadow-lg hover:bg-blue-700 transition-colors">
-                    <i className="fas fa-camera"></i>
-                  </button>
+                </div>
+
+                <h3 className="text-2xl font-bold text-gray-800 mb-8 flex items-center gap-2 self-start">
+                  <i className="fas fa-user-circle text-red-600"></i> Profile
+                </h3>
+
+                <div className="w-full space-y-5 font-bold text-gray-600 mb-8">
+                  <div className="flex items-center gap-3 text-base">
+                    <i className="fas fa-user text-red-500 w-5"></i>
+                    <span>Name: <span className="text-gray-900">{user.full_name}</span></span>
+                  </div>
+                  <div className="flex items-center gap-3 text-base">
+                    <i className="fas fa-tint text-red-500 w-5"></i>
+                    <span>Blood Group: <span className="text-gray-900">{user.blood_type}</span></span>
+                  </div>
+                  <div className="flex items-center gap-3 text-base">
+                    <i className="fas fa-calendar-alt text-blue-500 w-5"></i>
+                    <span>Date of Birth: <span className="text-gray-900">{user.dob ? formatDateHyphen(user.dob) : 'Not set'}</span></span>
+                  </div>
                 </div>
 
                 <div className="w-full">
-                  <h4 className="flex items-center gap-2 font-bold text-sm text-gray-800 mb-4">
-                    <i className="fas fa-user text-red-500"></i> Profile
-                  </h4>
-                  <div className="space-y-2">
-                    <div className="profile-info-row">
-                      <i className="fas fa-user text-gray-500"></i>
-                      <span className="label">Name:</span> <span className="value">{user.full_name}</span>
-                    </div>
-                    <div className="profile-info-row">
-                      <i className="fas fa-tint text-red-600"></i>
-                      <span className="label">Blood Group:</span> <span className="value font-medium text-gray-900">{user.blood_type || '-'}</span>
-                    </div>
-                    <div className="profile-info-row">
-                      <i className="fas fa-calendar text-blue-600"></i>
-                      <span className="label">Date of Birth:</span> <span className="value font-medium text-gray-900">{user.dob ? formatDateHyphen(user.dob) : 'Not set'}</span>
-                    </div>
+                  <div className={`flex items-center justify-center gap-3 py-3 rounded-2xl text-white font-black text-base shadow-lg ${user.availability === 'Available' ? 'bg-emerald-600' : 'bg-red-600'}`}>
+                    <div className="w-2 h-2 bg-white rounded-full shadow-sm"></div>
+                    {user.availability === 'Available' ? 'Available' : 'Unavailable'}
+                    <i className="fas fa-cloud text-sm opacity-60"></i>
                   </div>
-
-                  <div className="flex justify-center">
-                    <div className={`status-pill !px-6 !py-2.5 ${user.availability === 'Available' ? '!bg-emerald-600' : '!bg-red-600'}`}>
-                      <div className="w-2 h-2 bg-white rounded-full mr-2"></div>
-                      {user.availability === 'Available' ? 'Available' : 'Not Available'}
-                      <i className="fas fa-robot text-sm ml-2 opacity-60" title="Automatically managed"></i>
-                    </div>
-                  </div>
-
-                  <div className="text-center mt-4">
-                    <div className="text-xs text-gray-600">
-                      {donations.length > 0 && timeLeft.days > 0 ? (
-                        <>
-                          <p><i className="fas fa-calendar-alt mr-1"></i> Available again on: {formatDateHyphen(data?.stats?.nextEligibleDate)}</p>
-                          <p><i className="fas fa-clock mr-1"></i> Days remaining: {Math.max(0, timeLeft.days)}</p>
-                        </>
-                      ) : (donations.length > 0 && timeLeft.days === 0) ? (
-                        <p><i className="fas fa-check-circle mr-1 text-emerald-600"></i> Ready to donate again</p>
-                      ) : (
-                        <p><i className="fas fa-info-circle mr-1"></i> No donation history</p>
-                      )}
-                      <p className="mt-1 text-gray-500 text-[10px]"><i className="fas fa-cog mr-1"></i> Status managed automatically</p>
-                    </div>
+                  <div className="text-center mt-4 space-y-2">
+                    {stats.isEligible ? (
+                      <p className="text-xs font-bold text-emerald-600">
+                        <i className="fas fa-check-circle mr-1"></i> You are eligible to donate!
+                      </p>
+                    ) : (
+                      <p className="text-xs font-bold text-red-600">
+                        <i className="fas fa-history mr-1"></i> Next eligibility: {formatDateHyphen(stats.nextEligibleDate)}
+                      </p>
+                    )}
+                    <p className="text-[11px] font-medium text-gray-400 italic">
+                      Availability status is updated automatically based on your last donation (90-day rule).
+                    </p>
                   </div>
                 </div>
               </div>
 
-              {/* Profile Management Section */}
-              <div className="modern-card p-5 flex flex-col items-center justify-center text-center">
-                {user.city && user.district && user.state ? (
-                  <div className="bg-gradient-to-r from-green-50 to-green-100 rounded-2xl p-6 border border-green-200 w-full h-full flex flex-col items-center justify-center">
-                    <div className="flex items-center justify-center mb-4">
-                      <div className="w-16 h-16 bg-gradient-to-r from-green-500 to-green-600 rounded-full flex items-center justify-center shadow-lg">
-                        <i className="fas fa-user-edit text-white text-2xl"></i>
+              {/* Profile Card Section */}
+              <div className="modern-card !p-0">
+                <div className="text-center h-full">
+                  {data.user.state && data.user.district && data.user.city ? (
+                    /* Edit Profile Card */
+                    <div className="bg-gradient-to-r from-green-50 to-green-100 p-10 border border-green-200 h-full flex flex-col justify-center min-h-[350px]">
+                      <div className="flex items-center justify-center mb-6">
+                        <div className="w-20 h-20 bg-gradient-to-r from-green-500 to-green-600 rounded-full flex items-center justify-center shadow-lg">
+                          <i className="fas fa-user-edit text-white text-3xl pl-1"></i>
+                        </div>
                       </div>
-                    </div>
-                    <h3 className="text-lg font-bold text-gray-800 mb-2">Profile Complete!</h3>
-                    <div className="text-sm text-gray-600 mb-4 space-y-1">
-                      <p><i className="fas fa-map-marker-alt text-green-600 mr-2"></i> {user.city}, {user.district}</p>
-                      <p><i className="fas fa-flag text-green-600 mr-2"></i> {user.state}, {user.country}</p>
-                    </div>
-                    <button onClick={() => setShowCompleteProfile(true)} className="bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white px-8 py-3 rounded-xl font-semibold transition-all duration-300 shadow-lg hover:shadow-xl transform hover:-translate-y-1 flex items-center justify-center gap-3">
-                      <i className="fas fa-edit text-lg"></i>
-                      <span>Edit Your Profile</span>
-                      <i className="fas fa-arrow-right text-sm"></i>
-                    </button>
-                  </div>
-                ) : (
-                  <div className="bg-gradient-to-r from-red-50 to-red-100 rounded-2xl p-6 border border-red-200 w-full h-full flex flex-col items-center justify-center">
-                    <div className="flex items-center justify-center mb-4">
-                      <div className="w-16 h-16 bg-gradient-to-r from-red-500 to-red-600 rounded-full flex items-center justify-center shadow-lg">
-                        <i className="fas fa-user-plus text-white text-2xl"></i>
+                      <h3 className="text-2xl font-black text-gray-800 mb-3 tracking-tight">Profile Complete!</h3>
+                      <div className="text-base text-gray-600 mb-8 space-y-2 font-medium">
+                        <p><i className="fas fa-map-marker-alt text-green-600 mr-2"></i> {data.user.city}, {data.user.district}</p>
+                        <p><i className="fas fa-flag text-green-600 mr-2"></i> {data.user.state}, India</p>
                       </div>
+                      <button
+                        onClick={() => setShowEditProfile(true)}
+                        className="bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white px-6 py-3 rounded-xl font-bold text-base transition-all duration-300 shadow-lg hover:shadow-green-200 transform hover:-translate-y-1 flex items-center justify-center gap-2 w-auto mx-auto"
+                      >
+                        <i className="fas fa-edit text-lg"></i>
+                        <span>Edit Your Profile</span>
+                        <i className="fas fa-arrow-right text-sm"></i>
+                      </button>
                     </div>
-                    <h3 className="text-lg font-bold text-gray-800 mb-2">Complete Your Profile</h3>
-                    <p className="text-xs font-bold text-gray-500 leading-relaxed mb-6">
-                      Add your location details to help us serve you better
-                    </p>
-                    <button onClick={() => setShowCompleteProfile(true)} className="btn-vibrant-red">
-                      <i className="fas fa-map-marker-alt text-lg"></i>
-                      <span>Complete Profile</span>
-                      <i className="fas fa-arrow-right text-sm"></i>
-                    </button>
-                  </div>
-                )}
+                  ) : (
+                    /* Complete Profile Card */
+                    <div className="bg-gradient-to-r from-red-50 to-red-100 p-10 border border-red-200 h-full flex flex-col justify-center min-h-[350px]">
+                      <div className="flex items-center justify-center mb-6">
+                        <div className="w-20 h-20 bg-gradient-to-r from-red-500 to-red-600 rounded-full flex items-center justify-center shadow-lg">
+                          <i className="fas fa-user-plus text-white text-3xl"></i>
+                        </div>
+                      </div>
+                      <h3 className="text-2xl font-black text-gray-800 mb-3 tracking-tight">Complete Your Profile</h3>
+                      <p className="text-gray-600 text-base mb-8 leading-relaxed font-medium">Add your location details to help us serve you better</p>
+                      <button
+                        onClick={() => setShowCompleteProfile(true)}
+                        className="bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white px-8 py-5 rounded-2xl font-black text-lg transition-all duration-300 shadow-xl hover:shadow-red-200 transform hover:-translate-y-1 flex items-center justify-center gap-3 w-full"
+                      >
+                        <i className="fas fa-map-marker-alt text-xl"></i>
+                        <span>Complete Profile</span>
+                        <i className="fas fa-arrow-right text-base"></i>
+                      </button>
+                    </div>
+                  )}
+                </div>
               </div>
 
               {/* Eligibility Countdown Card */}
-              <div className="modern-card p-5 fade-in">
-                <h2 className="font-semibold text-gray-800 mb-4 flex items-center gap-2">
-                  <i className="fas fa-hourglass-half text-red-600 text-xl"></i>
-                  Eligibility Countdown
-                </h2>
-                <div id="eligibility-message" className="text-gray-700 text-lg font-medium">
-                  {donations.length > 0 ? (
-                    timeLeft.days > 0 ? `Next eligible donation in ${timeLeft.days} day${timeLeft.days > 1 ? 's' : ''}.` : 'You are eligible to donate now!'
-                  ) : (
-                    'No donation history available. You are eligible to donate.'
-                  )}
-                </div>
-                {donations.length > 0 && timeLeft.days > 0 && (
-                  <div id="countdown-display" className="grid grid-cols-2 gap-2 mt-4">
-                    <div className="text-center">
-                      <div className="bg-red-100 text-red-800 rounded-lg p-2">
-                        <div className="text-xl font-bold">{timeLeft.days}</div>
-                        <div className="text-xs font-semibold">Days</div>
-                      </div>
+              <div className="modern-card p-6 flex flex-col">
+                <h3 className="text-xl font-bold text-gray-800 mb-6 flex items-center gap-2">
+                  <i className="fas fa-hourglass-half text-red-600"></i> Eligibility Countdown
+                </h3>
+
+                {stats.isEligible ? (
+                  <div className="flex-1 flex flex-col items-center justify-center text-center py-8">
+                    <div className="w-16 h-16 bg-emerald-50 text-emerald-600 rounded-full flex items-center justify-center text-2xl mb-4 shadow-inner">
+                      <i className="fas fa-check-circle"></i>
                     </div>
-                    <div className="text-center">
-                      <div className="bg-red-100 text-red-800 rounded-lg p-2">
-                        <div className="text-xl font-bold">{timeLeft.hours}</div>
-                        <div className="text-xs font-semibold">Hours</div>
-                      </div>
+                    <p className="text-base font-bold text-gray-700 leading-snug">
+                      {donations.length === 0
+                        ? "No donation history available. You are eligible to donate."
+                        : "Great news! You are eligible to donate again."
+                      }
+                    </p>
+                    <button onClick={() => window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' })} className="mt-4 text-[10px] font-black text-emerald-600 uppercase tracking-widest hover:underline cursor-pointer">
+                      Record a new donation below
+                    </button>
+                  </div>
+                ) : (
+                  <div className="flex-1 flex flex-col justify-center">
+                    <div className="bg-red-50 border-2 border-red-100 rounded-3xl p-5 text-center mb-8">
+                      <p className="text-red-800 font-black text-xl">Next eligible donation in {timeLeft.days} days.</p>
                     </div>
-                    <div className="text-center">
-                      <div className="bg-red-100 text-red-800 rounded-lg p-2">
-                        <div className="text-xl font-bold">{timeLeft.minutes}</div>
-                        <div className="text-xs font-semibold">Minutes</div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="bg-red-100/50 rounded-3xl p-5 text-center border-b-4 border-red-200">
+                        <div className="text-4xl font-black text-red-700">{timeLeft.days}</div>
+                        <div className="text-xs font-black text-red-400 uppercase tracking-widest mt-1">Days</div>
                       </div>
-                    </div>
-                    <div className="text-center">
-                      <div className="bg-red-100 text-red-800 rounded-lg p-2">
-                        <div className="text-xl font-bold">{timeLeft.seconds}</div>
-                        <div className="text-xs font-semibold">Seconds</div>
+                      <div className="bg-red-100/50 rounded-3xl p-5 text-center border-b-4 border-red-200">
+                        <div className="text-4xl font-black text-red-700">{timeLeft.hours}</div>
+                        <div className="text-xs font-black text-red-400 uppercase tracking-widest mt-1">Hours</div>
+                      </div>
+                      <div className="bg-red-100/50 rounded-3xl p-5 text-center border-b-4 border-red-200">
+                        <div className="text-4xl font-black text-red-700">{timeLeft.minutes}</div>
+                        <div className="text-xs font-black text-red-400 uppercase tracking-widest mt-1">Mins</div>
+                      </div>
+                      <div className="bg-red-100/50 rounded-3xl p-5 text-center border-b-4 border-red-200">
+                        <div className="text-4xl font-black text-red-700">{timeLeft.seconds}</div>
+                        <div className="text-xs font-black text-red-400 uppercase tracking-widest mt-1">Secs</div>
                       </div>
                     </div>
                   </div>
@@ -510,177 +556,226 @@ const Dashboard = () => {
             {/* Donation & Reminders Integrated Section */}
             <div className="grid md:grid-cols-2 gap-6 mt-6">
               {/* Donation History Card */}
-              <div className="modern-card p-6 flex flex-col h-full">
-                <div className="flex items-center justify-between mb-6">
-                  <div className="flex items-center gap-2">
-                    <i className="fas fa-tint text-red-600 text-xl"></i>
-                    <h2 className="font-bold text-gray-800">Donation History</h2>
-                  </div>
-                  <span className="bg-red-50 text-red-600 text-xs font-bold px-3 py-1 rounded-full">{donations.length} donations</span>
-                </div>
+              <div className="modern-card p-5">
+                <h2 className="font-semibold text-gray-800 mb-4 flex items-center gap-2">
+                  <i className="fas fa-tint text-red-600 text-xl"></i>
+                  Donation History
+                  <span className="bg-red-100 text-red-800 text-xs font-medium px-2.5 py-0.5 rounded-full">{donations.length} donations</span>
+                </h2>
 
-                <div className="flex-1 min-h-[150px] mb-6">
-                  {donations.length === 0 ? (
-                    <div className="h-full flex flex-col items-center justify-center text-center opacity-40">
-                      <i className="fas fa-heart text-4xl mb-3"></i>
-                      <p className="text-sm font-medium">No donations recorded yet.</p>
-                      <p className="text-[10px]">Your first donation will appear here</p>
-                    </div>
-                  ) : (
-                    <div className="space-y-3 max-h-48 overflow-y-auto pr-2 custom-scrollbar">
-                      {donations.map((h) => (
-                        <div key={h.id} className="bg-gray-50 border border-gray-100 rounded-xl p-3 hover:bg-white hover:shadow-sm transition-all group">
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-3">
-                              <div className="w-8 h-8 bg-red-50 text-red-600 rounded-lg flex items-center justify-center flex-shrink-0 group-hover:bg-red-600 group-hover:text-white transition-colors">
-                                <i className="fas fa-tint text-xs"></i>
-                              </div>
-                              <div>
-                                <p className="font-bold text-gray-800 text-xs">{formatDateHyphen(h.date)}</p>
-                                <p className="text-[10px] text-gray-500 line-clamp-1">{h.notes || 'No notes added'}</p>
-                              </div>
+                {donations.length === 0 ? (
+                  <div className="text-center py-8">
+                    <i className="fas fa-heart text-gray-300 text-4xl mb-3"></i>
+                    <p className="text-gray-500 font-medium">No donations recorded yet.</p>
+                    <p className="text-xs text-gray-400 mt-1">Your first donation will appear here</p>
+                  </div>
+                ) : (
+                  <div className="space-y-3 max-h-64 overflow-y-auto pr-2 custom-scrollbar">
+                    {donations.map((h) => (
+                      <div key={h.id} className="bg-red-50 border border-red-200 rounded-lg p-3 hover:bg-red-100 transition-colors">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-3">
+                            <div className="w-8 h-8 bg-red-600 rounded-full flex items-center justify-center mr-3 flex-shrink-0">
+                              <i className="fas fa-tint text-white text-xs"></i>
                             </div>
-                            <div className="flex items-center gap-3">
-                              <span className="text-xs font-black text-gray-800">{h.units} <span className="text-[10px] text-gray-400 font-normal ml-0.5">units</span></span>
-                              <button onClick={() => handleDelete('donation', h.id)} className="w-6 h-6 rounded-md flex items-center justify-center text-gray-300 hover:text-red-600 hover:bg-red-50 transition-all opacity-0 group-hover:opacity-100">
-                                <i className="fas fa-trash-alt text-[10px]"></i>
-                              </button>
+                            <div>
+                              <p className="font-medium text-gray-900">{formatDateHyphen(h.date)}</p>
+                              <p className="text-sm text-gray-600">{h.notes || 'No notes'}</p>
+                            </div>
+                          </div>
+                          <div className="text-right flex flex-col items-end gap-1">
+                            <span className="bg-green-100 text-green-800 text-xs font-medium px-2 py-1 rounded-full">
+                              {h.units} {h.units > 1 ? 'units' : 'unit'}
+                            </span>
+                            <div className="flex gap-1">
+                              <button onClick={() => setEditingDonation(h)} className="text-blue-600 hover:text-blue-800 text-sm p-1"><i className="fas fa-edit"></i></button>
+                              <button onClick={() => handleDelete('donation', h.id)} className="text-red-600 hover:text-red-800 text-sm p-1"><i className="fas fa-trash"></i></button>
                             </div>
                           </div>
                         </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-
-                {/* Record New Donation Form Area */}
-                <div className="form-area-pink relative overflow-hidden">
-                  <div className="form-title-badge">
-                    <i className="fas fa-plus bg-red-500 shadow-red-200"></i>
-                    <h3 className="text-base font-black text-gray-800 flex items-center gap-2">
-                      Record New Donation <span className="w-1.5 h-1.5 bg-red-400 rounded-full animate-pulse"></span>
-                    </h3>
+                      </div>
+                    ))}
                   </div>
+                )}
 
-                  <form onSubmit={handleAddDonation} className="space-y-4">
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="input-group-refined">
-                        <label className="text-[11px] font-bold text-gray-600 flex items-center gap-1.5">
-                          <i className="fas fa-tint text-red-500 text-[10px]"></i> Units Donated *
-                        </label>
-                        <div className="input-wrapper-inner">
-                          <i className="fas fa-tint text-red-500 input-icon-inner"></i>
-                          <input className="refined-input-with-icon" type="number" value={units} onChange={e => setUnits(e.target.value)} step="0.01" min="0.1" max="10" placeholder="1" required />
-                          <span className="absolute right-3 text-[10px] text-gray-400 font-medium">units</span>
+                <div className="mt-6 pt-6 border-t-2 border-gray-100">
+                  <div className="bg-gradient-to-r from-red-50 to-rose-50 rounded-2xl p-6 border border-red-100 relative overflow-hidden group">
+                    <div className="absolute top-0 right-0 w-20 h-20 bg-red-200 rounded-full opacity-20 translate-x-10 -translate-y-10"></div>
+
+                    <div className="relative z-10">
+                      <h3 className="text-xl font-bold text-gray-800 mb-6 flex items-center gap-3">
+                        <div className="w-10 h-10 bg-gradient-to-r from-red-500 to-rose-600 rounded-xl flex items-center justify-center text-white shadow-lg">
+                          <i className="fas fa-plus-circle"></i>
                         </div>
-                      </div>
-                      <div className="input-group-refined">
-                        <label className="text-[11px] font-bold text-gray-600 flex items-center gap-1.5">
-                          <i className="fas fa-calendar-alt text-red-500 text-[10px]"></i> Donation Date *
-                        </label>
-                        <div className="input-wrapper-inner">
-                          <i className="fas fa-calendar-alt text-red-500 input-icon-inner"></i>
-                          <input className="refined-input-with-icon" type="date" value={donationDate} onChange={e => setDonationDate(e.target.value)} required />
+                        <span>Record New Donation</span>
+                        <div className="w-2 h-2 bg-red-400 rounded-full animate-bounce"></div>
+                      </h3>
+
+                      <form onSubmit={handleAddDonation} className="space-y-6">
+                        <div className="grid grid-cols-2 gap-6">
+                          <div>
+                            <label className="block text-base font-semibold text-gray-700 mb-3 flex items-center gap-2">
+                              <i className="fas fa-tint text-red-500"></i>
+                              Units Donated *
+                            </label>
+                            <div className="relative">
+                              <input
+                                className="w-full bg-white border-2 border-gray-200 rounded-xl px-12 py-4 h-[60px] text-base font-medium focus:border-red-400 focus:ring-0 transition-all outline-none"
+                                type="number"
+                                value={newDonation.units}
+                                onChange={(e) => setNewDonation({ ...newDonation, units: e.target.value })}
+                                step="0.1"
+                                min="0.1"
+                                required
+                              />
+                              <i className="fas fa-tint absolute left-4 top-1/2 -translate-y-1/2 text-red-500 text-lg"></i>
+                              <span className="absolute right-4 top-1/2 -translate-y-1/2 text-sm text-gray-500 font-medium">units</span>
+                            </div>
+                          </div>
+                          <div>
+                            <label className="block text-base font-semibold text-gray-700 mb-3 flex items-center gap-2">
+                              <i className="fas fa-calendar text-red-500"></i>
+                              Donation Date *
+                            </label>
+                            <div className="relative">
+                              <input
+                                className="w-full bg-white border-2 border-gray-200 rounded-xl px-12 py-4 h-[60px] text-base font-medium focus:border-red-400 focus:ring-0 transition-all outline-none"
+                                type="date"
+                                min={new Date().toISOString().split('T')[0]}
+                                value={newDonation.date}
+                                onChange={(e) => setNewDonation({ ...newDonation, date: e.target.value })}
+                                required
+                              />
+                              <i className="fas fa-calendar absolute left-4 top-1/2 -translate-y-1/2 text-red-500 text-lg"></i>
+                            </div>
+                          </div>
                         </div>
-                      </div>
-                    </div>
 
-                    <div className="input-group-refined">
-                      <label className="text-[11px] font-bold text-gray-600 flex items-center gap-1.5">
-                        <i className="fas fa-sticky-note text-red-500 text-[10px]"></i> Notes (Optional)
-                      </label>
-                      <div className="input-wrapper-inner">
-                        <i className="fas fa-comment-alt text-red-500 input-icon-inner"></i>
-                        <input className="refined-input-with-icon" value={notes} onChange={e => setNotes(e.target.value)} placeholder="e.g., Emergency donation, Regular checkup" />
-                      </div>
-                    </div>
+                        <div className="mt-6">
+                          <label className="block text-base font-semibold text-gray-700 mb-3 flex items-center gap-2">
+                            <i className="fas fa-comment text-red-500"></i>
+                            Notes (Optional)
+                          </label>
+                          <div className="relative">
+                            <input
+                              className="w-full bg-white border-2 border-gray-200 rounded-xl px-12 py-4 h-[60px] text-base font-medium focus:border-red-400 focus:ring-0 transition-all outline-none"
+                              placeholder="e.g., Emergency donation, Regular checkup"
+                              value={newDonation.notes}
+                              onChange={(e) => setNewDonation({ ...newDonation, notes: e.target.value })}
+                            />
+                            <i className="fas fa-comment absolute left-4 top-1/2 -translate-y-1/2 text-red-500 text-lg"></i>
+                          </div>
+                        </div>
 
-                    <button type="submit" className="btn-vibrant-red w-full flex items-center justify-center gap-3 py-4 shadow-lg shadow-red-100 hover:shadow-red-200">
-                      <i className="fas fa-heart text-xl"></i>
-                      <span className="text-sm font-black">Record Donation</span>
-                      <i className="fas fa-arrow-right text-sm"></i>
-                    </button>
-                  </form>
+                        <button type="submit" className="w-full bg-gradient-to-r from-red-500 via-red-600 to-rose-600 hover:from-red-600 hover:via-red-700 hover:to-rose-700 text-white py-4 rounded-2xl font-bold text-lg transition-all shadow-xl flex items-center justify-center gap-3 mt-4">
+                          <i className="fas fa-heart text-xl animate-pulse"></i>
+                          <span>Record Donation</span>
+                          <i className="fas fa-arrow-right text-lg"></i>
+                        </button>
+                      </form>
+                    </div>
+                  </div>
                 </div>
               </div>
 
               {/* Donation Reminders Card */}
-              <div className="modern-card p-6 flex flex-col h-full">
-                <div className="flex items-center justify-between mb-6">
-                  <div className="flex items-center gap-2">
-                    <i className="fas fa-bell text-yellow-500 text-xl"></i>
-                    <h2 className="font-bold text-gray-800">Donation Reminders</h2>
-                  </div>
-                  <span className="bg-yellow-50 text-yellow-600 text-xs font-bold px-3 py-1 rounded-full">{reminders.length} active</span>
-                </div>
+              <div className="modern-card p-5">
+                <h2 className="font-semibold text-gray-800 mb-4 flex items-center gap-2">
+                  <i className="fas fa-bell text-yellow-600 text-xl"></i>
+                  Donation Reminders
+                  <span className="bg-yellow-100 text-yellow-800 text-xs font-medium px-2.5 py-0.5 rounded-full">{reminders.length} active</span>
+                </h2>
 
-                <div className="flex-1 min-h-[150px] mb-6">
-                  {reminders.length === 0 ? (
-                    <div className="h-full flex flex-col items-center justify-center text-center opacity-40">
-                      <i className="fas fa-calendar-alt text-4xl mb-3"></i>
-                      <p className="text-sm font-medium">No reminders set.</p>
-                      <p className="text-[10px]">Set reminders to stay on track</p>
-                    </div>
-                  ) : (
-                    <div className="space-y-3 max-h-48 overflow-y-auto pr-2 custom-scrollbar">
-                      {reminders.map((r) => (
-                        <div key={r.id} className="bg-gray-50 border border-gray-100 rounded-xl p-3 hover:bg-white hover:shadow-sm transition-all group">
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-3">
-                              <div className="w-8 h-8 bg-blue-50 text-blue-600 rounded-lg flex items-center justify-center flex-shrink-0 group-hover:bg-blue-600 group-hover:text-white transition-colors">
-                                <i className="fas fa-calendar-check text-xs"></i>
-                              </div>
-                              <div>
-                                <p className="font-bold text-gray-800 text-xs">{r.message}</p>
-                                <p className="text-[10px] text-gray-500 font-medium">{formatDateHyphen(r.reminder_date)}</p>
-                              </div>
+                {reminders.length === 0 ? (
+                  <div className="text-center py-8">
+                    <i className="fas fa-calendar-alt text-gray-300 text-4xl mb-3"></i>
+                    <p className="text-gray-500 font-medium">No reminders set.</p>
+                    <p className="text-xs text-gray-400 mt-1">Set reminders to stay on track</p>
+                  </div>
+                ) : (
+                  <div className="space-y-3 max-h-64 overflow-y-auto pr-2 custom-scrollbar">
+                    {reminders.map((r) => (
+                      <div key={r.id} className="bg-blue-50 border border-blue-200 rounded-lg p-3 hover:bg-blue-100 transition-colors">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-3">
+                            <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center">
+                              <i className="fas fa-bell text-white text-xs"></i>
                             </div>
-                            <button onClick={() => handleDelete('reminder', r.id)} className="w-6 h-6 rounded-md flex items-center justify-center text-gray-300 hover:text-red-600 hover:bg-red-50 transition-all opacity-0 group-hover:opacity-100">
-                              <i className="fas fa-trash-alt text-[10px]"></i>
-                            </button>
+                            <div>
+                              <p className="font-medium text-gray-900">{r.message}</p>
+                              <p className="text-sm text-gray-600">{formatDateHyphen(r.reminder_date)}</p>
+                            </div>
+                          </div>
+                          <div className="text-right flex flex-col items-end gap-1">
+                            <span className="bg-blue-100 text-blue-800 text-xs font-medium px-2 py-1 rounded-full uppercase">Upcoming</span>
+                            <div className="flex gap-1">
+                              <button onClick={() => setEditingReminder(r)} className="text-blue-600 hover:text-blue-800 text-sm p-1"><i className="fas fa-edit"></i></button>
+                              <button onClick={() => handleDelete('reminder', r.id)} className="text-red-600 hover:text-red-800 text-sm p-1"><i className="fas fa-trash"></i></button>
+                            </div>
                           </div>
                         </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-
-                {/* Set New Reminder Form Area */}
-                <div className="form-area-blue relative overflow-hidden">
-                  <div className="form-title-badge">
-                    <i className="fas fa-plus bg-blue-500 shadow-blue-200"></i>
-                    <h3 className="text-base font-black text-gray-800 flex items-center gap-2">
-                      Set New Reminder <span className="w-1.5 h-1.5 bg-blue-400 rounded-full animate-pulse"></span>
-                    </h3>
+                      </div>
+                    ))}
                   </div>
+                )}
 
-                  <form onSubmit={handleAddReminder} className="space-y-4">
-                    <div className="input-group-refined">
-                      <label className="text-[11px] font-bold text-gray-600 flex items-center gap-1.5">
-                        <i className="fas fa-calendar-alt text-blue-500 text-[10px]"></i> Reminder Date *
-                      </label>
-                      <div className="input-wrapper-inner">
-                        <i className="fas fa-calendar-alt text-blue-500 input-icon-inner"></i>
-                        <input className="refined-input-with-icon" type="date" value={reminderDate} onChange={e => setReminderDate(e.target.value)} required />
-                      </div>
+                <div className="mt-6 pt-6 border-t-2 border-gray-100">
+                  <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-2xl p-6 border border-blue-100 relative overflow-hidden group">
+                    <div className="absolute top-0 left-0 w-20 h-20 bg-blue-200 rounded-full opacity-20 -translate-x-10 -translate-y-10"></div>
+
+                    <div className="relative z-10">
+                      <h3 className="text-xl font-bold text-gray-800 mb-6 flex items-center gap-3">
+                        <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center text-white shadow-lg">
+                          <i className="fas fa-plus-circle"></i>
+                        </div>
+                        <span>Set New Reminder</span>
+                        <div className="w-2 h-2 bg-blue-400 rounded-full animate-pulse"></div>
+                      </h3>
+
+                      <form onSubmit={handleAddReminder} className="space-y-6">
+                        <div>
+                          <label className="block text-base font-semibold text-gray-700 mb-3 flex items-center gap-2">
+                            <i className="fas fa-calendar-plus text-blue-500"></i>
+                            Reminder Date *
+                          </label>
+                          <div className="relative">
+                            <input
+                              className="w-full bg-white border-2 border-gray-200 rounded-xl px-12 py-4 h-[60px] text-base font-medium focus:border-blue-400 focus:ring-0 transition-all outline-none"
+                              type="date"
+                              min={new Date().toISOString().split('T')[0]}
+                              value={newReminder.date}
+                              onChange={(e) => setNewReminder({ ...newReminder, date: e.target.value })}
+                              required
+                            />
+                            <i className="fas fa-calendar-plus absolute left-4 top-1/2 -translate-y-1/2 text-blue-500 text-lg"></i>
+                          </div>
+                        </div>
+
+                        <div className="mt-6">
+                          <label className="block text-base font-semibold text-gray-700 mb-3 flex items-center gap-2">
+                            <i className="fas fa-comment-dots text-blue-500"></i>
+                            Reminder Message *
+                          </label>
+                          <div className="relative">
+                            <input
+                              className="w-full bg-white border-2 border-gray-200 rounded-xl px-12 py-4 h-[60px] text-base font-medium focus:border-blue-400 focus:ring-0 transition-all outline-none"
+                              placeholder="e.g., Time for your next donation"
+                              value={newReminder.text}
+                              onChange={(e) => setNewReminder({ ...newReminder, text: e.target.value })}
+                              required
+                            />
+                            <i className="fas fa-comment-dots absolute left-4 top-1/2 -translate-y-1/2 text-blue-500 text-lg"></i>
+                          </div>
+                        </div>
+
+                        <button type="submit" className="w-full bg-gradient-to-r from-blue-500 via-blue-600 to-indigo-600 hover:from-blue-600 hover:via-blue-700 hover:to-indigo-700 text-white py-4 rounded-2xl font-bold text-lg transition-all shadow-xl flex items-center justify-center gap-3 mt-4">
+                          <i className="fas fa-bell text-xl animate-pulse"></i>
+                          <span>Set Reminder</span>
+                          <i className="fas fa-arrow-right text-lg"></i>
+                        </button>
+                      </form>
                     </div>
-
-                    <div className="input-group-refined">
-                      <label className="text-[11px] font-bold text-gray-600 flex items-center gap-1.5">
-                        <i className="fas fa-comment-dots text-blue-500 text-[10px]"></i> Reminder Message *
-                      </label>
-                      <div className="input-wrapper-inner">
-                        <i className="fas fa-comment-dots text-blue-500 input-icon-inner"></i>
-                        <input className="refined-input-with-icon" value={reminderMsg} onChange={e => setReminderMsg(e.target.value)} placeholder="e.g., Time for your next donation" required />
-                      </div>
-                    </div>
-
-                    <button type="submit" className="btn-vibrant-blue w-full flex items-center justify-center gap-3 py-4 shadow-lg shadow-blue-100 hover:shadow-blue-200 mt-6">
-                      <i className="fas fa-bell text-xl"></i>
-                      <span className="text-sm font-black">Set Reminder</span>
-                      <i className="fas fa-arrow-right text-sm"></i>
-                    </button>
-                  </form>
+                  </div>
                 </div>
               </div>
             </div>
@@ -688,36 +783,94 @@ const Dashboard = () => {
         </div>
       </div>
 
-      {showScrollTop && (
-        <button
-          onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
-          className="btn-scroll-top fade-in"
-          title="Scroll to Top"
-        >
-          <i className="fas fa-arrow-up text-xl"></i>
-        </button>
-      )}
-
       {showCompleteProfile && <CompleteProfileModal onClose={() => setShowCompleteProfile(false)} onSuccess={fetchDashboardData} user={user} />}
+      {showEditProfile && <EditProfileModal isOpen={showEditProfile} onClose={() => setShowEditProfile(false)} user={user} onUpdate={fetchDashboardData} />}
       {activeInfo && <InfoModal isOpen={!!activeInfo} onClose={() => setActiveInfo(null)} title={activeInfo.title} content={activeInfo.content} />}
+      <BackToTop />
 
-      {showProfilePicModal && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[1000] flex items-center justify-center p-6 fade-in">
-          <div className="bg-white rounded-[40px] p-12 w-full max-w-md shadow-2xl relative border-t-8 border-red-500">
-            <button onClick={() => setShowProfilePicModal(false)} className="absolute top-8 right-8 text-gray-400 hover:text-gray-800 text-3xl font-bold">&times;</button>
-            <h3 className="text-3xl font-black text-gray-800 mb-8 tracking-tight">Update Picture</h3>
-            <div className="flex flex-col items-center gap-8">
-              <div className="w-52 h-52 bg-gray-50 rounded-full overflow-hidden border-8 border-white shadow-2xl relative group">
-                {previewUrl ? <img src={previewUrl} className="w-full h-full object-cover" /> : user.profile_picture ? <img src={getProfilePicUrl(user.profile_picture)} className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center text-6xl text-gray-200"><i className="fas fa-user"></i></div>}
+      {/* Modals */}
+      {editingDonation && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[1000] flex items-center justify-center p-6 animate-in fade-in">
+          <div className="bg-white rounded-[40px] p-12 w-full max-w-lg shadow-2xl relative border-t-8 border-red-500">
+            <button onClick={() => setEditingDonation(null)} className="absolute top-8 right-8 text-gray-400 hover:text-gray-800 text-4xl font-bold">&times;</button>
+            <h3 className="text-4xl font-black text-gray-800 mb-8 tracking-tight">Edit Donation</h3>
+            <form onSubmit={handleEditDonation} className="space-y-6">
+              <div className="modern-input-group">
+                <label>Donation Date</label>
+                <input
+                  type="date"
+                  min={new Date().toISOString().split('T')[0]}
+                  value={editingDonation.date ? editingDonation.date.split('T')[0] : ''}
+                  onChange={e => setEditingDonation({ ...editingDonation, date: e.target.value })}
+                  className="modern-input-field"
+                  required
+                />
               </div>
-              <div className="w-full space-y-4">
-                <input type="file" onChange={(e) => { const f = e.target.files[0]; if (f) { setSelectedFile(f); setPreviewUrl(URL.createObjectURL(f)); } }} id="pfile" className="hidden" />
-                <label htmlFor="pfile" className="w-full py-4 bg-gray-50 text-gray-600 rounded-2xl font-black text-sm flex items-center justify-center cursor-pointer hover:bg-gray-100 transition-all">Change Photo</label>
-                <button onClick={handleProfilePicUpload} disabled={!selectedFile} className={`w-full py-4 rounded-2xl font-black text-sm transition-all shadow-xl ${selectedFile ? 'bg-red-500 text-white' : 'bg-gray-200 text-gray-400'}`}>Upload Now</button>
+              <div className="modern-input-group">
+                <label>Units Donated</label>
+                <input
+                  type="number"
+                  step="0.01"
+                  value={editingDonation.units}
+                  onChange={e => setEditingDonation({ ...editingDonation, units: e.target.value })}
+                  className="modern-input-field"
+                  required
+                />
               </div>
-            </div>
+              <div className="modern-input-group">
+                <label>Notes</label>
+                <textarea
+                  value={editingDonation.notes || ''}
+                  onChange={e => setEditingDonation({ ...editingDonation, notes: e.target.value })}
+                  className="modern-input-field h-24 resize-none"
+                />
+              </div>
+              <button type="submit" className="w-full py-4 bg-red-600 text-white rounded-2xl font-black text-lg shadow-xl hover:bg-red-700 transition-all">Save Changes</button>
+            </form>
           </div>
         </div>
+      )}
+
+      {editingReminder && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[1000] flex items-center justify-center p-6 animate-in fade-in">
+          <div className="bg-white rounded-[40px] p-12 w-full max-w-lg shadow-2xl relative border-t-8 border-blue-500">
+            <button onClick={() => setEditingReminder(null)} className="absolute top-8 right-8 text-gray-400 hover:text-gray-800 text-4xl font-bold">&times;</button>
+            <h3 className="text-4xl font-black text-gray-800 mb-8 tracking-tight">Edit Reminder</h3>
+            <form onSubmit={handleEditReminder} className="space-y-6">
+              <div className="modern-input-group">
+                <label>Reminder Date</label>
+                <input
+                  type="date"
+                  min={new Date().toISOString().split('T')[0]}
+                  value={editingReminder.reminder_date ? editingReminder.reminder_date.split('T')[0] : ''}
+                  onChange={e => setEditingReminder({ ...editingReminder, reminder_date: e.target.value })}
+                  className="modern-input-field"
+                  required
+                />
+              </div>
+              <div className="modern-input-group">
+                <label>Reminder Message</label>
+                <input
+                  type="text"
+                  value={editingReminder.message}
+                  onChange={e => setEditingReminder({ ...editingReminder, message: e.target.value })}
+                  className="modern-input-field"
+                  required
+                />
+              </div>
+              <button type="submit" className="w-full py-4 bg-blue-600 text-white rounded-2xl font-black text-lg shadow-xl hover:bg-blue-700 transition-all">Save Changes</button>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {showProfilePicModal && (
+        <ProfilePicModal
+          isOpen={showProfilePicModal}
+          onClose={() => setShowProfilePicModal(false)}
+          user={user}
+          onUpdate={fetchDashboardData}
+        />
       )}
     </div>
   );

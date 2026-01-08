@@ -40,11 +40,11 @@
   background-color: var(--modal-bg);
   border-radius: var(--radius-xl);
   box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
-  width: min(650px, 95vw);
+  width: min(750px, 95vw);
   max-height: 90vh;
   overflow-y: auto;
   /* Prevent horizontal scrollbars if shadow expands? */
-  padding: 40px;
+  padding: 60px;
   margin: 0;
   box-sizing: border-box;
   text-align: center;
@@ -108,7 +108,7 @@
 
 .modal-header h2 {
   margin: 0;
-  font-size: 26px;
+  font-size: 34px;
   color: #111827;
   font-weight: 800;
   letter-spacing: -0.02em;
@@ -117,7 +117,7 @@
 .modal-header p {
   margin: 0;
   color: #6b7280;
-  font-size: 15px;
+  font-size: 18px;
   font-weight: 500;
 }
 
@@ -177,12 +177,12 @@
 }
 
 .field-label {
-  font-weight: 700;
+  font-weight: 800;
   color: #374151;
-  font-size: 14px;
+  font-size: 18px;
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
 }
 
 .field-label .required {
@@ -223,11 +223,11 @@
 /* Inputs */
 select.blood-group-select {
   width: 100%;
-  height: 52px;
-  padding: 0 16px;
+  height: 64px;
+  padding: 0 20px;
   border: 1px solid #e5e7eb;
   border-radius: var(--radius-lg);
-  font-size: 15px;
+  font-size: 18px;
   background-color: #fff;
   color: #1f2937;
   cursor: pointer;
@@ -249,11 +249,11 @@ select.blood-group-select:focus,
 
 .dob-input {
   width: 100%;
-  height: 52px;
-  padding: 0 16px;
+  height: 64px;
+  padding: 0 20px;
   border: 1px solid #e5e7eb;
   border-radius: var(--radius-lg);
-  font-size: 15px;
+  font-size: 18px;
   background-color: #fff;
   color: #1f2937;
   cursor: pointer;
@@ -275,22 +275,22 @@ select.blood-group-select:focus,
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 12px;
-  padding: 18px 10px;
+  gap: 16px;
+  padding: 24px 12px;
   border: 1px solid #e5e7eb;
   border-radius: var(--radius-lg);
   background: #fff;
   cursor: pointer;
   transition: all 0.2s ease;
   color: #4b5563;
-  font-weight: 600;
-  font-size: 14px;
+  font-weight: 700;
+  font-size: 18px;
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
 }
 
 .icon-wrapper {
-  width: 48px;
-  height: 48px;
+  width: 60px;
+  height: 60px;
   border-radius: 50%;
   background: #f3f4f6;
   display: flex;
@@ -398,8 +398,8 @@ select.blood-group-select:focus,
 
 .country-code {
   background-color: #f9fafb;
-  height: 52px;
-  padding: 0 16px;
+  height: 64px;
+  padding: 0 20px;
   font-weight: 700;
   color: #374151;
   border-right: 1px solid #e5e7eb;
@@ -412,9 +412,9 @@ select.blood-group-select:focus,
 .phone-input {
   flex: 1;
   border: none;
-  height: 52px;
-  padding: 0 16px;
-  font-size: 16px;
+  height: 64px;
+  padding: 0 20px;
+  font-size: 18px;
   color: #1f2937;
   width: 100%;
   font-family: inherit;
@@ -456,9 +456,9 @@ select.blood-group-select:focus,
   background: linear-gradient(135deg, #ef4444, #b91c1c);
   color: white;
   border: none;
-  padding: 16px;
-  font-size: 16px;
-  font-weight: 700;
+  padding: 20px;
+  font-size: 20px;
+  font-weight: 800;
   border-radius: var(--radius-lg);
   cursor: pointer;
   box-shadow: 0 10px 20px rgba(220, 38, 38, 0.2);

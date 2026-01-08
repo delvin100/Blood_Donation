@@ -5,7 +5,7 @@ export default function BackToTop() {
 
   useEffect(() => {
     function onScroll() {
-      setVisible(window.scrollY > 300);
+      setVisible(window.scrollY > 100);
     }
     window.addEventListener('scroll', onScroll, { passive: true });
     return () => window.removeEventListener('scroll', onScroll);
@@ -22,9 +22,9 @@ export default function BackToTop() {
       aria-label="Back to top"
       title="Back to top"
     >
-      {}
+      { }
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden>
-        <path d="M6 15l6-6 6 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+        <path d="M6 15l6-6 6 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
       </svg>
     </button>
   );

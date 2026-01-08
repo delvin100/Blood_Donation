@@ -14,14 +14,14 @@ const InfoModal = ({ title, content, onClose }) => {
             >
                 <div className="p-6 border-b border-gray-100 flex items-center justify-between bg-gradient-to-br from-red-50 to-white/50">
                     <div className="flex items-center gap-4">
-                        <div className="w-12 h-12 bg-red-600 rounded-2xl flex items-center justify-center text-white shadow-lg rotate-3">
-                            <i className="fas fa-info-circle text-xl -rotate-3"></i>
+                        <div className="w-14 h-14 bg-red-600 rounded-2xl flex items-center justify-center text-white shadow-lg rotate-3 text-2xl">
+                            <i className="fas fa-info-circle -rotate-3"></i>
                         </div>
                         <div>
-                            <h3 className="text-2xl font-black text-gray-800 tracking-tight">
+                            <h3 className="text-3xl font-black text-gray-800 tracking-tight">
                                 {title}
                             </h3>
-                            <div className="h-1 w-12 bg-red-600/20 rounded-full mt-1"></div>
+                            <div className="h-1 w-16 bg-red-600/20 rounded-full mt-1"></div>
                         </div>
                     </div>
                     <button
@@ -33,8 +33,8 @@ const InfoModal = ({ title, content, onClose }) => {
                     </button>
                 </div>
 
-                <div className="p-8 overflow-y-auto custom-scrollbar bg-white/80">
-                    <div className="info-content-animate text-gray-600 leading-relaxed text-base">
+                <div className="p-10 overflow-y-auto custom-scrollbar bg-white/80">
+                    <div className="info-content-animate text-gray-600 leading-relaxed text-lg">
                         {typeof content === 'string' ? (
                             <p className="whitespace-pre-line font-medium text-gray-700">{content}</p>
                         ) : (

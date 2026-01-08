@@ -276,10 +276,54 @@ router.post('/login', async (req, res) => {
     if (err.code === 'ECONNREFUSED' || err.code === 'PROTOCOL_CONNECTION_LOST') {
       return res.status(503).json({ error: 'Database connection failed. Please ensure MySQL is running and configured correctly.' });
     }
-
     res.status(500).json({ error: 'Server error. Please try again.' });
   }
 });
+
+const https = require('https');
+
+// Helper to fetch Google User Info using native https
+function getGoogleUserInfo(accessToken) {
+  return new Promise((resolve, reject) => {
+    const options = {
+      hostname: 'www.googleapis.com',
+      path: '/oauth2/v3/userinfo',
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${accessToken}`,
+        'User-Agent': 'Node.js App'
+      }
+    };
+
+    const req = https.request(options, (res) => {
+      let data = '';
+      res.on('data', (chunk) => data += chunk);
+      res.on('end', () => {
+        if (res.statusCode >= 200 && res.statusCode < 300) {
+          try {
+            resolve(JSON.parse(data));
+          } catch (e) {
+            reject(new Error('Failed to parse Google response'));
+          }
+        } else {
+          // Try to parse error message
+          let errMsg = `Google API returned status ${res.statusCode}`;
+          try {
+            const errJson = JSON.parse(data);
+            if (errJson.error_description) errMsg += `: ${errJson.error_description}`;
+            else if (errJson.error) errMsg += `: ${JSON.stringify(errJson.error)}`;
+          } catch (e) {
+            errMsg += `: ${data}`;
+          }
+          reject(new Error(errMsg));
+        }
+      });
+    });
+
+    req.on('error', (e) => reject(new Error('Network request failed: ' + e.message)));
+    req.end();
+  });
+}
 
 // Google Auth Login/Signup
 router.post('/google', async (req, res) => {
@@ -289,17 +333,27 @@ router.post('/google', async (req, res) => {
       return res.status(400).json({ error: 'Missing credential' });
     }
 
-    // Fetch User Info from Google (using access_token)
-    const googleRes = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
-      headers: { Authorization: `Bearer ${credential}` }
-    });
-
-    if (!googleRes.ok) {
-      throw new Error('Failed to fetch Google user info');
+    // Fetch User Info from Google (using native https helper)
+    let payload;
+    try {
+      payload = await getGoogleUserInfo(credential);
+    } catch (apiErr) {
+      console.error('Google API Error:', apiErr);
+      return res.status(400).json({ error: 'Failed to verify Google token: ' + apiErr.message });
     }
 
-    const payload = await googleRes.json();
-    const { sub: googleId, email, name, picture } = payload;
+    const { sub: googleId, email, name, picture, given_name, family_name } = payload;
+
+    console.log('Google Payload:', { googleId, email, name, given_name, family_name }); // Debug
+
+    // Construct full name if 'name' property is missing
+    let fullName = name || [given_name, family_name].filter(Boolean).join(' ');
+
+    console.log('Computed Full Name:', fullName); // Debug
+
+    if (!fullName || fullName.trim() === '') {
+      fullName = 'Blood Donor'; // Fallback
+    }
 
     if (!email) {
       return res.status(400).json({ error: 'Google account must have an email.' });
@@ -310,29 +364,67 @@ router.post('/google', async (req, res) => {
     let donor = rows[0];
 
     // If not found by Google ID, check by email
+    let foundByEmail = false;
     if (!donor) {
       [rows] = await pool.query('SELECT * FROM donors WHERE email = ? LIMIT 1', [email]);
       donor = rows[0];
 
       if (donor) {
+        foundByEmail = true;
         // Link Google ID to existing account
         await pool.query('UPDATE donors SET google_id = ? WHERE id = ?', [googleId, donor.id]);
         donor.google_id = googleId;
       }
     }
 
+    // Self-heal: If existing donor has no name, update it from Google
+    if (donor) {
+      let updates = [];
+      let params = [];
+
+      if (!donor.full_name || donor.full_name.trim() === '') {
+        updates.push('full_name = ?');
+        params.push(fullName);
+        donor.full_name = fullName;
+      }
+
+      // Also heal EMAIL if it's missing (rare, but possible if created via loose logic previously)
+      if (!donor.email || donor.email.trim() === '') {
+        updates.push('email = ?');
+        params.push(email);
+        donor.email = email;
+      }
+
+      if (!donor.profile_picture && picture) {
+        updates.push('profile_picture = ?');
+        params.push(picture);
+        donor.profile_picture = picture;
+      }
+
+      if (updates.length > 0) {
+        params.push(donor.id);
+        await pool.query(`UPDATE donors SET ${updates.join(', ')} WHERE id = ?`, params);
+        console.log('Self-healed donor profile:', updates);
+      }
+    }
+
     // If still not found, create new user
     if (!donor) {
+      const finalFullName = fullName || email.split('@')[0] || 'Blood Donor';
+
       const [result] = await pool.query(
         `INSERT INTO donors 
          (google_id, full_name, email, profile_picture, created_at) 
          VALUES (?, ?, ?, ?, NOW())`,
-        [googleId, name, email, picture]
+        [googleId, finalFullName, email, picture]
       );
 
       const insertId = result.insertId;
       // Fetch the new donor
       [rows] = await pool.query('SELECT * FROM donors WHERE id = ?', [insertId]);
+      donor = rows[0];
+    } else {
+      [rows] = await pool.query('SELECT * FROM donors WHERE id = ?', [donor.id]);
       donor = rows[0];
     }
 
@@ -358,8 +450,8 @@ router.post('/google', async (req, res) => {
     });
 
   } catch (err) {
-    console.error('Google Auth Error:', err);
-    res.status(500).json({ error: 'Google authentication failed.' });
+    console.error('Google Auth Critical Error:', err);
+    res.status(500).json({ error: 'Google authentication failed: ' + err.message });
   }
 });
 
@@ -524,12 +616,12 @@ router.post('/reset-password', async (req, res) => {
 // Complete Profile endpoint
 router.post('/complete-profile', authMiddleware, async (req, res) => {
   try {
-    const { bloodGroup, gender, phoneNumber, dob } = req.body;
+    const { bloodGroup, gender, phoneNumber, dob, state, district, city } = req.body;
     const { id: donorId } = req.user; // Get user ID from authenticated token
 
     // Basic validation
     if (!bloodGroup || !gender || !phoneNumber || !dob) {
-      return res.status(400).json({ error: 'All fields are required.' });
+      return res.status(400).json({ error: 'Core fields are required.' });
     }
 
     // Optional age validation (18-65) if DOB provided
@@ -547,13 +639,13 @@ router.post('/complete-profile', authMiddleware, async (req, res) => {
     }
 
     // Optional gender validation
-    if (!['Male', 'Female', 'Other'].includes(gender)) {
+    if (!['male', 'female', 'other'].includes(gender.toLowerCase())) {
       return res.status(400).json({ error: 'Please select a valid gender.' });
     }
 
     await pool.query(
-      'UPDATE donors SET blood_type = ?, gender = ?, phone = ?, dob = ? WHERE id = ?',
-      [bloodGroup, gender, phoneNumber, dob, donorId]
+      'UPDATE donors SET blood_type = ?, gender = ?, phone = ?, dob = ?, state = ?, district = ?, city = ? WHERE id = ?',
+      [bloodGroup, gender, phoneNumber, dob, state, district, city, donorId]
     );
 
     res.json({ message: 'Profile updated successfully.' });
