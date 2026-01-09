@@ -46,6 +46,30 @@ const bloodGroups = [
   "B+", "B-", "Bombay Blood Group", "INRA", "O+", "O-"
 ];
 
+// City to District mapping for better location accuracy
+const cityToDistrictMapping = {
+  // Kerala
+  'Kochi': 'Ernakulam',
+  'Cochin': 'Ernakulam',
+  'Thiruvananthapuram': 'Thiruvananthapuram',
+  'Trivandrum': 'Thiruvananthapuram',
+  'Kozhikode': 'Kozhikode',
+  'Calicut': 'Kozhikode',
+  'Thrissur': 'Thrissur',
+  'Trichur': 'Thrissur',
+  'Kollam': 'Kollam',
+  'Quilon': 'Kollam',
+  'Kannur': 'Kannur',
+  'Cannanore': 'Kannur',
+  'Palakkad': 'Palakkad',
+  'Palghat': 'Palakkad',
+  'Alappuzha': 'Alappuzha',
+  'Alleppey': 'Alappuzha',
+  'Kottayam': 'Kottayam',
+  'Malappuram': 'Malappuram',
+  // Add more mappings as needed
+};
+
 export default function CompleteProfileModal({ onClose, onSuccess, user }) {
   // Step state: 2 = Basic Details, 3 = Location
   const [step, setStep] = useState(2);
@@ -68,6 +92,10 @@ export default function CompleteProfileModal({ onClose, onSuccess, user }) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showSuccessOverlay, setShowSuccessOverlay] = useState(false);
 
+  // Location fetching states
+  const [isFetchingLocation, setIsFetchingLocation] = useState(false);
+  const [locationError, setLocationError] = useState('');
+
   const districts = state ? stateDistrictMapping[state] || [] : [];
 
   // Use regex check for simple inline validation classes, but full validation on submit
@@ -79,6 +107,191 @@ export default function CompleteProfileModal({ onClose, onSuccess, user }) {
     }
     if (globalError) setGlobalError('');
   };
+
+  // Fetch location using GPS and reverse geocoding
+  const fetchLocation = async () => {
+    setIsFetchingLocation(true);
+    setLocationError('');
+
+    try {
+      // Check if geolocation is supported
+      if (!navigator.geolocation) {
+        throw new Error('Geolocation is not supported by your browser');
+      }
+
+      // Helper to get position with specific options
+      const getPosition = (options) => {
+        return new Promise((resolve, reject) => {
+          navigator.geolocation.getCurrentPosition(resolve, reject, options);
+        });
+      };
+
+      let position;
+      try {
+        // Try high accuracy first with longer timeout (20s)
+        console.log('Attempting high accuracy location fetch...');
+        position = await getPosition({
+          enableHighAccuracy: true,
+          timeout: 20000,
+          maximumAge: 0
+        });
+      } catch (err) {
+        console.warn('High accuracy failed, retrying with low accuracy...', err);
+        // Fallback: Try low accuracy if high accuracy fails or times out
+        position = await getPosition({
+          enableHighAccuracy: false,
+          timeout: 20000,
+          maximumAge: 0
+        });
+      }
+
+      const { latitude, longitude } = position.coords;
+      console.log('GPS Coordinates:', latitude, longitude);
+
+      // Try multiple geocoding services for better accuracy
+      let locationData = null;
+
+      // Try Nominatim (OpenStreetMap) first
+      try {
+        const nominatimResponse = await fetch(
+          `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&addressdetails=1`,
+          {
+            headers: {
+              'User-Agent': 'BloodDonationApp/1.0'
+            }
+          }
+        );
+
+        if (nominatimResponse.ok) {
+          const nominatimData = await nominatimResponse.json();
+          console.log('Nominatim response:', nominatimData);
+
+          if (nominatimData.address) {
+            const addr = nominatimData.address;
+            locationData = {
+              state: addr.state,
+              district: addr.state_district || addr.county || addr.district,
+              city: addr.city || addr.town || addr.village || addr.suburb || addr.municipality
+            };
+          }
+        }
+      } catch (err) {
+        console.warn('Nominatim failed:', err);
+      }
+
+      // If Nominatim didn't work, try BigDataCloud
+      if (!locationData) {
+        try {
+          const bigDataResponse = await fetch(
+            `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${latitude}&longitude=${longitude}&localityLanguage=en`
+          );
+
+          if (bigDataResponse.ok) {
+            const bigData = await bigDataResponse.json();
+            console.log('BigDataCloud response:', bigData);
+
+            locationData = {
+              state: bigData.principalSubdivision,
+              district: bigData.localityInfo?.administrative?.[2]?.name || bigData.locality,
+              city: bigData.city || bigData.locality
+            };
+          }
+        } catch (err) {
+          console.warn('BigDataCloud failed:', err);
+        }
+      }
+
+      if (!locationData || !locationData.state) {
+        throw new Error('Unable to determine location from coordinates');
+      }
+
+      // Clean and match state
+      let matchedState = null;
+      const stateKeys = Object.keys(stateDistrictMapping);
+
+      for (const stateKey of stateKeys) {
+        if (stateKey.toLowerCase().includes(locationData.state.toLowerCase()) ||
+          locationData.state.toLowerCase().includes(stateKey.toLowerCase())) {
+          matchedState = stateKey;
+          break;
+        }
+      }
+
+      if (!matchedState) {
+        throw new Error(`State "${locationData.state}" not found in our database`);
+      }
+
+      // Match district
+      let matchedDistrict = null;
+      const districts = stateDistrictMapping[matchedState] || [];
+
+      // First try exact match
+      for (const dist of districts) {
+        if (dist.toLowerCase() === locationData.district?.toLowerCase()) {
+          matchedDistrict = dist;
+          break;
+        }
+      }
+
+      // If no exact match, try partial match
+      if (!matchedDistrict && locationData.district) {
+        for (const dist of districts) {
+          if (dist.toLowerCase().includes(locationData.district.toLowerCase()) ||
+            locationData.district.toLowerCase().includes(dist.toLowerCase())) {
+            matchedDistrict = dist;
+            break;
+          }
+        }
+      }
+
+      // Check city-to-district mapping
+      if (!matchedDistrict && locationData.city) {
+        const cityKey = Object.keys(cityToDistrictMapping).find(
+          city => city.toLowerCase() === locationData.city.toLowerCase()
+        );
+        if (cityKey) {
+          matchedDistrict = cityToDistrictMapping[cityKey];
+        }
+      }
+
+      // Auto-fill the form
+      setState(matchedState);
+
+      if (matchedDistrict) {
+        setDistrict(matchedDistrict);
+      }
+
+      if (locationData.city) {
+        setCity(locationData.city);
+      }
+
+      // Clear any errors
+      setErrors({});
+
+      console.log('Location set:', {
+        state: matchedState,
+        district: matchedDistrict,
+        city: locationData.city
+      });
+
+    } catch (err) {
+      console.error('Location fetch error:', err);
+
+      if (err.code === 1) {
+        setLocationError('Location permission denied. Please enable location access in your browser settings.');
+      } else if (err.code === 2) {
+        setLocationError('Location unavailable. Please check your device settings.');
+      } else if (err.code === 3) {
+        setLocationError('Location request timed out. Please try again.');
+      } else {
+        setLocationError(err.message || 'Failed to fetch location. Please enter manually.');
+      }
+    } finally {
+      setIsFetchingLocation(false);
+    }
+  };
+
+
 
   const handleNextStep = (e) => {
     e.preventDefault();
@@ -278,12 +491,10 @@ export default function CompleteProfileModal({ onClose, onSuccess, user }) {
             ) : null}
           </div>
         </div>
-        {errors.phone ? (
+        {errors.phone && (
           <p className="mt-2 text-sm text-red-600 flex items-center gap-1 animate-pulse">
             <i className="fas fa-exclamation-circle"></i> {errors.phone}
           </p>
-        ) : (
-          <p className="text-xs text-gray-500 mt-2 ml-1">Example: 9876543210</p>
         )}
       </div>
 
@@ -447,6 +658,42 @@ export default function CompleteProfileModal({ onClose, onSuccess, user }) {
               Location Details
               <div className="w-2 h-2 bg-red-400 rounded-full animate-pulse"></div>
             </h3>
+
+            {/* Fetch Location Button */}
+            <div className="mb-6">
+              <button
+                type="button"
+                onClick={fetchLocation}
+                disabled={isFetchingLocation}
+                className={`w-full bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white font-semibold py-4 px-6 rounded-xl transition-all duration-300 transform hover:scale-[1.02] shadow-lg flex items-center justify-center gap-3 group ${isFetchingLocation ? 'opacity-75 cursor-not-allowed' : ''
+                  }`}
+              >
+                {isFetchingLocation ? (
+                  <>
+                    <i className="fas fa-spinner fa-spin text-xl"></i>
+                    <span>Fetching your location...</span>
+                  </>
+                ) : (
+                  <>
+                    <i className="fas fa-location-arrow text-xl group-hover:scale-110 transition-transform"></i>
+                    <span>Fetch My Location</span>
+                  </>
+                )}
+              </button>
+
+              {locationError && (
+                <div className="mt-3 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm flex items-start gap-2">
+                  <i className="fas fa-exclamation-triangle mt-0.5"></i>
+                  <span>{locationError}</span>
+                </div>
+              )}
+
+              <p className="text-xs text-gray-500 mt-2 text-center flex items-center justify-center gap-1">
+                <i className="fas fa-info-circle"></i>
+                Click to automatically detect your location using GPS
+              </p>
+            </div>
+
             <div className="grid md:grid-cols-3 gap-6">
               {/* State Field */}
               <div>
@@ -580,8 +827,8 @@ export default function CompleteProfileModal({ onClose, onSuccess, user }) {
             <i className="fas fa-arrow-right text-lg"></i>
           </button>
         </div>
-      </form>
-    </div>
+      </form >
+    </div >
   );
 
   return (
@@ -629,8 +876,8 @@ export default function CompleteProfileModal({ onClose, onSuccess, user }) {
               <div className="w-8 md:w-16 h-1 bg-green-500 rounded"></div>
 
               {/* Step 2 */}
-              <div className={`w-3 h-3 rounded-full transition-colors duration-500 ${step >= 2 ? 'bg-red-500 animate-pulse' : 'bg-gray-300'}`}></div>
-              <div className={`w-8 md:w-16 h-1 rounded transition-colors duration-500 ${step > 2 ? 'bg-red-500' : 'bg-gray-300'}`}></div>
+              <div className={`w-3 h-3 rounded-full transition-colors duration-500 ${step > 2 ? 'bg-green-500' : step === 2 ? 'bg-red-500 animate-pulse' : 'bg-gray-300'}`}></div>
+              <div className={`w-8 md:w-16 h-1 rounded transition-colors duration-500 ${step === 3 ? 'bg-red-500' : step === 2 ? 'bg-red-500' : 'bg-gray-300'}`}></div>
 
               {/* Step 3 */}
               <div className={`w-3 h-3 rounded-full transition-colors duration-500 ${step >= 3 ? 'bg-red-500' : 'bg-gray-300'}`}></div>

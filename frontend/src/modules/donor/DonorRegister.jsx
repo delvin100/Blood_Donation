@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import { useGoogleLogin } from '@react-oauth/google';
 import CompleteProfileModal from "./CompleteProfileModal";
 
-export default function Register() {
+export default function DonorRegister() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [slideIdx, setSlideIdx] = useState(0);
@@ -616,7 +616,7 @@ export default function Register() {
             </button>
 
             <div className="footer">
-              Already have an account? <a href="/login">Sign in</a>
+              Already have an account? <a href="/donor/login">Sign in</a>
             </div>
           </div>
         </section>

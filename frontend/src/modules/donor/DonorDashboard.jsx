@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import '../public/css/dashboard.css';
+import '../../../public/css/dashboard.css';
 import CompleteProfileModal from './CompleteProfileModal';
 import InfoModal from './InfoModal';
 import EditProfileModal from './EditProfileModal';
 import ProfilePicModal from './ProfilePicModal';
-import BackToTop from './BackToTop';
+import BackToTop from '../../BackToTop';
+import Chatbot from './Chatbot';
 
 const formatDateHyphen = (dateStr) => {
   if (!dateStr) return '';
@@ -218,26 +219,367 @@ const Dashboard = () => {
   const { user, donations, reminders, stats } = data;
 
   const navigationContent = {
-    'about-us': { title: 'About eBloodBank', content: <div className="space-y-4 text-gray-600"><p>eBloodBank.org is the world's largest voluntary blood donors organization. Our mission is to ensure that every life counts by providing a platform that connects blood donors with those in need, especially in critical times.</p><p>Since our inception, we have helped thousands of people find the right blood donor at the right time, completely free of cost.</p></div> },
-    'vision-mission': { title: 'Vision & Mission', content: <div className="space-y-4"><p><strong className="text-red-600">Vision:</strong> To become the world's most trusted and reliable voluntary blood donation platform, where no life is lost due to a lack of blood.</p><p><strong className="text-red-600">Mission:</strong> To build a massive network of voluntary blood donors across the globe and simplify the process of blood donation through technology and community participation.</p></div> },
-    'founders': { title: 'Founders', content: <div className="space-y-3"><p>eBloodBank was founded by a group of passionate individuals driven by a common goal: saving lives through voluntary blood donation.</p><p>Their vision and leadership have shaped this platform into a global movement that continues to grow and serve humanity every day.</p></div> },
-    'technical-team': { title: 'Technical Team', content: <div className="space-y-3"><p>Our platform is built and maintained by a dedicated team of software engineers and designers who volunteer their skills to ensure the portal remains accessible, secure, and user-friendly.</p><p>We use modern technologies to provide real-time location tracking and donor matching.</p></div> },
-    'field-volunteers': { title: 'Field Volunteers', content: <div className="space-y-3"><p>Our field volunteers are the backbone of our operations. They work on the ground to organize blood drives, verify donor details, and provide immediate assistance during emergencies.</p><p>We have thousands of volunteers working across various districts to bridge the gap between donors and recipients.</p></div> },
-    'campaign-team': { title: 'Campaign Team', content: <div className="space-y-3"><p>The campaign team works tirelessly to spread awareness about the importance of voluntary blood donation through social media, workshops, and community events.</p><p>They aim to debunk myths and encourage young people to become lifelong donors.</p></div> },
-    'donation-facts': { title: 'Blood Donation Facts', content: <ul className="list-disc pl-5 space-y-2"><li>A single donation can save up to three lives.</li><li>The body replaces plasma within 24 hours.</li><li>Red cells are replaced in about 4-6 weeks.</li><li>Only 7% of people have O-Negative blood, the universal donor type.</li></ul> },
-    'who-can-donate': { title: 'Who Can Donate', content: <div className="space-y-4"><p><strong>General Requirements:</strong></p><ul className="list-disc pl-5 space-y-2"><li>Weight: At least 45 - 50 kg.</li><li>Age: 18 - 65 years.</li><li>Hemoglobin: Minimum 12.5 g/dL.</li><li>Health: You should be feeling well and healthy.</li></ul></div> },
-    'donation-process': { title: 'Donation Process', content: <ol className="list-decimal pl-5 space-y-2"><li><strong>Registration:</strong> Fill out a basic health form.</li><li><strong>Medical Check:</strong> A mini health screening (BP, pulse, Hb).</li><li><strong>Donation:</strong> Takes only about 10-15 minutes.</li><li><strong>Refreshment:</strong> Rest and have a light snack.</li></ol> },
-    'blood-types': { title: 'Blood Types Guide', content: <div className="space-y-2"><p><strong>Compatibility Chart:</strong></p><ul className="list-disc pl-5 space-y-1"><li><strong>O-</strong>: Universal donor.</li><li><strong>AB+</strong>: Universal recipient.</li><li><strong>A+/A-</strong>: Common groups.</li><li><strong>B+/B-</strong>: Vital for specific needs.</li></ul></div> },
-    'health-benefits': { title: 'Health Benefits', content: <ul className="list-disc pl-5 space-y-2"><li>Reduces the risk of heart disease and cancer.</li><li>Balances iron levels in the body.</li><li>Burns calories (approx 650 per donation).</li><li>Psychological satisfaction of saving lives.</li></ul> },
-    'preparation-tips': { title: 'Preparation Tips', content: <ul className="list-disc pl-5 space-y-2"><li>Drink plenty of water before donation.</li><li>Eat a healthy, low-fat meal.</li><li>Get a good night's sleep.</li><li>Avoid alcohol for 24 hours before donating.</li></ul> },
-    'aftercare': { title: 'Post-Donation Care', content: <ul className="list-disc pl-5 space-y-2"><li>Drink extra fluids for the next 48 hours.</li><li>Avoid strenuous physical activity.</li><li>Keep the bandage on for a few hours.</li><li>If you feel dizzy, lay down with feet elevated.</li></ul> },
-    'myths-facts': { title: 'Myths vs Facts', content: <div className="space-y-3"><p><strong>Myth:</strong> Donation is painful. <br /><strong>Fact:</strong> It's just a quick prick, no more painful than a regular test.</p><p><strong>Myth:</strong> I will become weak. <br /><strong>Fact:</strong> Most people recover their energy very quickly.</p></div> },
-    'emergency-blood': { title: 'Emergency Blood Need', content: <p>In case of emergencies, please use our 'Search Donor' feature to find immediate results near the patient's hospital. For critical support, contact our district volunteer lead.</p> },
-    'nearby-centers': { title: 'Nearby Centers', content: <p>We are currently integrating with local blood banks to provide real-time availability. Please check the 'Centers' map on our main portal.</p> },
-    'blood-drives': { title: 'Blood Drives & Events', content: <p>Stay updated with our upcoming blood drives by following our social media handles or checking the 'Events' section on the homepage.</p> },
-    'success-stories': { title: 'Donor Success Stories', content: <p>Read how a single call through eBloodBank helped a family in crisis. [Coming soon: Full story library].</p> },
-    'faq': { title: 'FAQ', content: <p>Find answers to common questions about donation intervals, medications, and medical conditions on our FAQ page.</p> },
-    'contact-support': { title: 'Contact Support', content: <p>Need help? Reach out to us at support@eBloodBank.org or call our 24/7 helpline for urgent inquiries.</p> }
+    'about-us': {
+      title: 'About eBloodBank',
+      content: (
+        <div className="space-y-6">
+          <div className="bg-gradient-to-r from-red-50 to-white p-6 rounded-2xl border-l-4 border-red-500 shadow-sm">
+            <h4 className="text-xl font-bold text-gray-800 mb-3 flex items-center gap-2">
+              <i className="fas fa-history text-red-500"></i> Our Story
+            </h4>
+            <p className="text-gray-600 leading-relaxed text-lg">
+              eBloodBank.org was born from a simple yet powerful idea: <span className="font-bold text-red-600">No one should suffer due to a lack of blood.</span> Established in 2024, we have grown into a global volunteering movement, bridging the gap between donors and patients in real-time.
+            </p>
+          </div>
+          <div className="grid md:grid-cols-2 gap-4">
+            <div className="bg-white p-5 rounded-xl shadow-md border hover:border-red-200 transition-all group">
+              <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                <i className="fas fa-users text-red-600 text-xl"></i>
+              </div>
+              <h5 className="font-bold text-gray-800 mb-2">Community Driven</h5>
+              <p className="text-sm text-gray-500">Powered by thousands of volunteers and donors like you.</p>
+            </div>
+            <div className="bg-white p-5 rounded-xl shadow-md border hover:border-red-200 transition-all group">
+              <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                <i className="fas fa-bolt text-blue-600 text-xl"></i>
+              </div>
+              <h5 className="font-bold text-gray-800 mb-2">Fast & Secure</h5>
+              <p className="text-sm text-gray-500">Real-time connection with strict privacy protocols.</p>
+            </div>
+          </div>
+        </div>
+      )
+    },
+    'vision-mission': {
+      title: 'Vision & Mission',
+      content: (
+        <div className="space-y-8">
+          <div className="relative overflow-hidden bg-gradient-to-br from-gray-900 to-gray-800 text-white p-8 rounded-3xl shadow-xl transform hover:scale-[1.01] transition-all">
+            <div className="absolute top-0 right-0 w-32 h-32 bg-white opacity-5 rounded-full -translate-y-16 translate-x-16"></div>
+            <div className="relative z-10">
+              <div className="flex items-center gap-3 mb-4">
+                <span className="px-3 py-1 bg-red-500 rounded-full text-xs font-black uppercase tracking-widest">Our Vision</span>
+              </div>
+              <p className="text-2xl font-light italic leading-relaxed">
+                "To create a world where <span className="font-bold text-red-400">every life is valued</span> and no patient dies waiting for blood."
+              </p>
+            </div>
+          </div>
+
+          <div className="bg-white p-8 rounded-3xl border border-gray-100 shadow-lg relative">
+            <div className="absolute -top-5 left-8 bg-red-600 text-white w-10 h-10 flex items-center justify-center rounded-xl shadow-lg">
+              <i className="fas fa-bullseye text-xl"></i>
+            </div>
+            <h4 className="text-xl font-bold text-gray-800 mb-4 mt-2">Our Mission</h4>
+            <ul className="space-y-4">
+              {[
+                "Build a massive global network of voluntary donors.",
+                "Leverage technology to reduce response time in emergencies.",
+                "Eliminate the scarcity of blood through awareness and action.",
+                "Ensure safe and free access to blood for all."
+              ].map((item, idx) => (
+                <li key={idx} className="flex items-start gap-3 text-gray-600">
+                  <i className="fas fa-check-circle text-green-500 mt-1"></i>
+                  <span>{item}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </div>
+      )
+    },
+    'founders': {
+      title: 'Our Founders',
+      content: (
+        <div className="space-y-6">
+          <p className="text-lg text-gray-600 leading-relaxed text-center">
+            Driven by passion and united by a cause. Meet the visionaries who started it all.
+          </p>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {[1, 2].map(i => (
+              <div key={i} className="bg-white p-6 rounded-2xl shadow-lg border-t-4 border-red-500 hover:-translate-y-2 transition-transform duration-300">
+                <div className="w-20 h-20 mx-auto bg-gray-200 rounded-full mb-4 flex items-center justify-center text-3xl text-gray-400">
+                  <i className="fas fa-user"></i>
+                </div>
+                <h4 className="text-center text-xl font-bold text-gray-800">Founder Name {i}</h4>
+                <p className="text-center text-red-500 font-medium text-sm mb-3">Co-Founder</p>
+                <p className="text-center text-gray-500 text-sm">"Believing in the power of humanity to save lives."</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      )
+    },
+    'technical-team': {
+      title: 'Technical Wizards',
+      content: (
+        <div className="text-center">
+          <div className="inline-block p-4 bg-blue-50 rounded-full mb-6">
+            <i className="fas fa-code text-4xl text-blue-600"></i>
+          </div>
+          <h3 className="text-2xl font-bold text-gray-800 mb-4">Building the Future of Donation</h3>
+          <p className="text-gray-600 mb-8 max-w-md mx-auto">
+            Our platform is engineered by volunteer developers who dedicate their code to save lives. Secure, fast, and reliable.
+          </p>
+          <div className="bg-gray-50 p-6 rounded-2xl border border-gray-200 text-left">
+            <h5 className="font-bold text-gray-800 mb-3 flex items-center gap-2">
+              <i className="fas fa-layer-group text-blue-500"></i> Tech Stack
+            </h5>
+            <div className="flex flex-wrap gap-2">
+              {['React', 'Node.js', 'PostgreSQL', 'Tailwind', 'Maps API'].map(tag => (
+                <span key={tag} className="px-3 py-1 bg-white border border-gray-200 rounded-full text-xs font-semibold text-gray-600 shadow-sm">{tag}</span>
+              ))}
+            </div>
+          </div>
+        </div>
+      )
+    },
+    'field-volunteers': { title: 'Heroes on Ground', content: <div className="space-y-4"><p className="text-lg text-gray-700">From verified requests to organizing camps, our volunteers work 24/7.</p><div className="bg-yellow-50 p-4 rounded-xl border-l-4 border-yellow-500"><p className="font-bold text-yellow-800">Interested in volunteering?</p><p className="text-sm text-yellow-700">Join our local chapter today via the 'Contact' section.</p></div></div> },
+    'campaign-team': { title: 'Voice of Change', content: <p className="text-gray-700 text-lg">Spreading awareness, busting myths, and inspiring the youth to become lifelong donors.</p> },
+
+    'donation-facts': {
+      title: 'Did You Know?',
+      content: (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {[
+            { icon: 'fa-heartbeat', color: 'text-red-500', title: '3 Lives', desc: 'One donation can save up to three lives.' },
+            { icon: 'fa-clock', color: 'text-blue-500', title: 'Every 2 Secs', desc: 'Someone in needs blood every two seconds.' },
+            { icon: 'fa-history', color: 'text-green-500', title: 'Regenerates', desc: 'Plasma regenerates within 24 hours.' },
+            { icon: 'fa-weight', color: 'text-purple-500', title: 'Free Checkup', desc: 'You get a mini medical checkup before donating.' },
+          ].map((fact, i) => (
+            <div key={i} className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 flex items-start gap-4">
+              <div className={`mt-1 text-2xl ${fact.color}`}><i className={`fas ${fact.icon}`}></i></div>
+              <div>
+                <h5 className="font-bold text-gray-900">{fact.title}</h5>
+                <p className="text-sm text-gray-500 leading-snug">{fact.desc}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+      )
+    },
+    'who-can-donate': {
+      title: 'Eligibility Criteria',
+      content: (
+        <div className="space-y-6">
+          <div className="flex gap-4">
+            <div className="flex-1 bg-green-50 rounded-2xl p-6 border border-green-200">
+              <h4 className="text-green-800 font-bold mb-4 flex items-center gap-2"><i className="fas fa-check-circle"></i> Can Donate</h4>
+              <ul className="space-y-2 text-green-900 text-sm font-medium">
+                <li><i className="fas fa-check mr-2 opacity-50"></i> Age: 18 - 65 years</li>
+                <li><i className="fas fa-check mr-2 opacity-50"></i> Weight: &gt; 50 kg</li>
+                <li><i className="fas fa-check mr-2 opacity-50"></i> Healthy & Well rested</li>
+                <li><i className="fas fa-check mr-2 opacity-50"></i> Hb level &gt; 12.5 g/dL</li>
+              </ul>
+            </div>
+            <div className="flex-1 bg-red-50 rounded-2xl p-6 border border-red-200">
+              <h4 className="text-red-800 font-bold mb-4 flex items-center gap-2"><i className="fas fa-times-circle"></i> Cannot Donate</h4>
+              <ul className="space-y-2 text-red-900 text-sm font-medium">
+                <li><i className="fas fa-times mr-2 opacity-50"></i> Under 18 years</li>
+                <li><i className="fas fa-times mr-2 opacity-50"></i> Underweight</li>
+                <li><i className="fas fa-times mr-2 opacity-50"></i> Consumed alcohol (24h)</li>
+                <li><i className="fas fa-times mr-2 opacity-50"></i> Major surgery recently</li>
+              </ul>
+            </div>
+          </div>
+          <p className="text-center text-gray-500 text-xs italic">Consult with the doctor at the camp for specific medical conditions.</p>
+        </div>
+      )
+    },
+
+    // ... Simplified rich content for other sections
+    'donation-process': { title: '4 Simple Steps', content: <div className="space-y-4">{['Registration', 'Medical Check', 'Donation', 'Refreshment'].map((step, i) => (<div key={i} className="flex items-center gap-4 bg-white p-4 rounded-xl shadow-sm"><div className="w-10 h-10 bg-red-100 text-red-600 rounded-full flex items-center justify-center font-bold">{i + 1}</div><span className="font-bold text-gray-700">{step}</span></div>))}</div> },
+    'blood-types': {
+      title: 'Blood Types Compatibility',
+      content: <div className="bg-white rounded-xl shadow-lg overflow-hidden"><table className="w-full text-sm text-left"><thead className="bg-gray-100 text-gray-700"><tr><th className="p-3">Type</th><th className="p-3">Give To</th><th className="p-3">Receive From</th></tr></thead><tbody className="divide-y">{[
+        { t: 'O-', g: 'All', r: 'O-' }, { t: 'O+', g: 'O+, A+, B+, AB+', r: 'O+, O-' }, { t: 'A+', g: 'A+, AB+', r: 'A+, A-, O+, O-' }, { t: 'AB+', g: 'AB+', r: 'All' }
+      ].map(r => (<tr key={r.t} className="hover:bg-gray-50"><td className="p-3 font-bold text-red-600">{r.t}</td><td className="p-3">{r.g}</td><td className="p-3">{r.r}</td></tr>))}</tbody></table></div>
+    },
+    'health-benefits': { title: 'Why Donate?', content: <ul className="grid grid-cols-2 gap-3">{['Heart Health', 'Cancer Risk Reduction', 'Free Health Checkup', 'Calorie Burn', 'Iron Balance', 'Mental Satisfaction'].map(b => (<li key={b} className="bg-emerald-50 text-emerald-800 p-3 rounded-lg text-sm font-bold flex items-center gap-2"><i className="fas fa-leaf"></i> {b}</li>))}</ul> },
+    'preparation-tips': { title: 'Be Prepared', content: <div className="bg-blue-50 p-5 rounded-2xl"><h5 className="font-bold text-blue-900 mb-3">Before you go:</h5><ul className="list-disc pl-5 space-y-2 text-blue-800"><li>Hydrate well (water/juice).</li><li>Have a light meal.</li><li>Avoid smoking/drinking.</li><li>Carry your ID card.</li></ul></div> },
+    'aftercare': { title: 'Relax & Recover', content: <div className="text-center"><i className="fas fa-couch text-4xl text-orange-400 mb-4"></i><p className="text-gray-700 mb-4">You've done a great job! Now take it easy.</p><div className="grid grid-cols-2 gap-4 text-left"><div className="bg-orange-50 p-3 rounded-lg"><span className="font-bold block text-orange-800">Do:</span> Drink fluids, eat snacks.</div><div className="bg-red-50 p-3 rounded-lg"><span className="font-bold block text-red-800">Don't:</span> Heavy lifting, rushing.</div></div></div> },
+
+    'myths-facts': {
+      title: 'Busting Myths',
+      content: (
+        <div className="space-y-4">
+          {[
+            { m: "Giving blood hurts.", f: "The pain is no more than a pinprick and lasts only a second." },
+            { m: "I'll get an infection.", f: "Sterile, disposable needles are used. There is zero risk of infection." },
+            { m: "I will become weak.", f: "The body replenishes the lost fluid in 24 hours. You can resume normal activities soon." },
+            { m: "I am too old.", f: "Anyone up to age 65 (or even older with doctor approval) can donate." }
+          ].map((item, idx) => (
+            <div key={idx} className="bg-white p-5 rounded-xl border-l-4 border-indigo-500 shadow-sm">
+              <p className="text-red-500 font-bold text-sm uppercase tracking-wide mb-1"><i className="fas fa-times-circle mr-1"></i> Myth:</p>
+              <p className="text-gray-800 font-medium mb-3 pl-2">"{item.m}"</p>
+              <div className="border-t border-gray-100 pt-2">
+                <p className="text-emerald-600 font-bold text-sm uppercase tracking-wide mb-1"><i className="fas fa-check-circle mr-1"></i> Fact:</p>
+                <p className="text-gray-600 pl-2">{item.f}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+      )
+    },
+
+    'emergency-blood': {
+      title: 'Emergency?',
+      content: (
+        <div className="space-y-6 text-center">
+          <div className="bg-red-600 text-white p-8 rounded-3xl shadow-xl animate-pulse-slow">
+            <i className="fas fa-exclamation-triangle text-5xl mb-4 text-yellow-300"></i>
+            <h3 className="text-3xl font-black mb-2">Critical Need?</h3>
+            <p className="text-lg opacity-90 mb-6">Don't panic. We are here to help you find a donor instantly.</p>
+            <div className="flex flex-col gap-3">
+              <button className="bg-white text-red-600 w-full py-4 rounded-xl font-bold text-lg shadow-lg hover:bg-gray-50 transition-colors flex items-center justify-center gap-2">
+                <i className="fas fa-search"></i> Search Donors Nearby
+              </button>
+              <button className="bg-red-800 text-white w-full py-4 rounded-xl font-bold text-lg shadow-lg hover:bg-red-900 transition-colors flex items-center justify-center gap-2 border border-red-700">
+                <i className="fas fa-phone-alt"></i> Call Helpline (1800-DONATE)
+              </button>
+            </div>
+          </div>
+          <div className="bg-yellow-50 p-6 rounded-2xl border border-yellow-200">
+            <h4 className="font-bold text-yellow-800 mb-2"><i className="fas fa-info-circle"></i> While you wait:</h4>
+            <ul className="text-yellow-900 text-sm text-left space-y-2 list-disc pl-5">
+              <li>Keep the patient's blood group details handy.</li>
+              <li>Contact local hospitals directly as well.</li>
+              <li>Share the requirement on social media with verified tags.</li>
+            </ul>
+          </div>
+        </div>
+      )
+    },
+
+    'nearby-centers': {
+      title: 'Locate Centers',
+      content: (
+        <div className="text-center space-y-4">
+          <div className="aspect-video bg-gray-100 rounded-2xl flex flex-col items-center justify-center border-2 border-dashed border-gray-300 relative overflow-hidden group">
+            <div className="absolute inset-0 bg-gray-500/10 group-hover:bg-gray-500/0 transition-colors"></div>
+            <i className="fas fa-map-marked-alt text-6xl text-gray-300 mb-3 group-hover:scale-110 transition-transform"></i>
+            <p className="text-gray-500 font-medium">Interactive Map Integration</p>
+            <span className="text-xs bg-gray-200 px-3 py-1 rounded-full text-gray-600 mt-2">Coming Soon in v2.0</span>
+          </div>
+          <p className="text-gray-600">
+            We are partnering with government and private blood banks to show real-time stock availability near you.
+          </p>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="bg-blue-50 p-4 rounded-xl text-blue-700 font-bold text-sm">
+              <i className="fas fa-hospital text-xl block mb-2"></i> Hospitals
+            </div>
+            <div className="bg-red-50 p-4 rounded-xl text-red-700 font-bold text-sm">
+              <i className="fas fa-clinic-medical text-xl block mb-2"></i> Blood Banks
+            </div>
+          </div>
+        </div>
+      )
+    },
+
+    'blood-drives': {
+      title: 'Events & Camps',
+      content: (
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <h4 className="font-bold text-gray-700">Upcoming Events</h4>
+            <span className="text-xs font-bold text-blue-600 bg-blue-50 px-2 py-1 rounded-lg">This Month</span>
+          </div>
+          {[
+            { date: "12 Oct", title: "Mega Blood Donation Camp", loc: "City Hall, Downtown", time: "9 AM - 5 PM" },
+            { date: "25 Oct", title: "Corporate Drive", loc: "Tech Park, Sector 5", time: "10 AM - 4 PM" }
+          ].map((ev, i) => (
+            <div key={i} className="flex gap-4 bg-white p-4 rounded-xl shadow-sm border border-gray-100 hover:border-red-200 transition-colors cursor-pointer">
+              <div className="bg-red-100 text-red-600 rounded-xl w-16 flex flex-col items-center justify-center flex-shrink-0">
+                <span className="text-xs font-bold uppercase">{ev.date.split(' ')[1]}</span>
+                <span className="text-2xl font-black">{ev.date.split(' ')[0]}</span>
+              </div>
+              <div>
+                <h5 className="font-bold text-gray-900 leading-tight mb-1">{ev.title}</h5>
+                <p className="text-xs text-gray-500 flex items-center gap-1"><i className="fas fa-map-marker-alt"></i> {ev.loc}</p>
+                <p className="text-xs text-gray-500 flex items-center gap-1"><i className="fas fa-clock"></i> {ev.time}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+      )
+    },
+
+    'success-stories': {
+      title: 'Real Heroes',
+      content: (
+        <div className="space-y-6">
+          <div className="relative rounded-2xl overflow-hidden group">
+            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent z-10"></div>
+            <div className="h-64 bg-gray-300 bg-[url('https://images.unsplash.com/photo-1615461168409-0d21818d2d66?q=80&w=2070&auto=format&fit=crop')] bg-cover bg-center group-hover:scale-105 transition-transform duration-700"></div>
+            <div className="absolute bottom-0 left-0 p-6 z-20 text-white">
+              <span className="bg-red-600 text-xs font-bold px-2 py-1 rounded mb-2 inline-block">Featured Story</span>
+              <h4 className="text-xl font-bold mb-1">"A stranger saved my daughter."</h4>
+              <p className="text-sm opacity-90 line-clamp-2">When 5-year-old Ananya needed rare AB- blood, a donor from eBloodBank traveled 50km in the rain to save her.</p>
+            </div>
+          </div>
+          <div className="bg-gray-50 p-6 rounded-2xl text-center">
+            <i className="fas fa-quote-left text-3xl text-gray-300 mb-3"></i>
+            <p className="text-gray-600 italic mb-4">"I never knew my blood could be someone's lifeline. It's the best feeling in the world."</p>
+            <div className="flex items-center justify-center gap-3">
+              <div className="w-10 h-10 bg-gray-200 rounded-full"></div>
+              <div className="text-left">
+                <p className="font-bold text-gray-900 text-sm">Rahul Sharma</p>
+                <p className="text-xs text-gray-500">Regular Donor (15+ donations)</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )
+    },
+
+    'faq': {
+      title: 'Questions?',
+      content: (
+        <div className="space-y-4">
+          {[
+            { q: "How often can I donate?", a: "Whole blood can be donated every 56 days (8 weeks). Platelets can be donated every 7 days." },
+            { q: "Can I donate if I have a tattoo?", a: "You usually need to wait 6-12 months after getting a tattoo, depending on state regulations and heavy metal testing." },
+            { q: "Does it hurt?", a: "Only a momentary pinch. The feeling of saving a life lasts forever!" },
+            { q: "Do I need to fast?", a: "No! In fact, you should eat a healthy meal and drink plenty of water before donating." }
+          ].map((item, i) => (
+            <details key={i} className="bg-white border border-gray-100 rounded-xl group">
+              <summary className="p-4 font-bold text-gray-800 cursor-pointer flex items-center justify-between list-none">
+                <span>{item.q}</span>
+                <span className="transition-transform group-open:rotate-180"><i className="fas fa-chevron-down text-gray-400"></i></span>
+              </summary>
+              <div className="px-4 pb-4 pt-0 text-gray-600 text-sm leading-relaxed border-t border-gray-50 mt-2">
+                {item.a}
+              </div>
+            </details>
+          ))}
+        </div>
+      )
+    },
+
+    'contact-support': {
+      title: 'We are here',
+      content: (
+        <div className="space-y-6">
+          <p className="text-gray-600 text-center">Have a question or facing an issue? Our volunteer support team is ready to assist you.</p>
+          <div className="grid grid-cols-1 gap-4">
+            <div className="bg-white p-5 rounded-xl shadow-sm border border-gray-100 flex items-center gap-4 hover:shadow-md transition-shadow cursor-pointer">
+              <div className="w-12 h-12 bg-blue-50 text-blue-600 rounded-full flex items-center justify-center text-xl"><i className="fas fa-envelope"></i></div>
+              <div>
+                <p className="text-gray-500 text-xs font-bold uppercase tracking-wide">Email Us</p>
+                <p className="text-gray-900 font-bold">ebloodbankoriginal@gmail.com</p>
+              </div>
+            </div>
+            <div className="bg-white p-5 rounded-xl shadow-sm border border-gray-100 flex items-center gap-4 hover:shadow-md transition-shadow cursor-pointer">
+              <div className="w-12 h-12 bg-green-50 text-green-600 rounded-full flex items-center justify-center text-xl"><i className="fas fa-headset"></i></div>
+              <div>
+                <p className="text-gray-500 text-xs font-bold uppercase tracking-wide">Chat Support</p>
+                <p className="text-gray-900 font-bold">+91 98765 43210</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )
+    }
   };
 
   const openInfo = (key) => { setActiveInfo(navigationContent[key]); };
@@ -272,73 +614,105 @@ const Dashboard = () => {
                 </div>
                 Navigation
               </h3>
-              <nav className="space-y-2">
-                <button onClick={() => openInfo('about-us')} className="sidebar-link w-full text-left group">
-                  <div className="w-6 h-6 rounded-full bg-blue-50 text-blue-500 flex items-center justify-center text-[10px] group-hover:bg-blue-200 transition-colors">
-                    <i className="fas fa-info"></i>
-                  </div>
-                  <span className="group-hover:translate-x-1 transition-transform">About Us</span>
-                </button>
-                <button onClick={() => openInfo('vision-mission')} className="sidebar-link w-full text-left group">
-                  <div className="w-6 h-6 rounded-full bg-blue-50 text-blue-500 flex items-center justify-center text-[10px] group-hover:bg-blue-200 transition-colors">
-                    <i className="fas fa-eye"></i>
-                  </div>
-                  <span className="group-hover:translate-x-1 transition-transform">Vision & Mission</span>
-                </button>
-
-                <div className="py-2 border-t border-dashed mt-2">
-                  <div className="sidebar-link w-full text-left cursor-default opacity-100 font-bold text-red-500 text-xs uppercase tracking-wider pl-1 mb-2">
-                    <i className="fas fa-users-cog mr-2"></i> People Behind
-                  </div>
-                  <div className="space-y-1 pl-2">
-                    <button onClick={() => openInfo('founders')} className="sidebar-link sub-link w-full text-left !ml-0 text-sm !font-medium">
-                      Founders
-                    </button>
-                    <button onClick={() => openInfo('technical-team')} className="sidebar-link sub-link w-full text-left !ml-0 text-sm !font-medium">
-                      Technical Team
-                    </button>
-                    <button onClick={() => openInfo('field-volunteers')} className="sidebar-link sub-link w-full text-left !ml-0 text-sm !font-medium">
-                      Field Volunteers
-                    </button>
-                    <button onClick={() => openInfo('campaign-team')} className="sidebar-link sub-link w-full text-left !ml-0 text-sm !font-medium">
-                      Campaign Team
-                    </button>
-                  </div>
-                </div>
-
-                <button onClick={() => openInfo('donation-facts')} className="sidebar-link w-full text-left group mt-2">
-                  <div className="w-6 h-6 rounded-full bg-blue-50 text-blue-500 flex items-center justify-center text-[10px] group-hover:bg-blue-200 transition-colors">
-                    <i className="fas fa-book"></i>
-                  </div>
-                  <span className="group-hover:translate-x-1 transition-transform">Blood Donation Facts</span>
-                </button>
-                <button onClick={() => openInfo('who-can-donate')} className="sidebar-link w-full text-left group">
-                  <div className="w-6 h-6 rounded-full bg-emerald-50 text-emerald-500 flex items-center justify-center text-[10px] group-hover:bg-emerald-200 transition-colors">
-                    <i className="fas fa-check-circle"></i>
-                  </div>
-                  <span className="group-hover:translate-x-1 transition-transform font-bold text-red-600">Who can/ Can't Donate</span>
-                </button>
-
-                <h4 className="sidebar-resource-title mt-6 mb-3 text-gray-400 font-black text-[10px] uppercase tracking-[0.2em]">Blood Donation Resources</h4>
-
+              <nav className="space-y-6">
                 {[
-                  { key: 'donation-process', icon: 'fa-route', label: 'Donation Process' },
-                  { key: 'blood-types', icon: 'fa-tint', label: 'Blood Types Guide' },
-                  { key: 'health-benefits', icon: 'fa-heart', label: 'Health Benefits' },
-                  { key: 'preparation-tips', icon: 'fa-clipboard-list', label: 'Preparation Tips' },
-                  { key: 'aftercare', icon: 'fa-shield-alt', label: 'Post-Donation Care' },
-                  { key: 'myths-facts', icon: 'fa-lightbulb', label: 'Myths vs Facts' },
-                  { key: 'emergency-blood', icon: 'fa-ambulance', label: 'Emergency Blood Need' },
-                  { key: 'nearby-centers', icon: 'fa-map-marker-alt', label: 'Nearby Centers' },
-                  { key: 'blood-drives', icon: 'fa-calendar-alt', label: 'Blood Drives & Events' },
-                  { key: 'success-stories', icon: 'fa-heart', label: 'Donor Success Stories' },
-                  { key: 'faq', icon: 'fa-question-circle', label: 'FAQ' },
-                  { key: 'contact-support', icon: 'fa-headset', label: 'Contact Support' },
-                ].map(item => (
-                  <button key={item.key} onClick={() => openInfo(item.key)} className="sidebar-link w-full text-left text-gray-600 hover:text-red-600 font-medium text-base flex items-center gap-4 px-4 py-3 rounded-2xl hover:bg-red-50 transition-all group">
-                    <i className={`fas ${item.icon} text-gray-400 group-hover:text-red-500 w-6 text-center transition-colors`}></i>
-                    <span className="group-hover:translate-x-1 transition-transform">{item.label}</span>
-                  </button>
+                  {
+                    label: 'General',
+                    items: [
+                      { key: 'about-us', icon: 'fa-info-circle', label: 'About Us', color: 'blue' },
+                      { key: 'vision-mission', icon: 'fa-lightbulb', label: 'Vision & Mission', color: 'yellow' },
+                      {
+                        key: 'people-behind', icon: 'fa-users', label: 'People Behind', color: 'purple', isGroup: true,
+                        subItems: [
+                          { key: 'founders', label: 'Founders', icon: 'fa-user-tie' },
+                          { key: 'technical-team', label: 'Technical Team', icon: 'fa-laptop-code' },
+                          { key: 'field-volunteers', label: 'Field Volunteers', icon: 'fa-hands-helping' },
+                          { key: 'campaign-team', label: 'Campaign Team', icon: 'fa-bullhorn' },
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    label: 'Donation Guides',
+                    items: [
+                      { key: 'who-can-donate', icon: 'fa-check-circle', label: 'Eligibility Criteria', color: 'emerald' },
+                      { key: 'donation-process', icon: 'fa-clipboard-check', label: 'Donation Process', color: 'teal' },
+                      { key: 'blood-types', icon: 'fa-vial', label: 'Blood Types', color: 'red' },
+                      { key: 'donation-facts', icon: 'fa-book-open', label: 'Facts & Figures', color: 'indigo' },
+                    ]
+                  },
+                  {
+                    label: 'Health & Care',
+                    items: [
+                      { key: 'health-benefits', icon: 'fa-heartbeat', label: 'Health Benefits', color: 'rose' },
+                      { key: 'preparation-tips', icon: 'fa-apple-alt', label: 'Preparation Tips', color: 'orange' },
+                      { key: 'aftercare', icon: 'fa-bed', label: 'Post-Donation Care', color: 'cyan' },
+                    ]
+                  },
+                  {
+                    label: 'Community',
+                    items: [
+                      { key: 'myths-facts', icon: 'fa-comment-slash', label: 'Myths vs Facts', color: 'violet' },
+                      { key: 'success-stories', icon: 'fa-star', label: 'Success Stories', color: 'yellow' },
+                      { key: 'blood-drives', icon: 'fa-flag', label: 'Events & Drives', color: 'red' },
+                    ]
+                  },
+                  {
+                    label: 'Support',
+                    items: [
+                      { key: 'faq', icon: 'fa-question-circle', label: 'FAQ', color: 'gray' },
+                      { key: 'contact-support', icon: 'fa-headset', label: 'Contact Support', color: 'blue' },
+                    ]
+                  }
+                ].map((section, idx) => (
+                  <div key={idx}>
+                    <h4 className="text-[11px] font-black text-gray-400 uppercase tracking-widest mb-3 pl-3">{section.label}</h4>
+                    <div className="space-y-1">
+                      {section.items.map(item => (
+                        <div key={item.key}>
+                          {item.isGroup ? (
+                            <div className="space-y-1">
+                              <div className="px-3 py-2 text-gray-800 font-bold text-sm flex items-center gap-3">
+                                <div className={`w-8 h-8 rounded-lg bg-${item.color}-50 text-${item.color}-500 flex items-center justify-center`}>
+                                  <i className={`fas ${item.icon}`}></i>
+                                </div>
+                                {item.label}
+                              </div>
+                              <div className="pl-6 space-y-1 border-l-2 border-gray-100 ml-7">
+                                {item.subItems.map(sub => (
+                                  <button
+                                    key={sub.key}
+                                    onClick={() => openInfo(sub.key)}
+                                    className="w-full text-left py-1.5 px-3 text-sm text-gray-500 hover:text-red-500 font-medium hover:bg-red-50 rounded-lg transition-all flex items-center gap-3"
+                                  >
+                                    <div className="w-5 text-center">
+                                      <i className={`fas ${sub.icon} text-sm opacity-70`}></i>
+                                    </div>
+                                    {sub.label}
+                                  </button>
+                                ))}
+                              </div>
+                            </div>
+                          ) : (
+                            <button
+                              onClick={() => openInfo(item.key)}
+                              className={`w-full text-left group flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200 ${item.urgent ? 'bg-red-50 hover:bg-red-100' : 'hover:bg-gray-50'
+                                }`}
+                            >
+                              <div className={`w-8 h-8 rounded-lg flex items-center justify-center transition-colors shadow-sm ${item.urgent ? 'bg-red-500 text-white' : `bg-${item.color}-50 text-${item.color}-500 group-hover:scale-110 duration-300`
+                                }`}>
+                                <i className={`fas ${item.icon} text-sm`}></i>
+                              </div>
+                              <span className={`font-semibold text-sm ${item.urgent ? 'text-red-700' : 'text-gray-700 group-hover:text-gray-900'}`}>
+                                {item.label}
+                              </span>
+                              {item.urgent && <i className="fas fa-exclamation-circle text-red-500 ml-auto animate-pulse"></i>}
+                            </button>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
                 ))}
               </nav>
             </div>
@@ -872,6 +1246,8 @@ const Dashboard = () => {
           onUpdate={fetchDashboardData}
         />
       )}
+      <BackToTop />
+      <Chatbot />
     </div>
   );
 };
