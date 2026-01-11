@@ -54,7 +54,7 @@ const ProfilePicModal = ({ isOpen, onClose, user, onUpdate }) => {
         setError('');
 
         try {
-            const token = localStorage.getItem('authToken');
+            const token = localStorage.getItem('authToken') || sessionStorage.getItem('authToken');
             const formData = new FormData();
             formData.append('profile_picture', selectedFile);
 

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 
-const Chatbot = () => {
+const Chatbot = ({ user, stats }) => {
     const [isOpen, setIsOpen] = useState(false);
     const [messages, setMessages] = useState([
         {
@@ -11,10 +11,22 @@ const Chatbot = () => {
     ]);
     const [inputValue, setInputValue] = useState("");
     const [isTyping, setIsTyping] = useState(false);
+    const [lastBotIntent, setLastBotIntent] = useState(null);
     const messagesEndRef = useRef(null);
 
     const scrollToBottom = () => {
         messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    };
+
+    const handleClearChat = () => {
+        setMessages([
+            {
+                id: 1,
+                type: 'bot',
+                text: `History cleared! 👋 I'm ready for fresh life-saving questions, ${user?.full_name?.split(' ')[0] || 'friend'}. How can I assist you?`
+            }
+        ]);
+        setLastBotIntent(null);
     };
 
     useEffect(() => {
@@ -37,12 +49,13 @@ const Chatbot = () => {
 
         // Simulate network delay and processing
         setTimeout(() => {
-            const botResponse = getBotResponse(userMsg.text);
+            const { text: botResponse, intent } = getBotResponse(userMsg.text);
             setMessages(prev => [...prev, {
                 id: Date.now() + 1,
                 type: 'bot',
                 text: botResponse
             }]);
+            setLastBotIntent(intent);
             setIsTyping(false);
         }, 1000 + Math.random() * 1000); // 1-2s delay
     };
@@ -57,51 +70,136 @@ const Chatbot = () => {
         setIsTyping(true);
 
         setTimeout(() => {
-            const botResponse = getBotResponse(text);
+            const { text: botResponse, intent } = getBotResponse(text);
             setMessages(prev => [...prev, {
                 id: Date.now() + 1,
                 type: 'bot',
                 text: botResponse
             }]);
+            setLastBotIntent(intent);
             setIsTyping(false);
         }, 1000);
     };
 
     const getBotResponse = (input) => {
-        const lowerInput = input.toLowerCase();
+        const lowerInput = input.toLowerCase().trim();
+        const userName = user?.full_name?.split(' ')[0] || 'friend';
 
-        // Logic for simple keyword matching
-        if (lowerInput.includes("donate") || lowerInput.includes("schedule") || lowerInput.includes("appointment")) {
-            return "To donate blood, please check the 'Events & Camps' section to find upcoming donation camps near you, or simply visit a nearby blood bank.";
+        // --- CONTEXTUAL HANDLING (Conversational Memory) ---
+        if (lastBotIntent === 'offer_profile_guide' && (lowerInput === 'yes' || lowerInput.includes('sure') || lowerInput.includes('yeah'))) {
+            return {
+                text: `Of course! 🗺️ Click on 'Edit Profile'. Inside, you'll find specialized sections for 'Personal Info', 'Location', and 'Account Security'. Need anything else?`,
+                intent: null
+            };
         }
-        if (lowerInput.includes("find") || lowerInput.includes("search") || lowerInput.includes("need blood")) {
-            return "You can search for blood donors in the 'Find Blood' section. Filter by blood group and location to find available donors quickly.";
+
+        if (lastBotIntent === 'offer_eligibility_check' && (lowerInput === 'yes' || lowerInput.includes('sure') || lowerInput.includes('yeah'))) {
+            // Trigger the actual check logic
+            if (stats?.isEligible) {
+                return {
+                    text: `Analyzing your records... 🧬 Done! You are ELIGIBLE to donate. Your body has fully recovered from your last donation. Ready to schedule a visit?`,
+                    intent: null
+                };
+            } else if (stats?.nextEligibleDate) {
+                const diffDays = Math.ceil(Math.abs(new Date(stats.nextEligibleDate) - new Date()) / (1000 * 60 * 60 * 24));
+                return {
+                    text: `Checking your history... 🧪 I see you've been a hero recently! You need ${diffDays} more days for your body to fully replenish its life-saving power. Eligible on ${new Date(stats.nextEligibleDate).toLocaleDateString()}.`,
+                    intent: null
+                };
+            }
         }
-        if (lowerInput.includes("profile") || lowerInput.includes("update") || lowerInput.includes("change")) {
-            return "You can update your personal details, including your location and contact info, by clicking the 'Edit Profile' button on your dashboard.";
+
+        if (lastBotIntent === 'offer_science_facts' && (lowerInput === 'yes' || lowerInput.includes('sure') || lowerInput.includes('yeah'))) {
+            return {
+                text: `Fascinating Facts: \n💉 Your body replaces lost plasma within 24 hours! \n🌟 One donation can save up to 3 separate lives. \n🩸 10% of your body weight is blood. \nReady to be a living, breathing miracle?`,
+                intent: null
+            };
         }
-        if (lowerInput.includes("certificate") || lowerInput.includes("badge")) {
-            return "Donation certificates are generated automatically after your donation is verified by the camp organizer. You can download them from the 'Certificates' tab.";
+
+        if (lowerInput === 'no' || lowerInput.includes('nope') || lowerInput.includes('not now')) {
+            return { text: "No problem! I'm here if you change your mind. 🩸", intent: null };
         }
-        if (lowerInput.includes("contact") || lowerInput.includes("support") || lowerInput.includes("help") || lowerInput.includes("issue")) {
-            return "For any support or issues, you can reach out to us at ebloodbankoriginal@gmail.com or use the 'Contact Support' form in the sidebar.";
+
+        // --- KEYWORD MATCHING ---
+
+        // 1. Personalized Eligibility
+        if (lowerInput.includes("eligible") || lowerInput.includes("can i donate") || lowerInput.includes("am i fit") || lowerInput === "eligibility") {
+            if (stats?.isEligible) {
+                return {
+                    text: `Good news, ${userName}! 🌟 My analysis indicates you are ELIGIBLE to donate. Would you like me to check the exact details of your last donation?`,
+                    intent: 'offer_eligibility_check'
+                };
+            } else if (stats?.nextEligibleDate) {
+                return {
+                    text: `My systems show you're on a recovery break, ${userName}. ⏳ I can calculate exactly how many days are left if you'd like?`,
+                    intent: 'offer_eligibility_check'
+                };
+            }
+            return {
+                text: `Checking general rules for you... 🧐 Are you 18-65 and over 45kg? If yes, you might be eligible! Want a personalized check of your records?`,
+                intent: 'offer_eligibility_check'
+            };
         }
-        if (lowerInput.includes("hi") || lowerInput.includes("hello") || lowerInput.includes("hey")) {
-            return "Hi there! How can I assist you in saving lives today? 🩸";
+
+        // 2. Compatibility & Science
+        if (lowerInput.includes("compatibility") || lowerInput.includes("group") || lowerInput.includes("receiver") || lowerInput.includes("universal") || lowerInput === "compatibility") {
+            return {
+                text: `Understanding Compatibility: \n• O- can give to anyone (Universal Donor).\n• AB+ can receive from anyone.\n• You are ${user?.blood_type || 'a hero'}. Would you like more science facts about your blood type?`,
+                intent: 'offer_science_facts'
+            };
         }
+
+        // 3. Managing Profile & Security
+        if (lowerInput.includes("profile") || lowerInput.includes("update") || lowerInput.includes("password") || lowerInput === "managing profile" || lowerInput === "manage profile") {
+            return {
+                text: `You can update your account, location, and security settings in 'Edit Profile'. Need a quick guide on where to find it?`,
+                intent: 'offer_profile_guide'
+            };
+        }
+
+        // 4. Personal Context
+        if (lowerInput.includes("my blood group") || lowerInput.includes("my type")) {
+            return {
+                text: user?.blood_type
+                    ? `Your registered blood type is ${user.blood_type}. ${user.blood_type.includes('-') ? 'Being Rhesus negative makes you a very rare and vital donor! 🌟' : 'Awesome group to have! ✨'}`
+                    : "I don't have your blood type on record. Should I show you how to add it in your profile?",
+                intent: !user?.blood_type ? 'offer_profile_guide' : null
+            };
+        }
+
+        // 5. Normal Actions
+        if (lowerInput.includes("donate") || lowerInput.includes("camp") || lowerInput.includes("how to")) {
+            return { text: `The donation journey: \n1. Locate a camp \n2. Confirm eligibility \n3. Donate \n4. Rest. Ready to save lives today?`, intent: null };
+        }
+
+        if (lowerInput.includes("emergency") || lowerInput.includes("urgent")) {
+            return { text: "🚨 CRITICAL: Use the 'Find Blood' tool immediately and filter for 'Available' donors nearby. Every second counts!", intent: null };
+        }
+
+        if (lowerInput.includes("hi") || lowerInput.includes("hello") || lowerInput.includes("hey") || lowerInput.includes("assistant")) {
+            const hour = new Date().getHours();
+            const timeGreeting = hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening";
+            return { text: `${timeGreeting}, ${userName}! 👋 I'm your AI assistant. I can help with eligibility, compatibility, or profile management. What's on your mind?`, intent: null };
+        }
+
         if (lowerInput.includes("bye") || lowerInput.includes("thanks") || lowerInput.includes("thank you")) {
-            return "You're welcome! Thank you for being part of our life-saving community. Have a great day! 🌟";
+            return { text: `My pleasure, ${userName}! Stay heroic. 🌟`, intent: null };
         }
 
-        return "I'm not quite sure about that. Could you try asking about 'Donating Blood', 'Finding Donors', or 'Managing Profile'?";
+        return {
+            text: `I'm analyzing your request... 🧠 I'm not 100% sure, but you might be asking about 'Eligibility', 'Compatibility', or 'Managing Profile'. Try typing one of those or using the quick replies!`,
+            intent: null
+        };
     };
 
     // Quick Reply Options
     const quickReplies = [
-        "How do I donate?",
-        "Find blood donors",
-        "Update profile",
-        "Contact support"
+        "Am I eligible?",
+        "Blood compatibility",
+        "How to donate?",
+        "Post-donation care",
+        "Emergency help",
+        "Update profile"
     ];
 
     return (
@@ -125,17 +223,26 @@ const Chatbot = () => {
                 style={{ height: 'min(600px, 70vh)' }}
             >
                 {/* Header */}
-                <div className="bg-gradient-to-r from-red-600 to-pink-600 p-4 rounded-t-2xl flex items-center gap-3 shrink-0">
-                    <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center backdrop-blur-sm">
-                        <i className="fas fa-robot text-white text-lg"></i>
+                <div className="bg-gradient-to-r from-red-600 to-pink-600 p-4 rounded-t-2xl flex items-center justify-between shrink-0">
+                    <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center backdrop-blur-sm">
+                            <i className="fas fa-robot text-white text-lg"></i>
+                        </div>
+                        <div>
+                            <h3 className="text-white font-bold text-lg leading-tight">AI Assistant</h3>
+                            <p className="text-red-100 text-xs flex items-center gap-1">
+                                <span className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></span>
+                                Online
+                            </p>
+                        </div>
                     </div>
-                    <div>
-                        <h3 className="text-white font-bold text-lg leading-tight">eBloodBank Assistant</h3>
-                        <p className="text-red-100 text-xs flex items-center gap-1">
-                            <span className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></span>
-                            Online
-                        </p>
-                    </div>
+                    <button
+                        onClick={handleClearChat}
+                        className="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white transition-colors"
+                        title="Clear History"
+                    >
+                        <i className="fas fa-trash-alt text-xs"></i>
+                    </button>
                 </div>
 
                 {/* Messages Area */}

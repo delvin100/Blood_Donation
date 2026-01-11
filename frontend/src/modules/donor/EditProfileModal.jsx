@@ -41,7 +41,7 @@ const stateDistrictMapping = {
 };
 
 // Reusable Input Field Component (Moved outside)
-const InputField = ({ label, name, type = 'text', options = null, disabled = false, icon, value, onChange, error }) => (
+const InputField = ({ label, name, type = 'text', options = null, disabled = false, icon, value, onChange, error, placeholder }) => (
     <div className="flex flex-col gap-2">
         <label className="text-sm font-bold text-gray-700 ml-1">
             {label} <span className="text-red-500">*</span>
@@ -71,7 +71,7 @@ const InputField = ({ label, name, type = 'text', options = null, disabled = fal
                     value={value || ''}
                     onChange={onChange}
                     disabled={disabled}
-                    placeholder={`Enter your ${label.toLowerCase()}`}
+                    placeholder={placeholder || `Enter your ${label.toLowerCase()}`}
                     className={`w-full pl-11 pr-4 py-4 rounded-xl border-2 font-medium bg-white outline-none transition-all duration-200 
                         ${error ? 'border-red-300 focus:border-red-500 focus:ring-4 focus:ring-red-500/10' : 'border-gray-200 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10'}
                         ${disabled ? 'bg-gray-100 text-gray-500 cursor-not-allowed' : ''}
@@ -98,12 +98,27 @@ const EditProfileModal = ({ isOpen, onClose, user, onUpdate }) => {
         country: 'India',
         state: '',
         district: '',
-        city: ''
+        city: '',
+        username: '',
+        password: '',
+        confirm_password: ''
     });
     // ... (rest of the component state)
     const [errors, setErrors] = useState({});
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [globalError, setGlobalError] = useState('');
+    const [passwordStrength, setPasswordStrength] = useState({ level: 0, label: "", color: "" });
+
+    const calculatePasswordStrength = (pwd) => {
+        if (!pwd) return { level: 0, label: "", color: "" };
+        if (/\s/.test(pwd)) return { level: 0, label: "Invalid (No spaces)", color: "#ef4444" };
+        const hasAlpha = /[a-zA-Z]/.test(pwd);
+        const hasNumber = /[0-9]/.test(pwd);
+        const hasSpecial = /[^a-zA-Z0-9]/.test(pwd);
+        if (hasAlpha && hasNumber && hasSpecial) return { level: 3, label: "Hard", color: "#10b981" };
+        if ((hasAlpha && hasNumber) || (hasAlpha && hasSpecial) || (hasNumber && hasSpecial)) return { level: 2, label: "Normal", color: "#f59e0b" };
+        return { level: 1, label: "Easy", color: "#ef4444" };
+    };
 
     useEffect(() => {
         if (user) {
@@ -120,7 +135,10 @@ const EditProfileModal = ({ isOpen, onClose, user, onUpdate }) => {
                 country: 'India', // Enforce India
                 state: user.state || '',
                 district: user.district || '',
-                city: user.city || ''
+                city: user.city || '',
+                username: user.username || '',
+                password: '',
+                confirm_password: ''
             });
             setErrors({}); // Clear errors when user changes
         }
@@ -133,13 +151,16 @@ const EditProfileModal = ({ isOpen, onClose, user, onUpdate }) => {
         let error = '';
         switch (name) {
             case 'full_name':
-                if (!value.trim()) error = 'Full Name is required.';
+                if (value.startsWith(' ')) error = 'Full name should not start with space.';
+                else if (!value.trim()) error = 'Full Name is required.';
                 else if (value.trim().length < 2) error = 'Name must be at least 2 characters.';
-                else if (!/^[a-zA-Z\s]*$/.test(value)) error = 'Name can only contain letters and spaces.';
+                else if (value.trim().length > 50) error = 'Full name must not exceed 50 characters.';
+                else if (!/^[a-zA-Z][a-zA-Z\s]*$/.test(value.trim())) error = 'Full name can only contain letters and spaces, and must start with a letter.';
                 break;
             case 'email':
                 if (!value.trim()) error = 'Email is required.';
                 else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) error = 'Invalid email address.';
+                else if (value.length > 100) error = 'Email must not exceed 100 characters.';
                 break;
             case 'phone':
                 if (!value.trim()) error = 'Please enter your phone number.';
@@ -156,7 +177,24 @@ const EditProfileModal = ({ isOpen, onClose, user, onUpdate }) => {
                         age--;
                     }
                     if (age < 18) error = 'You must be at least 18 years old to register.';
+                    else if (age > 65) error = 'Age must be between 18 and 65 years.';
                 }
+                break;
+            case 'username':
+                if (!value.trim()) error = 'Username is required.';
+                else if (value.length < 3) error = 'Username must be at least 3 characters.';
+                else if (value.length > 30) error = 'Username must not exceed 30 characters.';
+                else if (!/^[a-zA-Z][a-zA-Z0-9_]*$/.test(value)) error = 'Username must start with a letter and contain only letters, numbers, or underscores.';
+                break;
+            case 'password':
+                if (value) {
+                    if (value.length < 8) error = 'Password must be at least 8 characters.';
+                    else if (value.length > 128) error = 'Password must not exceed 128 characters.';
+                    else if (/\s/.test(value)) error = 'Password must not contain spaces.';
+                }
+                break;
+            case 'confirm_password':
+                if (formData.password && value !== formData.password) error = 'Passwords do not match.';
                 break;
             case 'blood_type':
             case 'gender':
@@ -190,6 +228,10 @@ const EditProfileModal = ({ isOpen, onClose, user, onUpdate }) => {
 
         const error = validateField(name, value);
         setErrors(prev => ({ ...prev, [name]: error }));
+
+        if (name === 'password') {
+            setPasswordStrength(calculatePasswordStrength(value));
+        }
     };
 
     const handleSubmit = async (e) => {
@@ -212,15 +254,22 @@ const EditProfileModal = ({ isOpen, onClose, user, onUpdate }) => {
             return;
         }
 
+        // Only send password if it's filled
+        const submissionData = { ...formData };
+        if (!submissionData.password) {
+            delete submissionData.password;
+            delete submissionData.confirm_password;
+        }
+
         try {
-            const token = localStorage.getItem('authToken');
+            const token = localStorage.getItem('authToken') || sessionStorage.getItem('authToken');
             const res = await fetch('/api/dashboard/profile', {
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json',
                     'Authorization': `Bearer ${token}`
                 },
-                body: JSON.stringify(formData)
+                body: JSON.stringify(submissionData)
             });
 
             if (!res.ok) {
@@ -310,6 +359,49 @@ const EditProfileModal = ({ isOpen, onClose, user, onUpdate }) => {
                         </div>
                     </div>
 
+                    {/* Section 3: Account Security (Only for non-Google users) */}
+                    {!user.google_id && (
+                        <div className="bg-rose-50/50 p-8 rounded-[32px] border border-rose-100">
+                            <h3 className="text-xl font-black text-rose-900 mb-6 flex items-center gap-2">
+                                <i className="fas fa-shield-alt text-rose-500"></i>
+                                Account Security
+                            </h3>
+                            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-x-8 gap-y-6">
+                                <InputField label="Username" name="username" icon="fa-user-tag" value={formData.username} onChange={handleChange} error={errors.username} />
+                                <div className="space-y-2">
+                                    <InputField label="New Password" name="password" type="password" icon="fa-lock" value={formData.password} onChange={handleChange} error={errors.password} />
+                                    {formData.password && (
+                                        <div className="px-1 pt-1">
+                                            <div className="flex justify-between items-center mb-1">
+                                                <span className="text-[10px] font-black uppercase tracking-wider text-gray-400">Strength: <span style={{ color: passwordStrength.color }}>{passwordStrength.label}</span></span>
+                                            </div>
+                                            <div className="h-1.5 w-full bg-gray-100 rounded-full overflow-hidden flex gap-1">
+                                                <div className={`h-full transition-all duration-500 rounded-full ${passwordStrength.level >= 1 ? '' : 'bg-transparent'}`} style={{ width: '33.33%', backgroundColor: passwordStrength.level >= 1 ? passwordStrength.color : '' }}></div>
+                                                <div className={`h-full transition-all duration-500 rounded-full ${passwordStrength.level >= 2 ? '' : 'bg-transparent'}`} style={{ width: '33.33%', backgroundColor: passwordStrength.level >= 2 ? passwordStrength.color : '' }}></div>
+                                                <div className={`h-full transition-all duration-500 rounded-full ${passwordStrength.level >= 3 ? '' : 'bg-transparent'}`} style={{ width: '33.33%', backgroundColor: passwordStrength.level >= 3 ? passwordStrength.color : '' }}></div>
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                                <InputField
+                                    label="Confirm New Password"
+                                    name="confirm_password"
+                                    type="password"
+                                    icon="fa-check-double"
+                                    value={formData.confirm_password}
+                                    onChange={handleChange}
+                                    error={errors.confirm_password}
+                                    placeholder="Confirm your password"
+                                    disabled={!formData.password}
+                                />
+                            </div>
+                            <p className="mt-4 text-xs text-rose-600 font-medium">
+                                <i className="fas fa-info-circle mr-1"></i>
+                                Leave password fields blank if you don't want to change it.
+                            </p>
+                        </div>
+                    )}
+
                     {/* Action Bar */}
                     <div className="flex items-center gap-4 pt-4">
                         <button
@@ -332,8 +424,8 @@ const EditProfileModal = ({ isOpen, onClose, user, onUpdate }) => {
                         </button>
                     </div>
                 </form>
-            </div>
-        </div>
+            </div >
+        </div >
     );
 };
 

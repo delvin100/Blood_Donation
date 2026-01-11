@@ -1,3 +1,4 @@
+const { json } = require('express');
 const pool = require('./db');
 
 async function migrate() {
@@ -15,7 +16,6 @@ async function migrate() {
                 console.error("Error adding google_id:", e.message);
             }
         }
-
         // Modify password_hash to be nullable
         try {
             await pool.query("ALTER TABLE donors MODIFY COLUMN password_hash VARCHAR(255) NULL");

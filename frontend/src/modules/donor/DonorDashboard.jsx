@@ -48,9 +48,9 @@ const Dashboard = () => {
 
   const fetchDashboardData = async () => {
     try {
-      const token = localStorage.getItem('authToken');
+      const token = localStorage.getItem('authToken') || sessionStorage.getItem('authToken');
       if (!token) {
-        window.location.href = '/login';
+        window.location.href = '/donor/login';
         return;
       }
       const res = await fetch('/api/dashboard/stats', {
@@ -116,7 +116,7 @@ const Dashboard = () => {
   const handleAddDonation = async (e) => {
     e.preventDefault();
     try {
-      const token = localStorage.getItem('authToken');
+      const token = localStorage.getItem('authToken') || sessionStorage.getItem('authToken');
       const res = await fetch('/api/dashboard/donation', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
@@ -135,7 +135,7 @@ const Dashboard = () => {
   const handleEditDonation = async (e) => {
     e.preventDefault();
     try {
-      const token = localStorage.getItem('authToken');
+      const token = localStorage.getItem('authToken') || sessionStorage.getItem('authToken');
       const res = await fetch(`/api/dashboard/donation/${editingDonation.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
@@ -157,7 +157,7 @@ const Dashboard = () => {
   const handleAddReminder = async (e) => {
     e.preventDefault();
     try {
-      const token = localStorage.getItem('authToken');
+      const token = localStorage.getItem('authToken') || sessionStorage.getItem('authToken');
       const res = await fetch('/api/dashboard/reminder', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
@@ -175,7 +175,7 @@ const Dashboard = () => {
   const handleEditReminder = async (e) => {
     e.preventDefault();
     try {
-      const token = localStorage.getItem('authToken');
+      const token = localStorage.getItem('authToken') || sessionStorage.getItem('authToken');
       const res = await fetch(`/api/dashboard/reminder/${editingReminder.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
@@ -193,7 +193,7 @@ const Dashboard = () => {
   const handleDelete = async (type, id) => {
     if (!window.confirm(`Are you sure you want to delete this ${type}?`)) return;
     try {
-      const token = localStorage.getItem('authToken');
+      const token = localStorage.getItem('authToken') || sessionStorage.getItem('authToken');
       const res = await fetch(`/api/dashboard/${type}/${id}`, {
         method: 'DELETE',
         headers: { 'Authorization': `Bearer ${token}` }
@@ -210,6 +210,7 @@ const Dashboard = () => {
 
   const handleLogout = () => {
     localStorage.removeItem('authToken');
+    sessionStorage.removeItem('authToken');
     window.location.href = '/login';
   };
 
@@ -1247,7 +1248,7 @@ const Dashboard = () => {
         />
       )}
       <BackToTop />
-      <Chatbot />
+      <Chatbot user={user} stats={stats} />
     </div>
   );
 };

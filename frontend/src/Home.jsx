@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { Link } from "react-router-dom";
 import BackToTop from "./BackToTop";
 
 export default function Home() {
@@ -10,6 +11,11 @@ export default function Home() {
   };
 
   const closeModal = () => setActiveModal(null);
+
+  const getDonorRedirectPath = () => {
+    const token = localStorage.getItem("authToken") || sessionStorage.getItem("authToken");
+    return token ? "/dashboard" : "/donor/login";
+  };
 
 
 
@@ -314,13 +320,13 @@ export default function Home() {
                   <p className="text-gray-600 mb-6">
                     Be a hero! Register as a blood donor and help save lives in your community.
                   </p>
-                  <a
-                    href="/donor/login"
+                  <Link
+                    to={getDonorRedirectPath()}
                     className="block text-center w-full bg-red-500 hover:bg-red-600 text-white font-semibold py-3 px-6 rounded-lg transition-colors glow-effect"
                     aria-label="Register or login as donor"
                   >
                     Register / Login as Donor
-                  </a>
+                  </Link>
                 </div>
               </div>
 
@@ -358,13 +364,13 @@ export default function Home() {
                   <p className="text-gray-600 mb-6">
                     Access your organization dashboard to manage drives and monitor requests.
                   </p>
-                  <a
-                    href="/organization-login.html"
+                  <Link
+                    to="/organization/login"
                     className="block text-center w-full bg-gray-800 hover:bg-gray-900 text-white font-semibold py-3 px-6 rounded-lg transition-colors glow-effect"
                     aria-label="Organization login"
                   >
                     Login for Organization
-                  </a>
+                  </Link>
                 </div>
               </div>
 
@@ -490,7 +496,7 @@ export default function Home() {
                 <li><a href="#home" className="text-gray-400 hover:text-white transition-colors">Home</a></li>
                 <li><a href="#aboutt" className="text-gray-400 hover:text-white transition-colors">About Us</a></li>
                 <li><a href="#action-cards" className="text-gray-400 hover:text-white transition-colors">Get Started</a></li>
-                <li><a href="/donor/login" className="text-gray-400 hover:text-white transition-colors">Donor Login</a></li>
+                <li><Link to={getDonorRedirectPath()} className="text-gray-400 hover:text-white transition-colors">Donor Login</Link></li>
               </ul>
             </div>
 

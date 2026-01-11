@@ -23,10 +23,19 @@ export default function DonorLogin() {
   // Field states
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
+  const [rememberMe, setRememberMe] = useState(false);
 
   // Field error states
   const [usernameError, setUsernameError] = useState("");
   const [passwordError, setPasswordError] = useState("");
+
+  // Check for existing session on mount
+  useEffect(() => {
+    const token = localStorage.getItem("authToken") || sessionStorage.getItem("authToken");
+    if (token) {
+      window.location.href = "/dashboard";
+    }
+  }, []);
 
   useEffect(() => {
     document.body.classList.add("register-page");
@@ -228,7 +237,11 @@ export default function DonorLogin() {
         if (!res.ok) throw new Error(data.error || "Google Login failed");
 
         if (data.token) {
-          localStorage.setItem("authToken", data.token);
+          if (rememberMe) {
+            localStorage.setItem("authToken", data.token);
+          } else {
+            sessionStorage.setItem("authToken", data.token);
+          }
         }
 
         if (data.user && data.user.blood_type) {
@@ -280,7 +293,11 @@ export default function DonorLogin() {
       }
 
       if (data.token) {
-        localStorage.setItem("authToken", data.token);
+        if (rememberMe) {
+          localStorage.setItem("authToken", data.token);
+        } else {
+          sessionStorage.setItem("authToken", data.token);
+        }
       }
       window.location.href = "/dashboard";
     } catch (err) {
@@ -429,10 +446,28 @@ export default function DonorLogin() {
                 {loginError}
               </div>
 
-              <div className="forgot">
-                <a href="#" onClick={openForgotModal} aria-label="Forgot password link">
-                  Forgot password?
-                </a>
+              <div className="login-options flex items-center justify-between py-2">
+                <label className="flex items-center gap-2 cursor-pointer group">
+                  <div className="relative">
+                    <input
+                      type="checkbox"
+                      className="peer hidden"
+                      checked={rememberMe}
+                      onChange={(e) => setRememberMe(e.target.checked)}
+                    />
+                    <div className="w-5 h-5 border-2 border-gray-300 rounded-md transition-all group-hover:border-red-500 peer-checked:bg-red-500 peer-checked:border-red-500 flex items-center justify-center">
+                      <svg className={`w-3 h-3 text-white transition-opacity ${rememberMe ? 'opacity-100' : 'opacity-0'}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round">
+                        <polyline points="20 6 9 17 4 12"></polyline>
+                      </svg>
+                    </div>
+                  </div>
+                  <span className="text-sm font-semibold text-gray-600 group-hover:text-gray-900 transition-colors">Remember me</span>
+                </label>
+                <div className="forgot">
+                  <a href="#" onClick={openForgotModal} aria-label="Forgot password link" className="text-sm font-bold text-red-600 hover:text-red-700 hover:underline">
+                    Forgot password?
+                  </a>
+                </div>
               </div>
 
               <button

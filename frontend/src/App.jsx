@@ -1,34 +1,39 @@
 import React from 'react';
+import { Routes, Route, Navigate } from 'react-router-dom';
+import { Toaster } from 'react-hot-toast';
 import Home from './Home';
 import DonorDashboard from './modules/donor/DonorDashboard';
 import DonorLogin from './modules/donor/DonorLogin';
 import DonorRegister from './modules/donor/DonorRegister';
+import OrgLogin from './modules/organization/OrgLogin';
+import OrgRegister from './modules/organization/OrgRegister';
+import OrgDashboard from './modules/organization/OrgDashboard';
 
 export default function App() {
-  const path = window.location.pathname;
+  return (
+    <>
+      <Toaster position="top-right" />
+      <Routes>
+        {/* Home Route */}
+        <Route path="/" element={<Home />} />
 
-  if (path === '/dashboard') {
-    return <DonorDashboard />;
-  }
+        {/* Donor Routes */}
+        <Route path="/dashboard" element={<DonorDashboard />} />
+        <Route path="/donor/login" element={<DonorLogin />} />
+        <Route path="/donor/register" element={<DonorRegister />} />
 
-  // Updated routes for Donor module
-  if (path === '/donor/login') {
-    return <DonorLogin />;
-  }
+        {/* Organization Routes */}
+        <Route path="/organization/login" element={<OrgLogin />} />
+        <Route path="/organization/register" element={<OrgRegister />} />
+        <Route path="/organization/dashboard" element={<OrgDashboard />} />
 
-  if (path === '/donor/register') {
-    return <DonorRegister />;
-  }
+        {/* Legacy Redirects */}
+        <Route path="/login" element={<Navigate to="/donor/login" replace />} />
+        <Route path="/register" element={<Navigate to="/donor/register" replace />} />
 
-  // Legacy redirects (optional, or just handle fallbacks)
-  if (path === '/login') {
-    window.location.href = '/donor/login';
-    return null;
-  }
-  if (path === '/register') {
-    window.location.href = '/donor/register';
-    return null;
-  }
-
-  return <Home />;
+        {/* Fallback */}
+        <Route path="*" element={<Home />} />
+      </Routes>
+    </>
+  );
 }

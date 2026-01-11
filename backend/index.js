@@ -11,10 +11,12 @@ app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 const homeRoutes = require('./routes/home');
 const authRoutes = require('./routes/auth');
 const dashboardRoutes = require('./routes/dashboard');
+const organizationRoutes = require('./routes/organization');
 
 app.use('/api', homeRoutes);
 app.use('/api/auth', authRoutes);
 app.use('/api/dashboard', dashboardRoutes);
+app.use('/api/organization', organizationRoutes);
 
 const PORT = process.env.PORT || 4000;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));

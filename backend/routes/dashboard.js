@@ -4,6 +4,7 @@ const pool = require('../db');
 const authMiddleware = require('../middlewares/authMiddleware');
 const multer = require('multer');
 const path = require('path');
+const bcrypt = require('bcrypt');
 
 // Multer Storage Configuration
 const storage = multer.diskStorage({
@@ -105,7 +106,9 @@ router.get('/stats', authMiddleware, async (req, res) => {
                 state: donor.state,
                 district: donor.district,
                 city: donor.city,
-                profile_picture: donor.profile_picture
+                profile_picture: donor.profile_picture,
+                username: donor.username,
+                google_id: donor.google_id
             },
             stats: {
                 totalDonations,
@@ -228,16 +231,93 @@ router.put('/reminder/:id', authMiddleware, async (req, res) => {
 // Update Profile
 router.put('/profile', authMiddleware, async (req, res) => {
     try {
-        const { full_name, email, dob, phone, blood_type, gender, state, district, city } = req.body;
+        const { full_name, email, dob, phone, blood_type, gender, state, district, city, username, password } = req.body;
         const donorId = req.user.id;
+
+        // --- Back-end Validations ---
+
+        // Full Name Validation
+        if (full_name) {
+            if (full_name.startsWith(' ')) {
+                return res.status(400).json({ error: 'Full name should not start with space.' });
+            }
+            const trimmedName = full_name.trim();
+            if (!trimmedName || trimmedName.length < 2 || trimmedName.length > 50) {
+                return res.status(400).json({ error: 'Full name must be between 2 and 50 characters.' });
+            }
+            if (!/^[a-zA-Z][a-zA-Z\s]*$/.test(trimmedName)) {
+                return res.status(400).json({ error: 'Full name can only contain letters and spaces, and must start with a letter.' });
+            }
+        }
+
+        // Email Validation
+        if (email) {
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            if (!emailRegex.test(email) || email.length > 100) {
+                return res.status(400).json({ error: 'Please enter a valid email address (max 100 characters).' });
+            }
+        }
+
+        // Username Validation
+        if (username) {
+            if (username.length < 3 || username.length > 30) {
+                return res.status(400).json({ error: 'Username must be between 3 and 30 characters.' });
+            }
+            if (!/^[a-zA-Z][a-zA-Z0-9_]*$/.test(username)) {
+                return res.status(400).json({ error: 'Username must start with a letter and contain only letters, numbers, or underscores.' });
+            }
+            // Check if username is already taken
+            const [existing] = await pool.query('SELECT id FROM donors WHERE username = ? AND id != ?', [username, donorId]);
+            if (existing.length > 0) {
+                return res.status(400).json({ error: 'Username is already taken' });
+            }
+        }
+
+        // Password Validation
+        if (password) {
+            if (password.length < 8 || password.length > 128) {
+                return res.status(400).json({ error: 'Password must be between 8 and 128 characters.' });
+            }
+            if (/\s/.test(password)) {
+                return res.status(400).json({ error: 'Password must not contain spaces.' });
+            }
+        }
+
+        // Age Validation
+        if (dob) {
+            const birthDate = new Date(dob);
+            const today = new Date();
+            let age = today.getFullYear() - birthDate.getFullYear();
+            const m = today.getMonth() - birthDate.getMonth();
+            if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
+                age--;
+            }
+            if (age < 18 || age > 65) {
+                return res.status(400).json({ error: 'Age must be between 18 and 65 years.' });
+            }
+        }
+
+        // Phone Validation
+        if (phone) {
+            if (!/^[0-9]{10}$/.test(phone)) {
+                return res.status(400).json({ error: 'Phone number must be exactly 10 digits.' });
+            }
+        }
+
+        let passwordHash = null;
+        if (password) {
+            passwordHash = await bcrypt.hash(password, 10);
+        }
 
         await pool.query(
             `UPDATE donors SET 
                 full_name = COALESCE(?, full_name), 
                 email = COALESCE(?, email), 
-                dob = ?, phone = ?, blood_type = ?, gender = ?, state = ?, district = ?, city = ? 
+                dob = ?, phone = ?, blood_type = ?, gender = ?, state = ?, district = ?, city = ?,
+                username = COALESCE(?, username),
+                password_hash = COALESCE(?, password_hash)
              WHERE id = ?`,
-            [full_name, email, dob, phone, blood_type, gender, state, district, city, donorId]
+            [full_name, email, dob, phone, blood_type, gender, state, district, city, username, passwordHash, donorId]
         );
 
         res.json({ message: 'Profile updated successfully' });

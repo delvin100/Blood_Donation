@@ -346,7 +346,7 @@ export default function CompleteProfileModal({ onClose, onSuccess, user }) {
 
     try {
       setIsSubmitting(true);
-      const token = localStorage.getItem('authToken');
+      const token = localStorage.getItem('authToken') || sessionStorage.getItem('authToken');
       if (!token) {
         setGlobalError('Authentication token not found. Please log in again.');
         setIsSubmitting(false);
