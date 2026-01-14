@@ -263,7 +263,7 @@ const EditProfileModal = ({ isOpen, onClose, user, onUpdate }) => {
 
         try {
             const token = localStorage.getItem('authToken') || sessionStorage.getItem('authToken');
-            const res = await fetch('/api/dashboard/profile', {
+            const res = await fetch('/api/donor/profile', {
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json',

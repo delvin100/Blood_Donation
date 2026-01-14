@@ -58,7 +58,7 @@ const ProfilePicModal = ({ isOpen, onClose, user, onUpdate }) => {
             const formData = new FormData();
             formData.append('profile_picture', selectedFile);
 
-            const res = await fetch('/api/dashboard/profile-picture', {
+            const res = await fetch('/api/donor/profile-picture', {
                 method: 'POST',
                 headers: { 'Authorization': `Bearer ${token}` },
                 body: formData
@@ -106,9 +106,9 @@ const ProfilePicModal = ({ isOpen, onClose, user, onUpdate }) => {
                     <div className="mb-8 flex flex-col items-center">
                         <div className="w-28 h-28 rounded-full shadow-xl border-4 border-white bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center overflow-hidden mb-3">
                             {previewUrl ? (
-                                <img src={previewUrl} alt="Preview" className="w-full h-full object-cover" />
+                                <img src={previewUrl} alt="Preview" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
                             ) : user.profile_picture ? (
-                                <img src={getProfilePicUrl(user.profile_picture)} alt="Current" className="w-full h-full object-cover" />
+                                <img src={getProfilePicUrl(user.profile_picture)} alt="Current" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
                             ) : (
                                 <span className="text-4xl font-bold text-white">
                                     {user.full_name?.charAt(0).toUpperCase()}

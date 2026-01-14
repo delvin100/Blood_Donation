@@ -378,24 +378,30 @@ router.post('/google', async (req, res) => {
     }
 
     // Self-heal: If existing donor has no name, update it from Google
+    // Self-heal: If existing donor has no name, update it from Google
     if (donor) {
       let updates = [];
       let params = [];
 
-      if (!donor.full_name || donor.full_name.trim() === '') {
-        updates.push('full_name = ?');
-        params.push(fullName);
-        donor.full_name = fullName;
+      // Self-heal: If existing donor has no name or generic name, update it from Google
+      if (!donor.full_name || donor.full_name.trim() === '' || donor.full_name === 'Blood Donor') {
+        if (fullName && fullName.trim() !== '') {
+          updates.push('full_name = ?');
+          params.push(fullName);
+          donor.full_name = fullName;
+        }
       }
 
-      // Also heal EMAIL if it's missing (rare, but possible if created via loose logic previously)
+      // Also heal EMAIL if it's missing
       if (!donor.email || donor.email.trim() === '') {
         updates.push('email = ?');
         params.push(email);
         donor.email = email;
       }
 
-      if (!donor.profile_picture && picture) {
+      // Fix Profile Picture: Always update if Google provides one and it's different
+      // This fixes issues where the URL was previously truncated or missing
+      if (picture && donor.profile_picture !== picture) {
         updates.push('profile_picture = ?');
         params.push(picture);
         donor.profile_picture = picture;

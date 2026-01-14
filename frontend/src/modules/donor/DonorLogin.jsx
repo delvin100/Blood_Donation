@@ -237,6 +237,10 @@ export default function DonorLogin() {
         if (!res.ok) throw new Error(data.error || "Google Login failed");
 
         if (data.token) {
+          // Clear any existing tokens first to avoid conflicts
+          localStorage.removeItem("authToken");
+          sessionStorage.removeItem("authToken");
+
           if (rememberMe) {
             localStorage.setItem("authToken", data.token);
           } else {
@@ -293,6 +297,10 @@ export default function DonorLogin() {
       }
 
       if (data.token) {
+        // Clear any existing tokens first to avoid conflicts
+        localStorage.removeItem("authToken");
+        sessionStorage.removeItem("authToken");
+
         if (rememberMe) {
           localStorage.setItem("authToken", data.token);
         } else {

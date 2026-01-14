@@ -30,7 +30,7 @@ CREATE TABLE donors (
   state VARCHAR(100) DEFAULT NULL,
   district VARCHAR(100) DEFAULT NULL,
   city VARCHAR(100) DEFAULT NULL,
-  profile_picture VARCHAR(255) DEFAULT NULL,
+  profile_picture TEXT DEFAULT NULL,
   reset_code VARCHAR(4) DEFAULT NULL,
   reset_code_expires_at DATETIME DEFAULT NULL,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
@@ -92,6 +92,8 @@ CREATE TABLE organizations (
   district VARCHAR(100),
   city VARCHAR(100),
   verified BOOLEAN DEFAULT FALSE,
+  reset_code VARCHAR(4) DEFAULT NULL,
+  reset_code_expires_at DATETIME DEFAULT NULL,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
@@ -101,6 +103,7 @@ CREATE TABLE blood_inventory (
   org_id INT NOT NULL,
   blood_group VARCHAR(30) NOT NULL,
   units INT DEFAULT 0,
+  min_threshold INT DEFAULT 5,
   last_updated TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   FOREIGN KEY (org_id) REFERENCES organizations(id) ON DELETE CASCADE,
   UNIQUE KEY unique_inventory (org_id, blood_group)
@@ -112,7 +115,7 @@ CREATE TABLE emergency_requests (
   org_id INT NOT NULL,
   blood_group VARCHAR(30) NOT NULL,
   units_required INT NOT NULL,
-  urgency_level ENUM('Critical', 'High', 'Moderate') DEFAULT 'High',
+  urgency_level ENUM('Critical', 'High', 'Medium') DEFAULT 'High',
   description TEXT,
   status ENUM('Active', 'Fulfilled', 'Cancelled') DEFAULT 'Active',
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -129,4 +132,16 @@ CREATE TABLE donor_verifications (
   notes TEXT,
   FOREIGN KEY (org_id) REFERENCES organizations(id) ON DELETE CASCADE,
   FOREIGN KEY (donor_id) REFERENCES donors(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- Organization Members Table
+CREATE TABLE IF NOT EXISTS org_members (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  org_id INT NOT NULL,
+  donor_id INT NOT NULL,
+  role ENUM('Member', 'Volunteer') DEFAULT 'Member',
+  joined_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (org_id) REFERENCES organizations(id) ON DELETE CASCADE,
+  FOREIGN KEY (donor_id) REFERENCES donors(id) ON DELETE CASCADE,
+  UNIQUE KEY unique_member (org_id, donor_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

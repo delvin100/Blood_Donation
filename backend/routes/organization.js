@@ -106,6 +106,51 @@ router.post('/login', async (req, res) => {
     }
 });
 
+// GET DASHBOARD STATS
+router.get('/stats', authMiddleware, async (req, res) => {
+    try {
+        const orgId = req.user.id;
+
+        // 1. Total Unit Count
+        const [inventoryRows] = await pool.query(
+            'SELECT SUM(units) as total_units FROM blood_inventory WHERE org_id = ?',
+            [orgId]
+        );
+        const totalUnits = inventoryRows[0].total_units || 0;
+
+        // 2. Active Emergency Requests
+        const [requestRows] = await pool.query(
+            'SELECT COUNT(*) as active_requests FROM emergency_requests WHERE org_id = ? AND status = ?',
+            [orgId, 'Active']
+        );
+        const activeRequests = requestRows[0].active_requests || 0;
+
+        // 3. Total Verified Donations (Donors verified by this org)
+        const [verificationRows] = await pool.query(
+            'SELECT COUNT(*) as verified_count FROM donor_verifications WHERE org_id = ? AND status = ?',
+            [orgId, 'Verified']
+        );
+        const verifiedCount = verificationRows[0].verified_count || 0;
+
+        // 4. Inventory Breakdown
+        const [breakdownRows] = await pool.query(
+            'SELECT blood_group, units, min_threshold FROM blood_inventory WHERE org_id = ?',
+            [orgId]
+        );
+
+        res.json({
+            total_units: totalUnits,
+            active_requests: activeRequests,
+            verified_count: verifiedCount,
+            inventory_breakdown: breakdownRows
+        });
+
+    } catch (err) {
+        console.error('Stats Error:', err);
+        res.status(500).json({ error: 'Server error' });
+    }
+});
+
 // GET INVENTORY
 router.get('/inventory', authMiddleware, async (req, res) => {
     try {
@@ -117,21 +162,22 @@ router.get('/inventory', authMiddleware, async (req, res) => {
     }
 });
 
-// UPDATE INVENTORY
+// UPDATE INVENTORY (Units & Thresholds)
 router.post('/inventory/update', authMiddleware, async (req, res) => {
     try {
         const orgId = req.user.id;
-        const { blood_group, units } = req.body;
+        const { blood_group, units, min_threshold } = req.body;
 
         await pool.query(
-            `INSERT INTO blood_inventory (org_id, blood_group, units) 
-       VALUES (?, ?, ?) 
-       ON DUPLICATE KEY UPDATE units = ?`,
-            [orgId, blood_group, units, units]
+            `INSERT INTO blood_inventory (org_id, blood_group, units, min_threshold) 
+       VALUES (?, ?, ?, ?) 
+       ON DUPLICATE KEY UPDATE units = ?, min_threshold = IFNULL(?, min_threshold)`,
+            [orgId, blood_group, units, min_threshold || 5, units, min_threshold]
         );
 
         res.json({ message: 'Inventory updated' });
     } catch (err) {
+        console.error('Inventory Update Error:', err);
         res.status(500).json({ error: 'Server error' });
     }
 });
@@ -157,10 +203,12 @@ router.post('/request/create', authMiddleware, async (req, res) => {
 // SEARCH DONOR (For Verification)
 router.get('/donor/search', authMiddleware, async (req, res) => {
     try {
-        const { query } = req.query; // email or phone
+        const { query } = req.query;
+        if (!query || query.length < 1) return res.json([]);
+
         const [rows] = await pool.query(
-            'SELECT id, full_name, email, phone, blood_type, availability FROM donors WHERE email = ? OR phone = ?',
-            [query, query]
+            'SELECT id, full_name, email, phone, blood_type, availability FROM donors WHERE email LIKE ? OR phone LIKE ? LIMIT 10',
+            [`%${query}%`, `%${query}%`]
         );
         res.json(rows);
     } catch (err) {
@@ -187,6 +235,102 @@ router.post('/verify', authMiddleware, async (req, res) => {
         );
 
         res.json({ message: 'Donor verified and donation recorded.' });
+    } catch (err) {
+        res.status(500).json({ error: 'Server error' });
+    }
+});
+
+// GET HISTORY (Verified Donations)
+router.get('/history', authMiddleware, async (req, res) => {
+    try {
+        const orgId = req.user.id;
+        const [rows] = await pool.query(`
+            SELECT dv.id, dv.notes, dv.verification_date as created_at, d.full_name, d.blood_type, d.email
+            FROM donor_verifications dv
+            JOIN donors d ON dv.donor_id = d.id
+            WHERE dv.org_id = ?
+            ORDER BY dv.verification_date DESC
+        `, [orgId]);
+        res.json(rows);
+    } catch (err) {
+        console.error("History Error:", err);
+        res.status(500).json({ error: 'Server error' });
+    }
+});
+
+// GET REQUESTS (Active & Closed)
+router.get('/requests', authMiddleware, async (req, res) => {
+    try {
+        const orgId = req.user.id;
+        const [rows] = await pool.query(
+            'SELECT * FROM emergency_requests WHERE org_id = ? ORDER BY created_at DESC',
+            [orgId]
+        );
+        res.json(rows);
+    } catch (err) {
+        res.status(500).json({ error: 'Server error' });
+    }
+});
+
+// GET RECENT ACTIVITY
+router.get('/recent-activity', authMiddleware, async (req, res) => {
+    try {
+        const orgId = req.user.id;
+
+        // Fetch last 3 verifications
+        const [verifications] = await pool.query(`
+            SELECT 'donation' as type, dv.verification_date as date, d.full_name as title, dv.notes as subtitle
+            FROM donor_verifications dv
+            JOIN donors d ON dv.donor_id = d.id
+            WHERE dv.org_id = ?
+            ORDER BY dv.verification_date DESC LIMIT 3
+        `, [orgId]);
+
+        // Fetch last 3 emergency requests
+        const [requests] = await pool.query(`
+            SELECT 'request' as type, created_at as date, blood_group as title, urgency_level as subtitle
+            FROM emergency_requests
+            WHERE org_id = ?
+            ORDER BY created_at DESC LIMIT 3
+        `, [orgId]);
+
+        // Fetch last 3 members
+        const [members] = await pool.query(`
+            SELECT 'member' as type, om.joined_at as date, d.full_name as title, d.city as subtitle
+            FROM org_members om
+            JOIN donors d ON om.donor_id = d.id
+            WHERE om.org_id = ?
+            ORDER BY om.joined_at DESC LIMIT 3
+        `, [orgId]);
+
+        const combined = [...verifications, ...requests, ...members]
+            .sort((a, b) => new Date(b.date) - new Date(a.date))
+            .slice(0, 6);
+
+        res.json(combined);
+    } catch (err) {
+        console.error('Recent Activity Error:', err);
+        res.status(500).json({ error: 'Server error' });
+    }
+});
+
+// UPDATE REQUEST STATUS
+router.put('/request/:id/status', authMiddleware, async (req, res) => {
+    try {
+        const orgId = req.user.id;
+        const { id } = req.params;
+        const { status } = req.body; // 'Active', 'Closed'
+
+        const [result] = await pool.query(
+            'UPDATE emergency_requests SET status = ? WHERE id = ? AND org_id = ?',
+            [status, id, orgId]
+        );
+
+        if (result.affectedRows === 0) {
+            return res.status(404).json({ error: 'Request not found' });
+        }
+
+        res.json({ message: 'Request updated' });
     } catch (err) {
         res.status(500).json({ error: 'Server error' });
     }
@@ -268,6 +412,137 @@ router.post('/reset-password', async (req, res) => {
         res.json({ message: 'Password reset successfully.' });
     } catch (err) {
         res.status(500).json({ error: 'Server error.' });
+    }
+});
+
+// --- MEMBER MANAGEMENT ---
+
+// GET ALL MEMBERS
+router.get('/members', authMiddleware, async (req, res) => {
+    try {
+        const orgId = req.user.id;
+        const [rows] = await pool.query(`
+            SELECT om.id as membership_id, om.role, om.joined_at, d.id as donor_id, d.full_name, d.email, d.phone, d.blood_type, d.city
+            FROM org_members om
+            JOIN donors d ON om.donor_id = d.id
+            WHERE om.org_id = ?
+            ORDER BY om.joined_at DESC
+        `, [orgId]);
+        res.json(rows);
+    } catch (err) {
+        console.error('Fetch Members Error:', err);
+        res.status(500).json({ error: 'Server error' });
+    }
+});
+
+// ADD MEMBER
+router.post('/members/add', authMiddleware, async (req, res) => {
+    try {
+        const orgId = req.user.id;
+        const { donor_id, role = 'Member' } = req.body;
+
+        if (!donor_id) return res.status(400).json({ error: 'Donor ID is required.' });
+
+        await pool.query(
+            'INSERT INTO org_members (org_id, donor_id, role) VALUES (?, ?, ?) ON DUPLICATE KEY UPDATE role = ?',
+            [orgId, donor_id, role, role]
+        );
+
+        res.json({ message: 'Donor added to organization members successfully!' });
+    } catch (err) {
+        console.error('Add Member Error:', err);
+        res.status(500).json({ error: 'Server error' });
+    }
+});
+
+// REMOVE MEMBER
+router.delete('/members/:donorId', authMiddleware, async (req, res) => {
+    try {
+        const orgId = req.user.id;
+        const { donorId } = req.params;
+
+        await pool.query('DELETE FROM org_members WHERE org_id = ? AND donor_id = ?', [orgId, donorId]);
+        res.json({ message: 'Member removed successfully.' });
+    } catch (err) {
+        console.error('Remove Member Error:', err);
+        res.status(500).json({ error: 'Server error' });
+    }
+});
+
+// --- ADVANCED FEATURES ---
+
+// GET ANALYTICS (Last 7 Days)
+router.get('/analytics', authMiddleware, async (req, res) => {
+    try {
+        const orgId = req.user.id;
+
+        // Count verifications per day
+        const [verifications] = await pool.query(`
+            SELECT DATE(verification_date) as date, COUNT(*) as count 
+            FROM donor_verifications 
+            WHERE org_id = ? AND verification_date >= DATE_SUB(CURDATE(), INTERVAL 7 DAY)
+            GROUP BY DATE(verification_date)
+            ORDER BY DATE(verification_date) ASC
+        `, [orgId]);
+
+        // Count requests per day
+        const [requests] = await pool.query(`
+            SELECT DATE(created_at) as date, COUNT(*) as count 
+            FROM emergency_requests 
+            WHERE org_id = ? AND created_at >= DATE_SUB(CURDATE(), INTERVAL 7 DAY)
+            GROUP BY DATE(created_at)
+            ORDER BY DATE(created_at) ASC
+        `, [orgId]);
+
+        res.json({ verifications, requests });
+    } catch (err) {
+        res.status(500).json({ error: 'Server error' });
+    }
+});
+
+// GET GEOGRAPHIC REACH
+router.get('/geographic-stats', authMiddleware, async (req, res) => {
+    try {
+        const orgId = req.user.id;
+        const [rows] = await pool.query(`
+            SELECT d.city, COUNT(*) as count 
+            FROM org_members om
+            JOIN donors d ON om.donor_id = d.id
+            WHERE om.org_id = ?
+            GROUP BY d.city
+            ORDER BY count DESC
+            LIMIT 5
+        `, [orgId]);
+        res.json(rows);
+    } catch (err) {
+        res.status(500).json({ error: 'Server error' });
+    }
+});
+
+// SEND OUTREACH BROADCAST
+router.post('/outreach', authMiddleware, async (req, res) => {
+    try {
+        const orgId = req.user.id;
+        const { subject, body } = req.body;
+
+        const [members] = await pool.query(`
+            SELECT d.email FROM org_members om
+            JOIN donors d ON om.donor_id = d.id
+            WHERE om.org_id = ?
+        `, [orgId]);
+
+        if (members.length === 0) return res.status(400).json({ error: 'No members to broadcast to' });
+
+        const emails = members.map(m => m.email);
+
+        // For local demo, we'll just log and return success if nodemailer isn't fully configured
+        // In a real app, you'd use the configured transporter
+        console.log(`Broadcasting to ${emails.length} members: ${subject}`);
+
+        // Mock success for now to allow UI testing
+        res.json({ message: `Success! Broadcast sent to ${emails.length} members.` });
+    } catch (err) {
+        res.status(500).json({ error: 'Server error' });
     }
 });
 

@@ -68,7 +68,10 @@ router.get('/stats', authMiddleware, async (req, res) => {
 
         // Fetch donor details
         const [donorRows] = await pool.query('SELECT * FROM donors WHERE id = ?', [donorId]);
-        if (donorRows.length === 0) return res.status(404).json({ error: 'Donor not found' });
+        if (donorRows.length === 0) {
+            console.error(`Dashboard stats failed: Donor ID ${donorId} not found in database.`);
+            return res.status(404).json({ error: 'Donor not found' });
+        }
         const donor = donorRows[0];
 
         // Fetch donation history
@@ -93,6 +96,15 @@ router.get('/stats', authMiddleware, async (req, res) => {
             }
         }
 
+        // Fetch organization memberships
+        const [memberships] = await pool.query(`
+            SELECT om.joined_at, om.role, o.name as org_name, o.type as org_type, o.city as org_city
+            FROM org_members om
+            JOIN organizations o ON om.org_id = o.id
+            WHERE om.donor_id = ?
+            ORDER BY om.joined_at DESC
+        `, [donorId]);
+
         res.json({
             user: {
                 id: donor.id,
@@ -115,10 +127,12 @@ router.get('/stats', authMiddleware, async (req, res) => {
                 lastDonation,
                 activeReminders: reminders.length,
                 isEligible,
-                nextEligibleDate
+                nextEligibleDate,
+                membershipCount: memberships.length
             },
             donations,
-            reminders
+            reminders,
+            memberships
         });
     } catch (err) {
         console.error('Dashboard Stats Error:', err);

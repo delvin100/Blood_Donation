@@ -1,5 +1,5 @@
 const { json } = require('express');
-const pool = require('./db');
+const pool = require('../db');
 
 async function migrate() {
     try {

@@ -37,11 +37,6 @@ const Dashboard = () => {
   const [editingReminder, setEditingReminder] = useState(null);
 
   // Form states
-  const [newDonation, setNewDonation] = useState({
-    date: new Date().toISOString().split('T')[0],
-    units: 1,
-    notes: ''
-  });
   const [newReminder, setNewReminder] = useState({ date: '', text: '' });
 
   const [timeLeft, setTimeLeft] = useState({ days: 0, hours: 0, minutes: 0, seconds: 0 });
@@ -53,9 +48,17 @@ const Dashboard = () => {
         window.location.href = '/donor/login';
         return;
       }
-      const res = await fetch('/api/dashboard/stats', {
+      const res = await fetch('/api/donor/stats', {
         headers: { 'Authorization': `Bearer ${token}` }
       });
+
+      if (res.status === 401 || res.status === 403 || res.status === 404) {
+        localStorage.removeItem('authToken');
+        sessionStorage.removeItem('authToken');
+        window.location.href = '/donor/login';
+        return;
+      }
+
       if (!res.ok) throw new Error('Failed to fetch dashboard data');
       const jsonData = await res.json();
       setData(jsonData);
@@ -113,30 +116,13 @@ const Dashboard = () => {
     return () => clearInterval(timer);
   }, [data?.stats?.nextEligibleDate]);
 
-  const handleAddDonation = async (e) => {
-    e.preventDefault();
-    try {
-      const token = localStorage.getItem('authToken') || sessionStorage.getItem('authToken');
-      const res = await fetch('/api/dashboard/donation', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-        body: JSON.stringify(newDonation)
-      });
-      const result = await res.json();
-      if (!res.ok) throw new Error(result.error || 'Failed to add donation');
-      setMessage('Donation recorded successfully!');
-      fetchDashboardData();
-      setNewDonation({ date: new Date().toISOString().split('T')[0], units: 1, notes: '' });
-    } catch (err) {
-      setMessage(`Error: ${err.message}`);
-    }
-  };
+
 
   const handleEditDonation = async (e) => {
     e.preventDefault();
     try {
       const token = localStorage.getItem('authToken') || sessionStorage.getItem('authToken');
-      const res = await fetch(`/api/dashboard/donation/${editingDonation.id}`, {
+      const res = await fetch(`/api/donor/donation/${editingDonation.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
         body: JSON.stringify({
@@ -158,7 +144,7 @@ const Dashboard = () => {
     e.preventDefault();
     try {
       const token = localStorage.getItem('authToken') || sessionStorage.getItem('authToken');
-      const res = await fetch('/api/dashboard/reminder', {
+      const res = await fetch('/api/donor/reminder', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
         body: JSON.stringify({ reminder_date: newReminder.date, message: newReminder.text })
@@ -176,7 +162,7 @@ const Dashboard = () => {
     e.preventDefault();
     try {
       const token = localStorage.getItem('authToken') || sessionStorage.getItem('authToken');
-      const res = await fetch(`/api/dashboard/reminder/${editingReminder.id}`, {
+      const res = await fetch(`/api/donor/reminder/${editingReminder.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
         body: JSON.stringify({ reminder_date: editingReminder.reminder_date, message: editingReminder.message })
@@ -194,7 +180,7 @@ const Dashboard = () => {
     if (!window.confirm(`Are you sure you want to delete this ${type}?`)) return;
     try {
       const token = localStorage.getItem('authToken') || sessionStorage.getItem('authToken');
-      const res = await fetch(`/api/dashboard/${type}/${id}`, {
+      const res = await fetch(`/api/donor/${type}/${id}`, {
         method: 'DELETE',
         headers: { 'Authorization': `Bearer ${token}` }
       });
@@ -217,7 +203,7 @@ const Dashboard = () => {
   if (loading) return <div className="modern-bg flex items-center justify-center text-white text-2xl font-black">Loading...</div>;
   if (error) return <div className="modern-bg flex items-center justify-center text-red-200 text-2xl font-black">Error: {error}</div>;
 
-  const { user, donations, reminders, stats } = data;
+  const { user, donations, reminders, stats, memberships } = data;
 
   const navigationContent = {
     'about-us': {
@@ -744,10 +730,8 @@ const Dashboard = () => {
                 <span className="text-sm font-bold text-gray-500 uppercase tracking-widest">Total Donations</span>
               </div>
               <div className="modern-card p-8 flex flex-col items-center justify-center text-center group hover:scale-[1.02] transition-all">
-                <span className="text-5xl font-black text-red-600 mb-2">
-                  {donations.length > 0 ? formatDateHyphen(donations[0].date) : 'None'}
-                </span>
-                <span className="text-sm font-bold text-gray-500 uppercase tracking-widest">Last Donation</span>
+                <span className="text-6xl font-black text-red-600 mb-2">{memberships?.length || 0}</span>
+                <span className="text-sm font-bold text-gray-500 uppercase tracking-widest">Joined Orgs</span>
               </div>
               <div className="modern-card p-8 flex flex-col items-center justify-center text-center group hover:scale-[1.02] transition-all">
                 <span className="text-6xl font-black text-red-600 mb-2">{reminders.length}</span>
@@ -776,7 +760,12 @@ const Dashboard = () => {
                 <div className="flex justify-center mb-5">
                   <div className="relative group">
                     {user.profile_picture ? (
-                      <img src={getProfilePicUrl(user.profile_picture)} className="w-24 h-24 rounded-full object-cover shadow-2xl border-4 border-white" alt="Profile" />
+                      <img
+                        src={getProfilePicUrl(user.profile_picture)}
+                        className="w-24 h-24 rounded-full object-cover shadow-2xl border-4 border-white"
+                        alt="Profile"
+                        referrerPolicy="no-referrer"
+                      />
                     ) : (
                       <div className="w-24 h-24 rounded-full bg-red-600 flex items-center justify-center text-white text-4xl font-black shadow-2xl">
                         {user.full_name.charAt(0).toUpperCase()}
@@ -895,9 +884,6 @@ const Dashboard = () => {
                         : "Great news! You are eligible to donate again."
                       }
                     </p>
-                    <button onClick={() => window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' })} className="mt-4 text-[10px] font-black text-emerald-600 uppercase tracking-widest hover:underline cursor-pointer">
-                      Record a new donation below
-                    </button>
                   </div>
                 ) : (
                   <div className="flex-1 flex flex-col justify-center">
@@ -974,82 +960,47 @@ const Dashboard = () => {
                 )}
 
                 <div className="mt-6 pt-6 border-t-2 border-gray-100">
-                  <div className="bg-gradient-to-r from-red-50 to-rose-50 rounded-2xl p-6 border border-red-100 relative overflow-hidden group">
-                    <div className="absolute top-0 right-0 w-20 h-20 bg-red-200 rounded-full opacity-20 translate-x-10 -translate-y-10"></div>
+                  <h2 className="font-semibold text-gray-800 mb-4 flex items-center gap-2">
+                    <i className="fas fa-building text-blue-600 text-xl"></i>
+                    My Organizations
+                    <span className="bg-blue-100 text-blue-800 text-xs font-medium px-2.5 py-0.5 rounded-full">{memberships?.length || 0} joined</span>
+                  </h2>
 
-                    <div className="relative z-10">
-                      <h3 className="text-xl font-bold text-gray-800 mb-6 flex items-center gap-3">
-                        <div className="w-10 h-10 bg-gradient-to-r from-red-500 to-rose-600 rounded-xl flex items-center justify-center text-white shadow-lg">
-                          <i className="fas fa-plus-circle"></i>
-                        </div>
-                        <span>Record New Donation</span>
-                        <div className="w-2 h-2 bg-red-400 rounded-full animate-bounce"></div>
-                      </h3>
-
-                      <form onSubmit={handleAddDonation} className="space-y-6">
-                        <div className="grid grid-cols-2 gap-6">
-                          <div>
-                            <label className="block text-base font-semibold text-gray-700 mb-3 flex items-center gap-2">
-                              <i className="fas fa-tint text-red-500"></i>
-                              Units Donated *
-                            </label>
-                            <div className="relative">
-                              <input
-                                className="w-full bg-white border-2 border-gray-200 rounded-xl px-12 py-4 h-[60px] text-base font-medium focus:border-red-400 focus:ring-0 transition-all outline-none"
-                                type="number"
-                                value={newDonation.units}
-                                onChange={(e) => setNewDonation({ ...newDonation, units: e.target.value })}
-                                step="0.1"
-                                min="0.1"
-                                required
-                              />
-                              <i className="fas fa-tint absolute left-4 top-1/2 -translate-y-1/2 text-red-500 text-lg"></i>
-                              <span className="absolute right-4 top-1/2 -translate-y-1/2 text-sm text-gray-500 font-medium">units</span>
-                            </div>
-                          </div>
-                          <div>
-                            <label className="block text-base font-semibold text-gray-700 mb-3 flex items-center gap-2">
-                              <i className="fas fa-calendar text-red-500"></i>
-                              Donation Date *
-                            </label>
-                            <div className="relative">
-                              <input
-                                className="w-full bg-white border-2 border-gray-200 rounded-xl px-12 py-4 h-[60px] text-base font-medium focus:border-red-400 focus:ring-0 transition-all outline-none"
-                                type="date"
-                                min={new Date().toISOString().split('T')[0]}
-                                value={newDonation.date}
-                                onChange={(e) => setNewDonation({ ...newDonation, date: e.target.value })}
-                                required
-                              />
-                              <i className="fas fa-calendar absolute left-4 top-1/2 -translate-y-1/2 text-red-500 text-lg"></i>
-                            </div>
-                          </div>
-                        </div>
-
-                        <div className="mt-6">
-                          <label className="block text-base font-semibold text-gray-700 mb-3 flex items-center gap-2">
-                            <i className="fas fa-comment text-red-500"></i>
-                            Notes (Optional)
-                          </label>
-                          <div className="relative">
-                            <input
-                              className="w-full bg-white border-2 border-gray-200 rounded-xl px-12 py-4 h-[60px] text-base font-medium focus:border-red-400 focus:ring-0 transition-all outline-none"
-                              placeholder="e.g., Emergency donation, Regular checkup"
-                              value={newDonation.notes}
-                              onChange={(e) => setNewDonation({ ...newDonation, notes: e.target.value })}
-                            />
-                            <i className="fas fa-comment absolute left-4 top-1/2 -translate-y-1/2 text-red-500 text-lg"></i>
-                          </div>
-                        </div>
-
-                        <button type="submit" className="w-full bg-gradient-to-r from-red-500 via-red-600 to-rose-600 hover:from-red-600 hover:via-red-700 hover:to-rose-700 text-white py-4 rounded-2xl font-bold text-lg transition-all shadow-xl flex items-center justify-center gap-3 mt-4">
-                          <i className="fas fa-heart text-xl animate-pulse"></i>
-                          <span>Record Donation</span>
-                          <i className="fas fa-arrow-right text-lg"></i>
-                        </button>
-                      </form>
+                  {memberships?.length === 0 ? (
+                    <div className="bg-gray-50 rounded-2xl p-8 text-center border-2 border-dashed border-gray-200">
+                      <i className="fas fa-hospital-user text-gray-300 text-4xl mb-3"></i>
+                      <p className="text-gray-500 font-medium">Not part of any organization yet.</p>
+                      <p className="text-xs text-gray-400 mt-1">Visit a registered hospital to get verified and joined!</p>
                     </div>
-                  </div>
+                  ) : (
+                    <div className="grid grid-cols-1 gap-4">
+                      {memberships.map((m, idx) => (
+                        <div key={idx} className="bg-white border border-gray-100 rounded-2xl p-5 shadow-sm hover:shadow-md transition-all border-l-4 border-l-blue-500">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-4">
+                              <div className="w-12 h-12 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center text-xl">
+                                <i className={m.org_type === 'Hospital' ? 'fas fa-hospital' : 'fas fa-clinic-medical'}></i>
+                              </div>
+                              <div>
+                                <h4 className="font-bold text-gray-900">{m.org_name}</h4>
+                                <div className="flex items-center gap-2 text-xs text-gray-500 font-medium mt-1">
+                                  <span>{m.org_type}</span>
+                                  <span className="w-1 h-1 bg-gray-300 rounded-full"></span>
+                                  <span>{m.org_city}</span>
+                                </div>
+                              </div>
+                            </div>
+                            <div className="text-right">
+                              <div className="text-[10px] font-black uppercase text-gray-400 tracking-widest mb-1">Joined On</div>
+                              <div className="text-sm font-bold text-gray-700 bg-gray-50 px-3 py-1 rounded-lg">
+                                {formatDateHyphen(m.joined_at)}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -1161,95 +1112,100 @@ const Dashboard = () => {
       {showCompleteProfile && <CompleteProfileModal onClose={() => setShowCompleteProfile(false)} onSuccess={fetchDashboardData} user={user} />}
       {showEditProfile && <EditProfileModal isOpen={showEditProfile} onClose={() => setShowEditProfile(false)} user={user} onUpdate={fetchDashboardData} />}
       {activeInfo && <InfoModal isOpen={!!activeInfo} onClose={() => setActiveInfo(null)} title={activeInfo.title} content={activeInfo.content} />}
-      <BackToTop />
 
       {/* Modals */}
-      {editingDonation && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[1000] flex items-center justify-center p-6 animate-in fade-in">
-          <div className="bg-white rounded-[40px] p-12 w-full max-w-lg shadow-2xl relative border-t-8 border-red-500">
-            <button onClick={() => setEditingDonation(null)} className="absolute top-8 right-8 text-gray-400 hover:text-gray-800 text-4xl font-bold">&times;</button>
-            <h3 className="text-4xl font-black text-gray-800 mb-8 tracking-tight">Edit Donation</h3>
-            <form onSubmit={handleEditDonation} className="space-y-6">
-              <div className="modern-input-group">
-                <label>Donation Date</label>
-                <input
-                  type="date"
-                  min={new Date().toISOString().split('T')[0]}
-                  value={editingDonation.date ? editingDonation.date.split('T')[0] : ''}
-                  onChange={e => setEditingDonation({ ...editingDonation, date: e.target.value })}
-                  className="modern-input-field"
-                  required
-                />
-              </div>
-              <div className="modern-input-group">
-                <label>Units Donated</label>
-                <input
-                  type="number"
-                  step="0.01"
-                  value={editingDonation.units}
-                  onChange={e => setEditingDonation({ ...editingDonation, units: e.target.value })}
-                  className="modern-input-field"
-                  required
-                />
-              </div>
-              <div className="modern-input-group">
-                <label>Notes</label>
-                <textarea
-                  value={editingDonation.notes || ''}
-                  onChange={e => setEditingDonation({ ...editingDonation, notes: e.target.value })}
-                  className="modern-input-field h-24 resize-none"
-                />
-              </div>
-              <button type="submit" className="w-full py-4 bg-red-600 text-white rounded-2xl font-black text-lg shadow-xl hover:bg-red-700 transition-all">Save Changes</button>
-            </form>
+      {
+        editingDonation && (
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[1000] flex items-center justify-center p-6 animate-in fade-in">
+            <div className="bg-white rounded-[40px] p-12 w-full max-w-lg shadow-2xl relative border-t-8 border-red-500">
+              <button onClick={() => setEditingDonation(null)} className="absolute top-8 right-8 text-gray-400 hover:text-gray-800 text-4xl font-bold">&times;</button>
+              <h3 className="text-4xl font-black text-gray-800 mb-8 tracking-tight">Edit Donation</h3>
+              <form onSubmit={handleEditDonation} className="space-y-6">
+                <div className="modern-input-group">
+                  <label>Donation Date</label>
+                  <input
+                    type="date"
+                    min={new Date().toISOString().split('T')[0]}
+                    value={editingDonation.date ? editingDonation.date.split('T')[0] : ''}
+                    onChange={e => setEditingDonation({ ...editingDonation, date: e.target.value })}
+                    className="modern-input-field"
+                    required
+                  />
+                </div>
+                <div className="modern-input-group">
+                  <label>Units Donated</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    value={editingDonation.units}
+                    onChange={e => setEditingDonation({ ...editingDonation, units: e.target.value })}
+                    className="modern-input-field"
+                    required
+                  />
+                </div>
+                <div className="modern-input-group">
+                  <label>Notes</label>
+                  <textarea
+                    value={editingDonation.notes || ''}
+                    onChange={e => setEditingDonation({ ...editingDonation, notes: e.target.value })}
+                    className="modern-input-field h-24 resize-none"
+                  />
+                </div>
+                <button type="submit" className="w-full py-4 bg-red-600 text-white rounded-2xl font-black text-lg shadow-xl hover:bg-red-700 transition-all">Save Changes</button>
+              </form>
+            </div>
           </div>
-        </div>
-      )}
+        )
+      }
 
-      {editingReminder && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[1000] flex items-center justify-center p-6 animate-in fade-in">
-          <div className="bg-white rounded-[40px] p-12 w-full max-w-lg shadow-2xl relative border-t-8 border-blue-500">
-            <button onClick={() => setEditingReminder(null)} className="absolute top-8 right-8 text-gray-400 hover:text-gray-800 text-4xl font-bold">&times;</button>
-            <h3 className="text-4xl font-black text-gray-800 mb-8 tracking-tight">Edit Reminder</h3>
-            <form onSubmit={handleEditReminder} className="space-y-6">
-              <div className="modern-input-group">
-                <label>Reminder Date</label>
-                <input
-                  type="date"
-                  min={new Date().toISOString().split('T')[0]}
-                  value={editingReminder.reminder_date ? editingReminder.reminder_date.split('T')[0] : ''}
-                  onChange={e => setEditingReminder({ ...editingReminder, reminder_date: e.target.value })}
-                  className="modern-input-field"
-                  required
-                />
-              </div>
-              <div className="modern-input-group">
-                <label>Reminder Message</label>
-                <input
-                  type="text"
-                  value={editingReminder.message}
-                  onChange={e => setEditingReminder({ ...editingReminder, message: e.target.value })}
-                  className="modern-input-field"
-                  required
-                />
-              </div>
-              <button type="submit" className="w-full py-4 bg-blue-600 text-white rounded-2xl font-black text-lg shadow-xl hover:bg-blue-700 transition-all">Save Changes</button>
-            </form>
+      {
+        editingReminder && (
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[1000] flex items-center justify-center p-6 animate-in fade-in">
+            <div className="bg-white rounded-[40px] p-12 w-full max-w-lg shadow-2xl relative border-t-8 border-blue-500">
+              <button onClick={() => setEditingReminder(null)} className="absolute top-8 right-8 text-gray-400 hover:text-gray-800 text-4xl font-bold">&times;</button>
+              <h3 className="text-4xl font-black text-gray-800 mb-8 tracking-tight">Edit Reminder</h3>
+              <form onSubmit={handleEditReminder} className="space-y-6">
+                <div className="modern-input-group">
+                  <label>Reminder Date</label>
+                  <input
+                    type="date"
+                    min={new Date().toISOString().split('T')[0]}
+                    value={editingReminder.reminder_date ? editingReminder.reminder_date.split('T')[0] : ''}
+                    onChange={e => setEditingReminder({ ...editingReminder, reminder_date: e.target.value })}
+                    className="modern-input-field"
+                    required
+                  />
+                </div>
+                <div className="modern-input-group">
+                  <label>Reminder Message</label>
+                  <input
+                    type="text"
+                    value={editingReminder.message}
+                    onChange={e => setEditingReminder({ ...editingReminder, message: e.target.value })}
+                    className="modern-input-field"
+                    required
+                  />
+                </div>
+                <button type="submit" className="w-full py-4 bg-blue-600 text-white rounded-2xl font-black text-lg shadow-xl hover:bg-blue-700 transition-all">Save Changes</button>
+              </form>
+            </div>
           </div>
-        </div>
-      )}
+        )
+      }
 
-      {showProfilePicModal && (
-        <ProfilePicModal
-          isOpen={showProfilePicModal}
-          onClose={() => setShowProfilePicModal(false)}
-          user={user}
-          onUpdate={fetchDashboardData}
-        />
-      )}
+      {
+        showProfilePicModal && (
+          <ProfilePicModal
+            isOpen={showProfilePicModal}
+            onClose={() => setShowProfilePicModal(false)}
+            user={user}
+            onUpdate={fetchDashboardData}
+          />
+        )
+      }
       <BackToTop />
       <Chatbot user={user} stats={stats} />
-    </div>
+    </div >
   );
 };
 

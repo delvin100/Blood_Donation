@@ -10,12 +10,12 @@ app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 const homeRoutes = require('./routes/home');
 const authRoutes = require('./routes/auth');
-const dashboardRoutes = require('./routes/dashboard');
+const donorRoutes = require('./routes/donor');
 const organizationRoutes = require('./routes/organization');
 
 app.use('/api', homeRoutes);
 app.use('/api/auth', authRoutes);
-app.use('/api/dashboard', dashboardRoutes);
+app.use('/api/donor', donorRoutes);
 app.use('/api/organization', organizationRoutes);
 
 const PORT = process.env.PORT || 4000;

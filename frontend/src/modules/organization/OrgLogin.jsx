@@ -42,6 +42,10 @@ export default function OrgLogin() {
             const response = await axios.post('/api/organization/login', { email, password });
 
             if (response.data.token) {
+                // Clear existing tokens
+                localStorage.removeItem('token');
+                sessionStorage.removeItem('token');
+
                 if (rememberMe) {
                     localStorage.setItem('token', response.data.token);
                 } else {
