@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import '../../../public/css/dashboard.css';
 import CompleteProfileModal from './CompleteProfileModal';
 import InfoModal from './InfoModal';
@@ -6,6 +6,9 @@ import EditProfileModal from './EditProfileModal';
 import ProfilePicModal from './ProfilePicModal';
 import BackToTop from '../../BackToTop';
 import Chatbot from './Chatbot';
+import axios from 'axios';
+import { toast } from 'react-hot-toast';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 
 const formatDateHyphen = (dateStr) => {
   if (!dateStr) return '';
@@ -32,12 +35,18 @@ const Dashboard = () => {
   const [showEditProfile, setShowEditProfile] = useState(false);
   const [activeInfo, setActiveInfo] = useState(null);
 
+  // Notifications State
+  const [notifications, setNotifications] = useState([]);
+  const [showNotifications, setShowNotifications] = useState(false);
+  const notificationRef = useRef(null);
+
   // Edit modals state
   const [editingDonation, setEditingDonation] = useState(null);
-  const [editingReminder, setEditingReminder] = useState(null);
+  const [urgentNeeds, setUrgentNeeds] = useState([]);
+
 
   // Form states
-  const [newReminder, setNewReminder] = useState({ date: '', text: '' });
+  const [newDonation, setNewDonation] = useState({ date: '', units: 1, notes: '', hb_level: '', blood_pressure: '' });
 
   const [timeLeft, setTimeLeft] = useState({ days: 0, hours: 0, minutes: 0, seconds: 0 });
 
@@ -85,7 +94,38 @@ const Dashboard = () => {
 
   useEffect(() => {
     fetchDashboardData();
+    fetchNotifications();
+    fetchUrgentNeeds();
+
+    // Close notifications when clicking outside
+    const handleClickOutside = (event) => {
+      if (notificationRef.current && !notificationRef.current.contains(event.target)) {
+        setShowNotifications(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+
+    // Polling for notifications
+    const interval = setInterval(fetchNotifications, 30000); // 30s
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      clearInterval(interval);
+    };
   }, []);
+
+  const fetchUrgentNeeds = async () => {
+    try {
+      const token = localStorage.getItem('authToken') || sessionStorage.getItem('authToken');
+      if (!token) return;
+      const res = await axios.get('/api/donor/urgent-needs', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setUrgentNeeds(res.data);
+    } catch (err) {
+      console.error('Error fetching urgent needs:', err);
+    }
+  };
 
   useEffect(() => {
     if (!data?.stats?.nextEligibleDate) return;
@@ -116,7 +156,76 @@ const Dashboard = () => {
     return () => clearInterval(timer);
   }, [data?.stats?.nextEligibleDate]);
 
+  const fetchNotifications = async () => {
+    try {
+      const token = localStorage.getItem('authToken') || sessionStorage.getItem('authToken');
+      if (!token) return;
+      const res = await axios.get('/api/donor/notifications', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setNotifications(res.data);
 
+      // Check for unread emergency notifications
+      const unreadEmergency = res.data.find(n => !n.is_read && n.type === 'Emergency');
+      if (unreadEmergency) {
+        toast.error(`URGENT: ${unreadEmergency.title}`, {
+          duration: 10000,
+          position: 'top-center',
+          style: {
+            background: '#dc2626',
+            color: '#fff',
+            fontWeight: 'bold',
+            borderRadius: '16px',
+            padding: '16px 24px',
+            boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)',
+          },
+          icon: '🚨',
+        });
+      }
+    } catch (err) {
+      console.error('Error fetching notifications:', err);
+    }
+  };
+
+  const markAsRead = async (id) => {
+    try {
+      const token = localStorage.getItem('authToken') || sessionStorage.getItem('authToken');
+      await axios.patch(`/api/donor/notifications/${id}/read`, {}, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setNotifications(prev => prev.map(n => n.id === id ? { ...n, is_read: 1 } : n));
+      // Update data count locally
+      if (data && data.stats) {
+        setData(prev => ({
+          ...prev,
+          stats: {
+            ...prev.stats,
+            unreadNotifications: Math.max(0, prev.stats.unreadNotifications - 1)
+          }
+        }));
+      }
+    } catch (err) {
+      console.error('Error marking read:', err);
+    }
+  };
+
+  const markAllRead = async () => {
+    try {
+      const token = localStorage.getItem('authToken') || sessionStorage.getItem('authToken');
+      await axios.patch('/api/donor/notifications/read-all', {}, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setNotifications(prev => prev.map(n => ({ ...n, is_read: 1 })));
+      if (data && data.stats) {
+        setData(prev => ({
+          ...prev,
+          stats: { ...prev.stats, unreadNotifications: 0 }
+        }));
+      }
+    } catch (err) {
+      console.error('Error marking all read:', err);
+    }
+  };
 
   const handleEditDonation = async (e) => {
     e.preventDefault();
@@ -128,51 +237,17 @@ const Dashboard = () => {
         body: JSON.stringify({
           date: editingDonation.date,
           units: editingDonation.units,
-          notes: editingDonation.notes
+          notes: editingDonation.notes,
+          hb_level: editingDonation.hb_level,
+          blood_pressure: editingDonation.blood_pressure
         })
       });
       if (!res.ok) throw new Error('Failed to update donation');
-      setMessage('Donation updated successfully!');
+      toast.success('Donation updated successfully!');
       fetchDashboardData();
       setEditingDonation(null);
     } catch (err) {
-      setMessage(`Error: ${err.message}`);
-    }
-  };
-
-  const handleAddReminder = async (e) => {
-    e.preventDefault();
-    try {
-      const token = localStorage.getItem('authToken') || sessionStorage.getItem('authToken');
-      const res = await fetch('/api/donor/reminder', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-        body: JSON.stringify({ reminder_date: newReminder.date, message: newReminder.text })
-      });
-      if (!res.ok) throw new Error('Failed to add reminder');
-      setMessage('Reminder added successfully!');
-      fetchDashboardData();
-      setNewReminder({ date: '', text: '' });
-    } catch (err) {
-      setMessage(`Error: ${err.message}`);
-    }
-  };
-
-  const handleEditReminder = async (e) => {
-    e.preventDefault();
-    try {
-      const token = localStorage.getItem('authToken') || sessionStorage.getItem('authToken');
-      const res = await fetch(`/api/donor/reminder/${editingReminder.id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-        body: JSON.stringify({ reminder_date: editingReminder.reminder_date, message: editingReminder.message })
-      });
-      if (!res.ok) throw new Error('Failed to update reminder');
-      setMessage('Reminder updated successfully!');
-      fetchDashboardData();
-      setEditingReminder(null);
-    } catch (err) {
-      setMessage(`Error: ${err.message}`);
+      toast.error(`Error: ${err.message}`);
     }
   };
 
@@ -193,7 +268,6 @@ const Dashboard = () => {
   };
 
 
-
   const handleLogout = () => {
     localStorage.removeItem('authToken');
     sessionStorage.removeItem('authToken');
@@ -203,7 +277,8 @@ const Dashboard = () => {
   if (loading) return <div className="modern-bg flex items-center justify-center text-white text-2xl font-black">Loading...</div>;
   if (error) return <div className="modern-bg flex items-center justify-center text-red-200 text-2xl font-black">Error: {error}</div>;
 
-  const { user, donations, reminders, stats, memberships } = data;
+  if (!data || !data.user) return <div className="modern-bg flex items-center justify-center text-white text-2xl font-black">Loading User Data...</div>;
+  const { user, donations = [], stats = {}, memberships = [] } = data;
 
   const navigationContent = {
     'about-us': {
@@ -586,6 +661,78 @@ const Dashboard = () => {
                 <p className="text-white/90 text-[10.5px] uppercase font-black tracking-[0.3em]">Blood Donation Portal</p>
               </div>
             </div>
+
+            <div className="flex items-center gap-6">
+              {/* Notification Bell */}
+              <div className="relative" ref={notificationRef}>
+                <button
+                  onClick={() => setShowNotifications(!showNotifications)}
+                  className={`w-12 h-12 rounded-[1.2rem] flex items-center justify-center transition-all duration-300 relative group
+                                    ${showNotifications ? 'bg-red-600 text-white shadow-lg shadow-red-200' : 'bg-white/10 text-white hover:bg-white/20'}`}
+                >
+                  <i className={`fas fa-bell text-lg ${data?.stats?.unreadNotifications > 0 ? 'animate-bounce' : ''}`}></i>
+                  {data?.stats?.unreadNotifications > 0 && (
+                    <span className="absolute top-0 right-0 w-5 h-5 bg-red-600 border-2 border-white rounded-full flex items-center justify-center text-[8px] font-black text-white transform translate-x-1 -translate-y-1">
+                      {data.stats.unreadNotifications}
+                    </span>
+                  )}
+                </button>
+
+                {/* Notification Dropdown */}
+                {showNotifications && (
+                  <div className="absolute right-0 mt-4 w-[400px] bg-white rounded-[2.5rem] shadow-2xl shadow-gray-200 border border-gray-100 py-8 overflow-hidden z-50 animate-in slide-in-from-top-4 duration-300">
+                    <div className="px-8 mb-6 flex items-center justify-between">
+                      <h3 className="text-xl font-black text-gray-900 tracking-tight">Activity Feed</h3>
+                      {data?.stats?.unreadNotifications > 0 && (
+                        <button
+                          onClick={markAllRead}
+                          className="text-[10px] font-black text-red-600 uppercase tracking-widest hover:text-red-700 hover:underline"
+                        >
+                          Clear All
+                        </button>
+                      )}
+                    </div>
+
+                    <div className="max-h-[400px] overflow-y-auto px-4 space-y-3 custom-scrollbar">
+                      {notifications.length === 0 ? (
+                        <div className="py-16 text-center">
+                          <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-4">
+                            <i className="fas fa-ghost text-gray-200 text-2xl"></i>
+                          </div>
+                          <p className="text-xs font-black text-gray-300 uppercase tracking-widest">No Alerts</p>
+                        </div>
+                      ) : (
+                        notifications.map(n => (
+                          <div
+                            key={n.id}
+                            onClick={() => !n.is_read && markAsRead(n.id)}
+                            className={`p-6 rounded-[2rem] transition-all cursor-pointer group relative overflow-hidden
+                                                        ${n.is_read ? 'bg-white opacity-60' : 'bg-red-50/50 hover:bg-red-50 border border-red-100/50'}`}
+                          >
+                            <div className="flex gap-5 relative z-10">
+                              <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 shadow-lg 
+                                                            ${n.type === 'Emergency' ? 'bg-red-600 text-white' : 'bg-gray-900 text-white'}`}>
+                                <i className={`fas ${n.type === 'Emergency' ? 'fa-radiation' : 'fa-info-circle'} text-md`}></i>
+                              </div>
+                              <div className="space-y-1 flex-1">
+                                <h4 className={`text-sm font-black tracking-tight ${!n.is_read ? 'text-gray-900' : 'text-gray-500'}`}>{n.title}</h4>
+                                <p className="text-[11px] font-bold text-gray-400 leading-relaxed line-clamp-2">{n.message}</p>
+                                <div className="flex items-center gap-3 pt-2">
+                                  <span className="text-[10px] font-black text-gray-300 uppercase tracking-widest">
+                                    {new Date(n.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                  </span>
+                                  {!n.is_read && <span className="w-2 h-2 rounded-full bg-red-500"></span>}
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
         </div>
       </header>
@@ -719,23 +866,35 @@ const Dashboard = () => {
                 <div className="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center text-white flex-shrink-0">
                   <i className="fas fa-info text-sm"></i>
                 </div>
-                <p className="font-bold text-base">No donation history found. Please record your first donation below to start tracking your journey.</p>
+                <p className="font-bold text-base">No donation history found. Please record your first donation to start tracking your journey.</p>
               </div>
             )}
 
-            {/* Dashboard Stats Overview - 3 Column Grid */}
+            {/* Dashboard Stats Overview - Impact Visualization */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <div className="modern-card p-8 flex flex-col items-center justify-center text-center group hover:scale-[1.02] transition-all">
-                <span className="text-6xl font-black text-red-600 mb-2">{donations.length}</span>
-                <span className="text-sm font-bold text-gray-500 uppercase tracking-widest">Total Donations</span>
+              <div className="modern-card p-8 flex flex-col items-center justify-center text-center group hover:scale-[1.02] transition-all bg-gradient-to-br from-red-50 to-white border-b-4 border-red-500">
+                <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                  <i className="fas fa-heartbeat text-red-600 text-3xl"></i>
+                </div>
+                <span className="text-5xl font-black text-gray-800 mb-1">{stats.livesSaved || 0}</span>
+                <span className="text-sm font-bold text-red-600 uppercase tracking-widest">Lives Saved</span>
+                <p className="text-[10px] text-gray-400 mt-2 italic">Based on {donations.length} successful donations</p>
               </div>
-              <div className="modern-card p-8 flex flex-col items-center justify-center text-center group hover:scale-[1.02] transition-all">
-                <span className="text-6xl font-black text-red-600 mb-2">{memberships?.length || 0}</span>
-                <span className="text-sm font-bold text-gray-500 uppercase tracking-widest">Joined Orgs</span>
+              <div className="modern-card p-8 flex flex-col items-center justify-center text-center group hover:scale-[1.02] transition-all bg-gradient-to-br from-blue-50 to-white border-b-4 border-blue-500">
+                <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                  <i className="fas fa-medal text-blue-600 text-3xl"></i>
+                </div>
+                <span className="text-4xl font-black text-gray-800 mb-1">{stats.milestone}</span>
+                <span className="text-sm font-bold text-blue-600 uppercase tracking-widest">Rank Level</span>
+                <p className="text-[10px] text-gray-400 mt-2">Keep donating to level up!</p>
               </div>
-              <div className="modern-card p-8 flex flex-col items-center justify-center text-center group hover:scale-[1.02] transition-all">
-                <span className="text-6xl font-black text-red-600 mb-2">{reminders.length}</span>
-                <span className="text-sm font-bold text-gray-500 uppercase tracking-widest">Active Reminders</span>
+              <div className="modern-card p-8 flex flex-col items-center justify-center text-center group hover:scale-[1.02] transition-all bg-gradient-to-br from-emerald-50 to-white border-b-4 border-emerald-500">
+                <div className="w-16 h-16 bg-emerald-100 rounded-full flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                  <i className="fas fa-check-circle text-emerald-600 text-3xl"></i>
+                </div>
+                <span className="text-4xl font-black text-gray-800 mb-1">{stats.isEligible ? 'Ready' : 'Resting'}</span>
+                <span className="text-sm font-bold text-emerald-600 uppercase tracking-widest">Status</span>
+                <p className="text-[10px] text-gray-400 mt-2">{stats.isEligible ? 'Eligible for donation' : 'In recovery phase'}</p>
               </div>
             </div>
 
@@ -743,7 +902,7 @@ const Dashboard = () => {
             <div className="modern-card p-8 bg-white overflow-hidden relative">
               <div className="flex items-center justify-between relative z-10">
                 <div>
-                  <h1 className="text-3xl font-black text-gray-800 uppercase">Hello, {user.full_name}</h1>
+                  <h1 className="text-3xl font-black text-gray-800 uppercase">Hello, {user?.full_name || 'Donor'}</h1>
                   <p className="text-gray-500 font-bold mt-2 text-base tracking-wide">Great to have you here saving lives!</p>
                 </div>
                 <button onClick={handleLogout} className="bg-red-600 hover:bg-red-700 text-white px-8 py-3.5 rounded-full font-black text-sm transition-all shadow-xl hover:shadow-red-200 transform hover:-translate-y-1 flex items-center gap-2">
@@ -781,26 +940,26 @@ const Dashboard = () => {
                   <i className="fas fa-user-circle text-red-600"></i> Profile
                 </h3>
 
-                <div className="w-full space-y-5 font-bold text-gray-600 mb-8">
-                  <div className="flex items-center gap-3 text-base">
-                    <i className="fas fa-user text-red-500 w-5"></i>
+                <div className="w-full space-y-4 font-bold text-gray-600 mb-8 px-6">
+                  <div className="flex items-center justify-start gap-4 text-lg">
+                    <i className="fas fa-user text-red-500 w-6 text-center"></i>
                     <span>Name: <span className="text-gray-900">{user.full_name}</span></span>
                   </div>
-                  <div className="flex items-center gap-3 text-base">
-                    <i className="fas fa-tint text-red-500 w-5"></i>
+                  <div className="flex items-center justify-start gap-4 text-lg">
+                    <i className="fas fa-tint text-red-500 w-6 text-center"></i>
                     <span>Blood Group: <span className="text-gray-900">{user.blood_type}</span></span>
                   </div>
-                  <div className="flex items-center gap-3 text-base">
-                    <i className="fas fa-calendar-alt text-blue-500 w-5"></i>
+                  <div className="flex items-center justify-start gap-4 text-lg">
+                    <i className="fas fa-calendar-alt text-blue-500 w-6 text-center"></i>
                     <span>Date of Birth: <span className="text-gray-900">{user.dob ? formatDateHyphen(user.dob) : 'Not set'}</span></span>
                   </div>
                 </div>
 
                 <div className="w-full">
-                  <div className={`flex items-center justify-center gap-3 py-3 rounded-2xl text-white font-black text-base shadow-lg ${user.availability === 'Available' ? 'bg-emerald-600' : 'bg-red-600'}`}>
+                  <div className={`flex items-center justify-center gap-3 py-3 rounded-full text-white font-black text-base shadow-lg ${user.availability === 'Available' ? 'bg-emerald-600' : 'bg-red-600'} animate-pulse-slow`}>
                     <div className="w-2 h-2 bg-white rounded-full shadow-sm"></div>
                     {user.availability === 'Available' ? 'Available' : 'Unavailable'}
-                    <i className="fas fa-cloud text-sm opacity-60"></i>
+                    <i className="fas fa-cloud text-sm opacity-90"></i>
                   </div>
                   <div className="text-center mt-4 space-y-2">
                     {stats.isEligible ? (
@@ -879,7 +1038,7 @@ const Dashboard = () => {
                       <i className="fas fa-check-circle"></i>
                     </div>
                     <p className="text-base font-bold text-gray-700 leading-snug">
-                      {donations.length === 0
+                      {donations?.length === 0
                         ? "No donation history available. You are eligible to donate."
                         : "Great news! You are eligible to donate again."
                       }
@@ -974,7 +1133,7 @@ const Dashboard = () => {
                     </div>
                   ) : (
                     <div className="grid grid-cols-1 gap-4">
-                      {memberships.map((m, idx) => (
+                      {memberships?.map((m, idx) => (
                         <div key={idx} className="bg-white border border-gray-100 rounded-2xl p-5 shadow-sm hover:shadow-md transition-all border-l-4 border-l-blue-500">
                           <div className="flex items-center justify-between">
                             <div className="flex items-center gap-4">
@@ -1004,208 +1163,261 @@ const Dashboard = () => {
                 </div>
               </div>
 
-              {/* Donation Reminders Card */}
-              <div className="modern-card p-5">
-                <h2 className="font-semibold text-gray-800 mb-4 flex items-center gap-2">
-                  <i className="fas fa-bell text-yellow-600 text-xl"></i>
-                  Donation Reminders
-                  <span className="bg-yellow-100 text-yellow-800 text-xs font-medium px-2.5 py-0.5 rounded-full">{reminders.length} active</span>
-                </h2>
+              {/* Urgent Needs & Digital ID Section */}
+              <div className="space-y-6">
+                {/* Digital Donor ID Card - Verified Life Saver Edition */}
+                <div className="relative group">
+                  <div className="id-card-premium rounded-[2.5rem] p-0 shadow-2xl relative overflow-hidden neon-border-red" style={{ background: '#0f172a' }}>
+                    <div className="absolute top-0 right-0 w-64 h-64 bg-red-600/5 rounded-full blur-3xl -translate-y-32 translate-x-32"></div>
 
-                {reminders.length === 0 ? (
-                  <div className="text-center py-8">
-                    <i className="fas fa-calendar-alt text-gray-300 text-4xl mb-3"></i>
-                    <p className="text-gray-500 font-medium">No reminders set.</p>
-                    <p className="text-xs text-gray-400 mt-1">Set reminders to stay on track</p>
-                  </div>
-                ) : (
-                  <div className="space-y-3 max-h-64 overflow-y-auto pr-2 custom-scrollbar">
-                    {reminders.map((r) => (
-                      <div key={r.id} className="bg-blue-50 border border-blue-200 rounded-lg p-3 hover:bg-blue-100 transition-colors">
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-3">
-                            <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center">
-                              <i className="fas fa-bell text-white text-xs"></i>
+                    {/* Top Bar - RED SECTION */}
+                    <div className="bg-red-600 h-[70px] px-10 flex items-center justify-between border-b border-white/10 relative z-20 w-full flex-shrink-0">
+                      <div className="flex items-center gap-3">
+                        <div className="w-9 h-9 bg-white/20 rounded-lg flex items-center justify-center">
+                          <i className="fas fa-heart text-white text-[12px] animate-pulse"></i>
+                        </div>
+                        <span className="text-[10px] font-black uppercase tracking-[0.3em] text-white">Verified Life Saver</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-[10px] font-black text-white/90 leading-none">eBloodBank</span>
+                        <div className="w-2 h-2 rounded-full bg-emerald-400 verified-badge-glow"></div>
+                      </div>
+                    </div>
+
+                    <div className="p-8 relative z-10">
+                      <div className="flex justify-between items-start mb-8">
+                        <div>
+                          <h3 className="text-3xl font-black tracking-tighter uppercase leading-none mb-0.5 text-white">Donor ID</h3>
+                          <p className="text-[9px] text-gray-400 font-bold tracking-[0.2em] uppercase leading-none">Member Card</p>
+                        </div>
+                        <div className="id-card-chip"></div>
+                      </div>
+
+                      <div className="flex gap-10 items-center mb-10">
+                        <div className="w-32 h-32 bg-white/5 rounded-[2.5rem] border border-white/10 p-2 backdrop-blur-md shadow-inner flex items-center justify-center overflow-hidden">
+                          {user?.profile_picture ? (
+                            <img src={getProfilePicUrl(user.profile_picture)} className="w-full h-full object-cover rounded-[2rem]" alt="ID" />
+                          ) : (
+                            <div className="w-full h-full bg-gradient-to-br from-red-600 to-red-800 rounded-[2rem] flex items-center justify-center text-5xl font-black text-white shadow-lg">
+                              <span className="leading-none mt-[-4px]">{user?.full_name?.charAt(0)}</span>
                             </div>
-                            <div>
-                              <p className="font-medium text-gray-900">{r.message}</p>
-                              <p className="text-sm text-gray-600">{formatDateHyphen(r.reminder_date)}</p>
-                            </div>
+                          )}
+                        </div>
+                        <div className="flex-1 space-y-5">
+                          <div className="mt-[-2px]">
+                            <p className="donor-stat-label">Donor Name</p>
+                            <p className="text-3xl font-black text-white tracking-tight leading-none">{user?.full_name}</p>
                           </div>
-                          <div className="text-right flex flex-col items-end gap-1">
-                            <span className="bg-blue-100 text-blue-800 text-xs font-medium px-2 py-1 rounded-full uppercase">Upcoming</span>
-                            <div className="flex gap-1">
-                              <button onClick={() => setEditingReminder(r)} className="text-blue-600 hover:text-blue-800 text-sm p-1"><i className="fas fa-edit"></i></button>
-                              <button onClick={() => handleDelete('reminder', r.id)} className="text-red-600 hover:text-red-800 text-sm p-1"><i className="fas fa-trash"></i></button>
+                          <div className="flex gap-20 items-start min-h-[50px]">
+                            <div className="flex flex-col">
+                              <p className="donor-stat-label">Blood Type</p>
+                              <p className="text-3xl font-black text-red-500 drop-shadow-[0_0_15px_rgba(239,68,68,0.4)] leading-none mt-1">{user?.blood_type}</p>
+                            </div>
+                            <div className="flex flex-col">
+                              <p className="donor-stat-label">City</p>
+                              <p className="text-lg font-bold text-white/90 leading-none pb-0.5">{user?.city || 'Not Set'}</p>
                             </div>
                           </div>
                         </div>
                       </div>
-                    ))}
-                  </div>
-                )}
 
-                <div className="mt-6 pt-6 border-t-2 border-gray-100">
-                  <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-2xl p-6 border border-blue-100 relative overflow-hidden group">
-                    <div className="absolute top-0 left-0 w-20 h-20 bg-blue-200 rounded-full opacity-20 -translate-x-10 -translate-y-10"></div>
-
-                    <div className="relative z-10">
-                      <h3 className="text-xl font-bold text-gray-800 mb-6 flex items-center gap-3">
-                        <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center text-white shadow-lg">
-                          <i className="fas fa-plus-circle"></i>
-                        </div>
-                        <span>Set New Reminder</span>
-                        <div className="w-2 h-2 bg-blue-400 rounded-full animate-pulse"></div>
-                      </h3>
-
-                      <form onSubmit={handleAddReminder} className="space-y-6">
-                        <div>
-                          <label className="block text-base font-semibold text-gray-700 mb-3 flex items-center gap-2">
-                            <i className="fas fa-calendar-plus text-blue-500"></i>
-                            Reminder Date *
-                          </label>
-                          <div className="relative">
-                            <input
-                              className="w-full bg-white border-2 border-gray-200 rounded-xl px-12 py-4 h-[60px] text-base font-medium focus:border-blue-400 focus:ring-0 transition-all outline-none"
-                              type="date"
-                              min={new Date().toISOString().split('T')[0]}
-                              value={newReminder.date}
-                              onChange={(e) => setNewReminder({ ...newReminder, date: e.target.value })}
-                              required
-                            />
-                            <i className="fas fa-calendar-plus absolute left-4 top-1/2 -translate-y-1/2 text-blue-500 text-lg"></i>
+                      <div className="flex items-end justify-between bg-white/5 p-5 rounded-3xl border border-white/10 backdrop-blur-sm">
+                        <div className="space-y-4">
+                          <div>
+                            <p className="donor-stat-label">Member Identifier</p>
+                            <p className="text-sm font-mono text-gray-300">EB-{user?.id?.toString().padStart(6, '0')}</p>
+                          </div>
+                          <div>
+                            <p className="donor-stat-label">Life Saver Status</p>
+                            <div className="flex gap-1 mt-1">
+                              {[1, 2, 3, 4, 5].map(i => (
+                                <div key={i} className={`w-3 h-1 rounded-full ${i <= (stats?.totalDonations || 1) ? 'bg-red-500' : 'bg-white/10'}`}></div>
+                              ))}
+                            </div>
                           </div>
                         </div>
-
-                        <div className="mt-6">
-                          <label className="block text-base font-semibold text-gray-700 mb-3 flex items-center gap-2">
-                            <i className="fas fa-comment-dots text-blue-500"></i>
-                            Reminder Message *
-                          </label>
-                          <div className="relative">
-                            <input
-                              className="w-full bg-white border-2 border-gray-200 rounded-xl px-12 py-4 h-[60px] text-base font-medium focus:border-blue-400 focus:ring-0 transition-all outline-none"
-                              placeholder="e.g., Time for your next donation"
-                              value={newReminder.text}
-                              onChange={(e) => setNewReminder({ ...newReminder, text: e.target.value })}
-                              required
-                            />
-                            <i className="fas fa-comment-dots absolute left-4 top-1/2 -translate-y-1/2 text-blue-500 text-lg"></i>
-                          </div>
+                        <div className="qr-container-premium">
+                          <img
+                            src={`https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=Donor:${user?.full_name}|Type:${user?.blood_type}|ID:EB-${user?.id}&bgcolor=ffffff&color=000000&margin=2`}
+                            alt="Unique QR Code"
+                            className="w-16 h-16"
+                          />
                         </div>
-
-                        <button type="submit" className="w-full bg-gradient-to-r from-blue-500 via-blue-600 to-indigo-600 hover:from-blue-600 hover:via-blue-700 hover:to-indigo-700 text-white py-4 rounded-2xl font-bold text-lg transition-all shadow-xl flex items-center justify-center gap-3 mt-4">
-                          <i className="fas fa-bell text-xl animate-pulse"></i>
-                          <span>Set Reminder</span>
-                          <i className="fas fa-arrow-right text-lg"></i>
-                        </button>
-                      </form>
+                      </div>
                     </div>
+
+                    {/* Decorative Footer - FULL WIDTH */}
+                    <div className="bg-white/5 py-3 px-10 flex items-center justify-between text-[10px] font-black uppercase tracking-[0.2em] text-gray-500 border-t border-white/5 w-full flex-shrink-0">
+                      <span>Issued: 2026 Edition</span>
+                      <span className="flex items-center gap-2">
+                        <i className="fas fa-shield-alt text-red-600"></i>
+                        Secured Digital Token
+                      </span>
+                    </div>
+
+
                   </div>
                 </div>
+
+
+                {/* Urgent Needs Feed */}
+                <div className="modern-card p-6">
+                  <h3 className="text-xl font-bold text-gray-800 mb-6 flex items-center justify-between">
+                    <span className="flex items-center gap-2">
+                      <i className="fas fa-fire-alt text-orange-500"></i>
+                      Urgent Needs in {user.city}
+                    </span>
+                    <span className="text-xs bg-red-100 text-red-600 px-3 py-1 rounded-full animate-pulse">Live</span>
+                  </h3>
+
+                  {urgentNeeds.length === 0 ? (
+                    <div className="py-12 text-center bg-gray-50 rounded-3xl border-2 border-dashed border-gray-100">
+                      <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center mx-auto mb-4 border shadow-sm">
+                        <i className="fas fa-check text-emerald-500 text-xl"></i>
+                      </div>
+                      <p className="text-sm font-bold text-gray-500 italic">"Looks like everyone is safe in your city today!"</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-4 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
+                      {urgentNeeds.map((need) => (
+                        <div key={need.id} className="relative group rounded-[2rem] border border-red-100 p-5 hover:bg-red-50 transition-all duration-300">
+                          <div className="flex items-start justify-between mb-4">
+                            <div className="flex items-center gap-4">
+                              <div className="w-14 h-14 bg-red-600 text-white rounded-2xl flex flex-col items-center justify-center shadow-lg shadow-red-100 font-black">
+                                <span className="text-xl leading-none">{need.blood_group}</span>
+                                <span className="text-[10px] uppercase">{need.urgency_level}</span>
+                              </div>
+                              <div>
+                                <h4 className="font-black text-gray-900 leading-tight">{need.org_name}</h4>
+                                <p className="text-xs text-red-600 font-bold flex items-center gap-1 mt-1">
+                                  <i className="fas fa-map-marker-alt"></i> {need.org_city}
+                                </p>
+                              </div>
+                            </div>
+                            <div className="text-right">
+                              <p className="text-xs font-black text-gray-400 uppercase tracking-widest">Units Required</p>
+                              <p className="text-2xl font-black text-gray-900">{need.units_required}</p>
+                            </div>
+                          </div>
+                          <p className="text-xs text-gray-600 font-medium mb-4 line-clamp-2">"{need.description}"</p>
+                          <a href={`tel:${need.org_phone}`} className="w-full py-3 bg-red-600 hover:bg-red-700 text-white rounded-xl font-bold text-sm shadow-xl flex items-center justify-center gap-2 transition-all">
+                            <i className="fas fa-phone-alt animate-bounce"></i>
+                            Call Institution
+                          </a>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Health Analytics - HB & BP Trends */}
+              <div className="modern-card p-6">
+                <h3 className="text-xl font-bold text-gray-800 mb-6 flex items-center gap-2">
+                  <i className="fas fa-chart-line text-blue-600"></i>
+                  Health Trends (Hb level)
+                </h3>
+                <div className="h-[250px] w-full">
+                  {donations.filter(d => d.hb_level).length > 0 ? (
+                    <ResponsiveContainer width="100%" height="100%">
+                      <LineChart data={[...donations].reverse().filter(d => d.hb_level)}>
+                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
+                        <XAxis dataKey="date" tickFormatter={(str) => new Date(str).toLocaleDateString([], { month: 'short', day: 'numeric' })} tick={{ fontSize: 10 }} />
+                        <YAxis domain={['auto', 'auto']} tick={{ fontSize: 10 }} />
+                        <Tooltip />
+                        <Line type="monotone" dataKey="hb_level" stroke="#ef4444" strokeWidth={3} dot={{ r: 4, fill: '#ef4444' }} activeDot={{ r: 8 }} name="Hb Level (g/dL)" />
+                      </LineChart>
+                    </ResponsiveContainer>
+                  ) : (
+                    <div className="h-full flex flex-col items-center justify-center text-center bg-gray-50 rounded-2xl border-2 border-dashed">
+                      <i className="fas fa-vial text-gray-300 text-3xl mb-2"></i>
+                      <p className="text-xs text-gray-500 px-10">Add Hb level data to your next donation to see trends!</p>
+                    </div>
+                  )}
+                </div>
+                {donations.some(d => d.blood_pressure) && (
+                  <div className="mt-6 pt-6 border-t border-gray-100">
+                    <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-3">Recent BP Readings</p>
+                    <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-none">
+                      {donations.filter(d => d.blood_pressure).slice(0, 4).map(d => (
+                        <div key={d.id} className="bg-blue-50 px-4 py-2 rounded-full border border-blue-100 flex-shrink-0">
+                          <span className="text-xs font-bold text-blue-800">{d.blood_pressure}</span>
+                          <span className="text-[8px] text-blue-400 ml-2">{new Date(d.date).toLocaleDateString()}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           </div>
         </div>
+        {showCompleteProfile && <CompleteProfileModal onClose={() => setShowCompleteProfile(false)} onSuccess={fetchDashboardData} user={user} />}
+        {showEditProfile && <EditProfileModal isOpen={showEditProfile} onClose={() => setShowEditProfile(false)} user={user} onUpdate={fetchDashboardData} />}
+        {activeInfo && <InfoModal isOpen={!!activeInfo} onClose={() => setActiveInfo(null)} title={activeInfo.title} content={activeInfo.content} />}
+
+        {
+          editingDonation && (
+            <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[1000] flex items-center justify-center p-6 animate-in fade-in">
+              <div className="bg-white rounded-[40px] p-12 w-full max-w-lg shadow-2xl relative border-t-8 border-red-500">
+                <button onClick={() => setEditingDonation(null)} className="absolute top-8 right-8 text-gray-400 hover:text-gray-800 text-4xl font-bold">&times;</button>
+                <h3 className="text-4xl font-black text-gray-800 mb-8 tracking-tight">Edit Donation</h3>
+                <form onSubmit={handleEditDonation} className="space-y-6">
+                  <div className="modern-input-group">
+                    <label>Donation Date</label>
+                    <input
+                      type="date"
+                      min={new Date().toISOString().split('T')[0]}
+                      value={editingDonation.date ? editingDonation.date.split('T')[0] : ''}
+                      onChange={e => setEditingDonation({ ...editingDonation, date: e.target.value })}
+                      className="modern-input-field"
+                      required
+                    />
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="modern-input-group">
+                      <label>Hb Level (g/dL)</label>
+                      <input
+                        type="number"
+                        step="0.1"
+                        placeholder="Optional"
+                        value={editingDonation.hb_level || ''}
+                        onChange={e => setEditingDonation({ ...editingDonation, hb_level: e.target.value })}
+                        className="modern-input-field"
+                      />
+                    </div>
+                    <div className="modern-input-group">
+                      <label>Blood Pressure</label>
+                      <input
+                        type="text"
+                        placeholder="e.g. 120/80"
+                        value={editingDonation.blood_pressure || ''}
+                        onChange={e => setEditingDonation({ ...editingDonation, blood_pressure: e.target.value })}
+                        className="modern-input-field"
+                      />
+                    </div>
+                  </div>
+                  <button type="submit" className="w-full py-4 bg-red-600 text-white rounded-2xl font-black text-lg shadow-xl hover:bg-red-700 transition-all">Save Changes</button>
+                </form>
+              </div>
+            </div>
+          )
+        }
+
+        {
+          showProfilePicModal && (
+            <ProfilePicModal
+              isOpen={showProfilePicModal}
+              onClose={() => setShowProfilePicModal(false)}
+              user={user}
+              onUpdate={fetchDashboardData}
+            />
+          )
+        }
+        <BackToTop />
+        <Chatbot user={user} stats={stats} />
       </div>
-
-      {showCompleteProfile && <CompleteProfileModal onClose={() => setShowCompleteProfile(false)} onSuccess={fetchDashboardData} user={user} />}
-      {showEditProfile && <EditProfileModal isOpen={showEditProfile} onClose={() => setShowEditProfile(false)} user={user} onUpdate={fetchDashboardData} />}
-      {activeInfo && <InfoModal isOpen={!!activeInfo} onClose={() => setActiveInfo(null)} title={activeInfo.title} content={activeInfo.content} />}
-
-      {/* Modals */}
-      {
-        editingDonation && (
-          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[1000] flex items-center justify-center p-6 animate-in fade-in">
-            <div className="bg-white rounded-[40px] p-12 w-full max-w-lg shadow-2xl relative border-t-8 border-red-500">
-              <button onClick={() => setEditingDonation(null)} className="absolute top-8 right-8 text-gray-400 hover:text-gray-800 text-4xl font-bold">&times;</button>
-              <h3 className="text-4xl font-black text-gray-800 mb-8 tracking-tight">Edit Donation</h3>
-              <form onSubmit={handleEditDonation} className="space-y-6">
-                <div className="modern-input-group">
-                  <label>Donation Date</label>
-                  <input
-                    type="date"
-                    min={new Date().toISOString().split('T')[0]}
-                    value={editingDonation.date ? editingDonation.date.split('T')[0] : ''}
-                    onChange={e => setEditingDonation({ ...editingDonation, date: e.target.value })}
-                    className="modern-input-field"
-                    required
-                  />
-                </div>
-                <div className="modern-input-group">
-                  <label>Units Donated</label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    value={editingDonation.units}
-                    onChange={e => setEditingDonation({ ...editingDonation, units: e.target.value })}
-                    className="modern-input-field"
-                    required
-                  />
-                </div>
-                <div className="modern-input-group">
-                  <label>Notes</label>
-                  <textarea
-                    value={editingDonation.notes || ''}
-                    onChange={e => setEditingDonation({ ...editingDonation, notes: e.target.value })}
-                    className="modern-input-field h-24 resize-none"
-                  />
-                </div>
-                <button type="submit" className="w-full py-4 bg-red-600 text-white rounded-2xl font-black text-lg shadow-xl hover:bg-red-700 transition-all">Save Changes</button>
-              </form>
-            </div>
-          </div>
-        )
-      }
-
-      {
-        editingReminder && (
-          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[1000] flex items-center justify-center p-6 animate-in fade-in">
-            <div className="bg-white rounded-[40px] p-12 w-full max-w-lg shadow-2xl relative border-t-8 border-blue-500">
-              <button onClick={() => setEditingReminder(null)} className="absolute top-8 right-8 text-gray-400 hover:text-gray-800 text-4xl font-bold">&times;</button>
-              <h3 className="text-4xl font-black text-gray-800 mb-8 tracking-tight">Edit Reminder</h3>
-              <form onSubmit={handleEditReminder} className="space-y-6">
-                <div className="modern-input-group">
-                  <label>Reminder Date</label>
-                  <input
-                    type="date"
-                    min={new Date().toISOString().split('T')[0]}
-                    value={editingReminder.reminder_date ? editingReminder.reminder_date.split('T')[0] : ''}
-                    onChange={e => setEditingReminder({ ...editingReminder, reminder_date: e.target.value })}
-                    className="modern-input-field"
-                    required
-                  />
-                </div>
-                <div className="modern-input-group">
-                  <label>Reminder Message</label>
-                  <input
-                    type="text"
-                    value={editingReminder.message}
-                    onChange={e => setEditingReminder({ ...editingReminder, message: e.target.value })}
-                    className="modern-input-field"
-                    required
-                  />
-                </div>
-                <button type="submit" className="w-full py-4 bg-blue-600 text-white rounded-2xl font-black text-lg shadow-xl hover:bg-blue-700 transition-all">Save Changes</button>
-              </form>
-            </div>
-          </div>
-        )
-      }
-
-      {
-        showProfilePicModal && (
-          <ProfilePicModal
-            isOpen={showProfilePicModal}
-            onClose={() => setShowProfilePicModal(false)}
-            user={user}
-            onUpdate={fetchDashboardData}
-          />
-        )
-      }
-      <BackToTop />
-      <Chatbot user={user} stats={stats} />
-    </div >
+    </div>
   );
 };
 

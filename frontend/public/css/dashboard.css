@@ -644,3 +644,190 @@ body {
 .back-to-top.visible {
     display: flex;
 }
+
+/* Animations */
+@keyframes pulse-slow {
+
+    0%,
+    100% {
+        opacity: 1;
+    }
+
+    50% {
+        opacity: 0.8;
+    }
+}
+
+.animate-pulse-slow {
+    animation: pulse-slow 3s infinite;
+}
+
+/* Recharts Customization */
+.recharts-cartesian-grid-horizontal line {
+    stroke: #f1f5f9;
+}
+
+.recharts-tooltip-cursor {
+    stroke: #ef4444;
+    stroke-width: 2;
+}
+
+/* Scrollbar Hide */
+.scrollbar-none::-webkit-scrollbar {
+    display: none;
+}
+
+.scrollbar-none {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+}
+
+/* Premium Verified Life Saver Card */
+.id-card-premium {
+    background: #1e1b4b;
+    /* Solid dark blue for capture */
+    background: linear-gradient(135deg, #1e1b4b 0%, #0f172a 100%);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+    position: relative;
+    overflow: hidden;
+    max-width: 600px;
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+}
+
+.id-card-glass {
+    background: rgba(255, 255, 255, 0.03);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.holographic-sheen::after {
+    content: '';
+    position: absolute;
+    top: -150%;
+    left: -150%;
+    width: 300%;
+    height: 300%;
+    background: linear-gradient(45deg,
+            transparent 0%,
+            rgba(255, 255, 255, 0.05) 45%,
+            rgba(255, 255, 255, 0.2) 50%,
+            rgba(255, 255, 255, 0.05) 55%,
+            transparent 100%);
+    transform: rotate(-45deg);
+    animation: holo-shimmer 6s infinite linear;
+    pointer-events: none;
+}
+
+@keyframes holo-shimmer {
+    0% {
+        transform: translateX(-100%) rotate(-45deg);
+    }
+
+    100% {
+        transform: translateX(100%) rotate(-45deg);
+    }
+}
+
+.neon-border-red {
+    box-shadow: 0 0 15px rgba(239, 68, 68, 0.2), inset 0 0 15px rgba(239, 68, 68, 0.1);
+    border: 1px solid rgba(239, 68, 68, 0.4);
+}
+
+.verified-badge-glow {
+    filter: drop-shadow(0 0 8px rgba(239, 68, 68, 0.6));
+    animation: badge-pulse 2s infinite ease-in-out;
+    /* Improved alignment */
+    width: 6px;
+    height: 6px;
+}
+
+@keyframes badge-pulse {
+
+    0%,
+    100% {
+        transform: scale(1);
+        opacity: 1;
+    }
+
+    50% {
+        transform: scale(1.1);
+        opacity: 0.8;
+    }
+}
+
+.id-card-chip {
+    background: linear-gradient(135deg, #d4af37 0%, #f5e050 50%, #d4af37 100%);
+    width: 45px;
+    height: 35px;
+    border-radius: 6px;
+    position: relative;
+    box-shadow: inset 0 0 5px rgba(0, 0, 0, 0.2);
+}
+
+.id-card-chip::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: rgba(0, 0, 0, 0.1);
+}
+
+.id-card-chip::after {
+    content: '';
+    position: absolute;
+    left: 50%;
+    top: 0;
+    bottom: 0;
+    width: 1px;
+    background: rgba(0, 0, 0, 0.1);
+}
+
+.qr-container-premium {
+    background: white;
+    padding: 8px;
+    border-radius: 12px;
+    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+    transition: transform 0.3s ease;
+}
+
+.qr-container-premium:hover {
+    transform: scale(1.05) rotate(2deg);
+}
+
+.donor-stat-label {
+    font-size: 8px;
+    font-weight: 900;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: rgba(255, 255, 255, 0.4);
+    margin-bottom: 4px;
+}
+
+.donor-stat-value {
+    font-size: 16px;
+    font-weight: 800;
+    color: white;
+    line-height: 1;
+    /* Reset for better baseline control */
+    display: block;
+}
+
+.id-card-stat-group {
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    /* Align to baseline of container */
+}
+
+/* Glassmorphism Effect */
+.glass-effect {
+    background: rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}

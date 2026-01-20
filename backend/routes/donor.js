@@ -77,9 +77,6 @@ router.get('/stats', authMiddleware, async (req, res) => {
         // Fetch donation history
         const [donations] = await pool.query('SELECT * FROM donations WHERE donor_id = ? ORDER BY date DESC', [donorId]);
 
-        // Fetch reminders
-        const [reminders] = await pool.query('SELECT * FROM reminders WHERE donor_id = ? ORDER BY reminder_date ASC', [donorId]);
-
         // Calculate stats
         const totalDonations = donations.length;
         const lastDonation = donations.length > 0 ? donations[0].date : null;
@@ -105,6 +102,17 @@ router.get('/stats', authMiddleware, async (req, res) => {
             ORDER BY om.joined_at DESC
         `, [donorId]);
 
+        // Fetch unread notifications count
+        const [unreadNotifications] = await pool.query(
+            'SELECT COUNT(*) as count FROM notifications WHERE recipient_id = ? AND recipient_type = "Donor" AND is_read = FALSE',
+            [donorId]
+        );
+
+        // Milestone Level Logic
+        let milestone = 'Bronze';
+        if (totalDonations >= 10) milestone = 'Gold';
+        else if (totalDonations >= 5) milestone = 'Silver';
+
         res.json({
             user: {
                 id: donor.id,
@@ -120,18 +128,20 @@ router.get('/stats', authMiddleware, async (req, res) => {
                 city: donor.city,
                 profile_picture: donor.profile_picture,
                 username: donor.username,
-                google_id: donor.google_id
+                google_id: donor.google_id,
+                donor_tag: donor.donor_tag
             },
             stats: {
                 totalDonations,
                 lastDonation,
-                activeReminders: reminders.length,
                 isEligible,
                 nextEligibleDate,
-                membershipCount: memberships.length
+                membershipCount: memberships.length,
+                unreadNotifications: unreadNotifications[0].count,
+                livesSaved: totalDonations * 3,
+                milestone
             },
             donations,
-            reminders,
             memberships
         });
     } catch (err) {
@@ -143,7 +153,7 @@ router.get('/stats', authMiddleware, async (req, res) => {
 // Add Donation
 router.post('/donation', authMiddleware, async (req, res) => {
     try {
-        const { date, units, notes } = req.body;
+        const { date, units, notes, hb_level, blood_pressure } = req.body;
         const donorId = req.user.id;
 
         if (!date || !units) return res.status(400).json({ error: 'Date and units are required' });
@@ -159,7 +169,10 @@ router.post('/donation', authMiddleware, async (req, res) => {
             }
         }
 
-        await pool.query('INSERT INTO donations (donor_id, date, units, notes) VALUES (?, ?, ?, ?)', [donorId, date, units, notes]);
+        await pool.query(
+            'INSERT INTO donations (donor_id, date, units, notes, hb_level, blood_pressure) VALUES (?, ?, ?, ?, ?, ?)',
+            [donorId, date, units, notes, hb_level, blood_pressure]
+        );
 
         // Recalculate availability after add
         await updateDonorAvailability(donorId);
@@ -175,10 +188,13 @@ router.post('/donation', authMiddleware, async (req, res) => {
 router.put('/donation/:id', authMiddleware, async (req, res) => {
     try {
         const { id } = req.params;
-        const { date, units, notes } = req.body;
+        const { date, units, notes, hb_level, blood_pressure } = req.body;
         const donorId = req.user.id;
 
-        await pool.query('UPDATE donations SET date = ?, units = ?, notes = ? WHERE id = ? AND donor_id = ?', [date, units, notes, id, donorId]);
+        await pool.query(
+            'UPDATE donations SET date = ?, units = ?, notes = ?, hb_level = ?, blood_pressure = ? WHERE id = ? AND donor_id = ?',
+            [date, units, notes, hb_level, blood_pressure, id, donorId]
+        );
 
         // Recalculate occupancy
         await updateDonorAvailability(donorId);
@@ -205,39 +221,27 @@ router.delete('/donation/:id', authMiddleware, async (req, res) => {
     }
 });
 
-// Add Reminder
-router.post('/reminder', authMiddleware, async (req, res) => {
+// Get Urgent Needs
+router.get('/urgent-needs', authMiddleware, async (req, res) => {
     try {
-        const { reminder_date, message } = req.body;
         const donorId = req.user.id;
-        await pool.query('INSERT INTO reminders (donor_id, reminder_date, message) VALUES (?, ?, ?)', [donorId, reminder_date, message]);
-        res.json({ message: 'Reminder added' });
-    } catch (err) {
-        res.status(500).json({ error: 'Server error' });
-    }
-});
+        const [donorRows] = await pool.query('SELECT blood_type, city FROM donors WHERE id = ?', [donorId]);
+        if (donorRows.length === 0) return res.status(404).json({ error: 'Donor not found' });
 
-// Delete Reminder
-router.delete('/reminder/:id', authMiddleware, async (req, res) => {
-    try {
-        const { id } = req.params;
-        const donorId = req.user.id;
-        await pool.query('DELETE FROM reminders WHERE id = ? AND donor_id = ?', [id, donorId]);
-        res.json({ message: 'Reminder deleted' });
-    } catch (err) {
-        res.status(500).json({ error: 'Server error' });
-    }
-});
+        const { blood_type, city } = donorRows[0];
 
-// Update Reminder
-router.put('/reminder/:id', authMiddleware, async (req, res) => {
-    try {
-        const { id } = req.params;
-        const { reminder_date, message } = req.body;
-        const donorId = req.user.id;
-        await pool.query('UPDATE reminders SET reminder_date = ?, message = ? WHERE id = ? AND donor_id = ?', [reminder_date, message, id, donorId]);
-        res.json({ message: 'Reminder updated' });
+        // Fetch active emergency requests matching blood type and city
+        const [requests] = await pool.query(`
+            SELECT er.*, o.name as org_name, o.city as org_city, o.phone as org_phone
+            FROM emergency_requests er
+            JOIN organizations o ON er.org_id = o.id
+            WHERE er.blood_group = ? AND er.status = 'Active' AND o.city = ?
+            ORDER BY er.created_at DESC
+        `, [blood_type, city]);
+
+        res.json(requests);
     } catch (err) {
+        console.error('Urgent Needs Error:', err);
         res.status(500).json({ error: 'Server error' });
     }
 });
@@ -402,7 +406,7 @@ router.get('/search', authMiddleware, async (req, res) => {
         const { blood_type, state, district } = req.query;
         const donorId = req.user.id;
 
-        let query = 'SELECT full_name, blood_type, city, phone, availability FROM donors WHERE id != ? AND availability = "Available"';
+        let query = 'SELECT full_name, donor_tag, blood_type, city, phone, availability FROM donors WHERE id != ? AND availability = "Available"';
         const params = [donorId];
 
         if (blood_type && blood_type !== 'All') {
@@ -422,6 +426,54 @@ router.get('/search', authMiddleware, async (req, res) => {
         res.json(rows);
     } catch (err) {
         console.error('Search Donors Error:', err);
+        res.status(500).json({ error: 'Server error' });
+    }
+});
+
+// --- NOTIFICATION MANAGEMENT ---
+
+// GET ALL NOTIFICATIONS
+router.get('/notifications', authMiddleware, async (req, res) => {
+    try {
+        const donorId = req.user.id;
+        const [rows] = await pool.query(
+            'SELECT * FROM notifications WHERE recipient_id = ? AND recipient_type = "Donor" ORDER BY created_at DESC LIMIT 50',
+            [donorId]
+        );
+        res.json(rows);
+    } catch (err) {
+        console.error('Fetch Notifications Error:', err);
+        res.status(500).json({ error: 'Server error' });
+    }
+});
+
+// MARK NOTIFICATION AS READ
+router.patch('/notifications/:id/read', authMiddleware, async (req, res) => {
+    try {
+        const { id } = req.params;
+        const donorId = req.user.id;
+        await pool.query(
+            'UPDATE notifications SET is_read = TRUE WHERE id = ? AND recipient_id = ? AND recipient_type = "Donor"',
+            [id, donorId]
+        );
+        res.json({ message: 'Notification marked as read' });
+    } catch (err) {
+        console.error('Mark Read Error:', err);
+        res.status(500).json({ error: 'Server error' });
+    }
+});
+
+// MARK ALL AS READ
+router.patch('/notifications/read-all', authMiddleware, async (req, res) => {
+    try {
+        const donorId = req.user.id;
+        await pool.query(
+            'UPDATE notifications SET is_read = TRUE WHERE recipient_id = ? AND recipient_type = "Donor"',
+            [donorId]
+        );
+        res.json({ message: 'All notifications marked as read' });
+    } catch (err) {
+        console.error('Mark All Read Error:', err);
         res.status(500).json({ error: 'Server error' });
     }
 });

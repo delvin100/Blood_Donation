@@ -9,7 +9,7 @@ import puppeteer from 'puppeteer';
     });
 
     const page = await browser.newPage();
-
+                
     // --- REGISTRATION FLOW ONLY ---
     console.log('Navigating to Registration Page...');
     await page.goto('http://localhost:5173/organization/register', { waitUntil: 'networkidle0' });

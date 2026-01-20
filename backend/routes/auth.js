@@ -139,9 +139,13 @@ router.post('/register', async (req, res) => {
       ]
     );
 
+    const insertId = result.insertId;
+    const donorTag = `DON-${insertId.toString().padStart(6, '0')}`;
+    await pool.query('UPDATE donors SET donor_tag = ? WHERE id = ?', [donorTag, insertId]);
+
     // Generate JWT token
     const token = jwt.sign(
-      { id: result.insertId, username },
+      { id: insertId, username },
       JWT_SECRET,
       { expiresIn: '7d' }
     );
@@ -150,13 +154,14 @@ router.post('/register', async (req, res) => {
     res.json({
       token,
       user: {
-        id: result.insertId,
+        id: insertId,
         username,
         full_name,
         email,
         blood_type,
         phone,
-        gender
+        gender,
+        donor_tag: donorTag
       }
     });
   } catch (err) {
@@ -266,7 +271,8 @@ router.post('/login', async (req, res) => {
         email: donor.email,
         blood_type: donor.blood_type,
         phone: donor.phone,
-        gender: donor.gender
+        gender: donor.gender,
+        donor_tag: donor.donor_tag
       }
     });
   } catch (err) {
@@ -426,6 +432,9 @@ router.post('/google', async (req, res) => {
       );
 
       const insertId = result.insertId;
+      const donorTag = `DON-${insertId.toString().padStart(6, '0')}`;
+      await pool.query('UPDATE donors SET donor_tag = ? WHERE id = ?', [donorTag, insertId]);
+
       // Fetch the new donor
       [rows] = await pool.query('SELECT * FROM donors WHERE id = ?', [insertId]);
       donor = rows[0];
@@ -451,7 +460,8 @@ router.post('/google', async (req, res) => {
         blood_type: donor.blood_type,
         phone: donor.phone,
         gender: donor.gender,
-        profile_picture: donor.profile_picture
+        profile_picture: donor.profile_picture,
+        donor_tag: donor.donor_tag
       }
     });
 

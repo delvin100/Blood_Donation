@@ -68,6 +68,77 @@ router.post('/register', async (req, res) => {
     }
 });
 
+// GET PROFILE
+router.get('/profile', authMiddleware, async (req, res) => {
+    try {
+        const orgId = req.user.id;
+        const [rows] = await pool.query(
+            'SELECT id, name, email, phone, license_number, type, state, district, city, address, created_at FROM organizations WHERE id = ?',
+            [orgId]
+        );
+        if (rows.length === 0) return res.status(404).json({ error: 'Organization not found' });
+        res.json(rows[0]);
+    } catch (err) {
+        console.error('Fetch Profile Error:', err);
+        res.status(500).json({ error: 'Server error' });
+    }
+});
+
+// UPDATE PROFILE
+router.put('/profile', authMiddleware, async (req, res) => {
+    try {
+        const orgId = req.user.id;
+        const { name, email, phone, license_number, type, state, district, city, address } = req.body;
+
+        // Basic presence validation (matching registration requirements)
+        if (!name || !email || !license_number || !type) {
+            return res.status(400).json({ error: 'Name, email, license number, and facility type are required.' });
+        }
+
+        // Email Format Validation
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(email)) {
+            return res.status(400).json({ error: 'Invalid email format.' });
+        }
+
+        // Phone Validation (10 digits numeric)
+        const phoneRegex = /^[0-9]{10}$/;
+        if (phone && !phoneRegex.test(phone)) {
+            return res.status(400).json({ error: 'Phone number must be exactly 10 digits.' });
+        }
+
+        // Check if email is already taken by ANOTHER organization
+        const [existingEmail] = await pool.query(
+            'SELECT id FROM organizations WHERE email = ? AND id != ?',
+            [email, orgId]
+        );
+        if (existingEmail.length > 0) {
+            return res.status(400).json({ error: 'Email is already registered by another facility.' });
+        }
+
+        // Check if License Number is already taken by ANOTHER organization
+        const [existingLicense] = await pool.query(
+            'SELECT id FROM organizations WHERE license_number = ? AND id != ?',
+            [license_number, orgId]
+        );
+        if (existingLicense.length > 0) {
+            return res.status(400).json({ error: 'License number is already registered.' });
+        }
+
+        await pool.query(
+            `UPDATE organizations 
+             SET name = ?, email = ?, phone = ?, license_number = ?, type = ?, state = ?, district = ?, city = ?, address = ? 
+             WHERE id = ?`,
+            [name, email, phone, license_number, type, state, district, city, address, orgId]
+        );
+
+        res.json({ message: 'Profile updated successfully' });
+    } catch (err) {
+        console.error('Update Profile Error:', err);
+        res.status(500).json({ error: 'Server error' });
+    }
+});
+
 // LOGIN
 router.post('/login', async (req, res) => {
     try {
@@ -188,14 +259,85 @@ router.post('/request/create', authMiddleware, async (req, res) => {
         const orgId = req.user.id;
         const { blood_group, units_required, urgency_level, description } = req.body;
 
-        await pool.query(
+        const [result] = await pool.query(
             `INSERT INTO emergency_requests (org_id, blood_group, units_required, urgency_level, description, status, created_at)
        VALUES (?, ?, ?, ?, ?, 'Active', NOW())`,
             [orgId, blood_group, units_required, urgency_level, description]
         );
 
-        res.json({ message: 'Emergency request created' });
+        const requestId = result.insertId;
+
+        // Fetch organization name for the notification
+        const [orgRows] = await pool.query('SELECT name FROM organizations WHERE id = ?', [orgId]);
+        const orgName = orgRows[0]?.name || 'An Organization';
+
+        // 1. Find matching donors in the organization
+        const [matchingDonors] = await pool.query(`
+            SELECT d.id, d.email, d.full_name 
+            FROM org_members om
+            JOIN donors d ON om.donor_id = d.id
+            WHERE om.org_id = ? AND d.blood_type = ? AND d.availability = 'Available'
+        `, [orgId, blood_group]);
+
+        if (matchingDonors.length > 0) {
+            // 2. Create in-app notifications
+            const notificationValues = matchingDonors.map(donor => [
+                donor.id,
+                'Donor',
+                'Emergency',
+                `Emergency ${blood_group} Required`,
+                `${orgName} needs ${blood_group} blood. ${description ? `Briefing: ${description}` : 'Please help if possible.'}`,
+                requestId
+            ]);
+
+            await pool.query(
+                'INSERT INTO notifications (recipient_id, recipient_type, type, title, message, source_id) VALUES ?',
+                [notificationValues]
+            );
+
+            // 3. Send Emails
+            if (process.env.EMAIL_USER && process.env.EMAIL_PASS) {
+                for (const donor of matchingDonors) {
+                    const mailOptions = {
+                        from: `"eBloodBank Emergency" <${process.env.EMAIL_USER}>`,
+                        to: donor.email,
+                        subject: `CRITICAL: ${blood_group} Blood Required at ${orgName}`,
+                        html: `
+                            <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: 0 auto; background-color: #fef2f2; padding: 20px; border-radius: 16px; border: 1px solid #fee2e2;">
+                                <div style="text-align: center; margin-bottom: 20px;">
+                                    <span style="background-color: #dc2626; color: white; padding: 8px 16px; border-radius: 99px; font-weight: 800; font-size: 12px; uppercase tracking-widest;">EMERGENCY BROADCAST</span>
+                                </div>
+                                <div style="background-color: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);">
+                                    <h2 style="color: #991b1b; margin-top: 0; text-align: center;">Urgent Donor Required</h2>
+                                    <p style="color: #4b5563; line-height: 1.6;">Hello <strong>${donor.full_name}</strong>,</p>
+                                    <p style="color: #4b5563; line-height: 1.6;"><strong>${orgName}</strong> is reporting a critical shortage of <strong>${blood_group}</strong> blood and needs urgent assistance.</p>
+                                    
+                                    <div style="background-color: #f8fafc; padding: 20px; border-radius: 8px; margin: 25px 0; border: 1px italic #e2e8f0;">
+                                        <p style="margin: 0; color: #1e293b; font-size: 14px;"><strong>Requirement:</strong> ${units_required} Units</p>
+                                        <p style="margin: 5px 0 0 0; color: #1e293b; font-size: 14px;"><strong>Urgency:</strong> ${urgency_level}</p>
+                                        ${description ? `<p style="margin: 10px 0 0 0; color: #64748b; font-size: 13px; font-style: italic;">"${description}"</p>` : ''}
+                                    </div>
+
+                                    <p style="color: #4b5563; line-height: 1.6;">Since you are a verified member and your blood group matches, we request you to visit the facility if possible.</p>
+                                    
+                                    <div style="text-align: center; margin-top: 30px;">
+                                        <a href="${process.env.FRONTEND_URL || 'http://localhost:3000'}/dashboard" style="background-color: #dc2626; color: white; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: bold; display: inline-block;">Open Dashboard</a>
+                                    </div>
+                                </div>
+                                <p style="text-align: center; color: #9ca3af; font-size: 12px; margin-top: 20px;">
+                                    &copy; ${new Date().getFullYear()} eBloodBank Original. Every drop counts.
+                                </p>
+                            </div>
+                        `
+                    };
+                    transporter.sendMail(mailOptions).catch(err => console.error('Error sending emergency email:', err));
+                }
+            }
+        }
+
+        res.json({ message: 'Emergency request created and notifications sent to matching donors.' });
     } catch (err) {
+        console.error('Create Request Error:', err);
         res.status(500).json({ error: 'Server error' });
     }
 });
@@ -207,8 +349,8 @@ router.get('/donor/search', authMiddleware, async (req, res) => {
         if (!query || query.length < 1) return res.json([]);
 
         const [rows] = await pool.query(
-            'SELECT id, full_name, email, phone, blood_type, availability FROM donors WHERE email LIKE ? OR phone LIKE ? LIMIT 10',
-            [`%${query}%`, `%${query}%`]
+            'SELECT id, donor_tag, full_name, email, phone, blood_type, availability FROM donors WHERE email LIKE ? OR phone LIKE ? OR donor_tag LIKE ? LIMIT 10',
+            [`%${query}%`, `%${query}%`, `%${query}%`]
         );
         res.json(rows);
     } catch (err) {
@@ -221,6 +363,16 @@ router.post('/verify', authMiddleware, async (req, res) => {
     try {
         const orgId = req.user.id;
         const { donor_id, notes } = req.body;
+
+        // Check donor availability
+        const [donorRows] = await pool.query('SELECT availability FROM donors WHERE id = ?', [donor_id]);
+        if (donorRows.length === 0) {
+            return res.status(404).json({ error: 'Donor not found' });
+        }
+
+        if (donorRows[0].availability !== 'Available') {
+            return res.status(400).json({ error: 'Donor is currently unavailable for donation.' });
+        }
 
         // Log verification
         await pool.query(
@@ -236,6 +388,7 @@ router.post('/verify', authMiddleware, async (req, res) => {
 
         res.json({ message: 'Donor verified and donation recorded.' });
     } catch (err) {
+        console.error('Verify Error:', err);
         res.status(500).json({ error: 'Server error' });
     }
 });
@@ -245,7 +398,7 @@ router.get('/history', authMiddleware, async (req, res) => {
     try {
         const orgId = req.user.id;
         const [rows] = await pool.query(`
-            SELECT dv.id, dv.notes, dv.verification_date as created_at, d.full_name, d.blood_type, d.email
+            SELECT dv.id, dv.notes, dv.verification_date as created_at, d.full_name, d.blood_type, d.email, d.donor_tag
             FROM donor_verifications dv
             JOIN donors d ON dv.donor_id = d.id
             WHERE dv.org_id = ?
@@ -279,7 +432,8 @@ router.get('/recent-activity', authMiddleware, async (req, res) => {
 
         // Fetch last 3 verifications
         const [verifications] = await pool.query(`
-            SELECT 'donation' as type, dv.verification_date as date, d.full_name as title, dv.notes as subtitle
+            SELECT 'Verification' as type, dv.verification_date as timestamp, 
+            CONCAT('Verified donation for ', d.full_name, ' (', d.donor_tag, ')') as details
             FROM donor_verifications dv
             JOIN donors d ON dv.donor_id = d.id
             WHERE dv.org_id = ?
@@ -288,7 +442,8 @@ router.get('/recent-activity', authMiddleware, async (req, res) => {
 
         // Fetch last 3 emergency requests
         const [requests] = await pool.query(`
-            SELECT 'request' as type, created_at as date, blood_group as title, urgency_level as subtitle
+            SELECT 'Request' as type, created_at as timestamp, 
+            CONCAT('New ', blood_group, ' emergency request (', urgency_level, ')') as details
             FROM emergency_requests
             WHERE org_id = ?
             ORDER BY created_at DESC LIMIT 3
@@ -296,7 +451,8 @@ router.get('/recent-activity', authMiddleware, async (req, res) => {
 
         // Fetch last 3 members
         const [members] = await pool.query(`
-            SELECT 'member' as type, om.joined_at as date, d.full_name as title, d.city as subtitle
+            SELECT 'Member' as type, om.joined_at as timestamp, 
+            CONCAT(d.full_name, ' (', d.donor_tag, ') joined as a member from ', d.city) as details
             FROM org_members om
             JOIN donors d ON om.donor_id = d.id
             WHERE om.org_id = ?
@@ -304,7 +460,7 @@ router.get('/recent-activity', authMiddleware, async (req, res) => {
         `, [orgId]);
 
         const combined = [...verifications, ...requests, ...members]
-            .sort((a, b) => new Date(b.date) - new Date(a.date))
+            .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))
             .slice(0, 6);
 
         res.json(combined);
@@ -319,7 +475,7 @@ router.put('/request/:id/status', authMiddleware, async (req, res) => {
     try {
         const orgId = req.user.id;
         const { id } = req.params;
-        const { status } = req.body; // 'Active', 'Closed'
+        const { status } = req.body; // 'Active', 'Fulfilled', 'Cancelled'
 
         const [result] = await pool.query(
             'UPDATE emergency_requests SET status = ? WHERE id = ? AND org_id = ?',
@@ -330,7 +486,12 @@ router.put('/request/:id/status', authMiddleware, async (req, res) => {
             return res.status(404).json({ error: 'Request not found' });
         }
 
-        res.json({ message: 'Request updated' });
+        // If cancelled or fulfilled, remove notifications related to this request
+        if (status === 'Cancelled' || status === 'Fulfilled') {
+            await pool.query('DELETE FROM notifications WHERE source_id = ? AND type = "Emergency"', [id]);
+        }
+
+        res.json({ message: `Request updated to ${status}` });
     } catch (err) {
         res.status(500).json({ error: 'Server error' });
     }
@@ -422,7 +583,7 @@ router.get('/members', authMiddleware, async (req, res) => {
     try {
         const orgId = req.user.id;
         const [rows] = await pool.query(`
-            SELECT om.id as membership_id, om.role, om.joined_at, d.id as donor_id, d.full_name, d.email, d.phone, d.blood_type, d.city
+            SELECT om.id as membership_id, om.role, om.joined_at, d.id as donor_id, d.donor_tag, d.full_name, d.email, d.phone, d.blood_type, d.city
             FROM org_members om
             JOIN donors d ON om.donor_id = d.id
             WHERE om.org_id = ?
@@ -443,9 +604,24 @@ router.post('/members/add', authMiddleware, async (req, res) => {
 
         if (!donor_id) return res.status(400).json({ error: 'Donor ID is required.' });
 
+        // Check if donor exists
+        const [donorRows] = await pool.query('SELECT id FROM donors WHERE id = ?', [donor_id]);
+        if (donorRows.length === 0) {
+            return res.status(404).json({ error: 'Donor not found.' });
+        }
+
+        // Check if donor is already a member
+        const [existingMember] = await pool.query(
+            'SELECT id FROM org_members WHERE org_id = ? AND donor_id = ?',
+            [orgId, donor_id]
+        );
+        if (existingMember.length > 0) {
+            return res.status(400).json({ error: 'Donor is already a member of this organization.' });
+        }
+
         await pool.query(
-            'INSERT INTO org_members (org_id, donor_id, role) VALUES (?, ?, ?) ON DUPLICATE KEY UPDATE role = ?',
-            [orgId, donor_id, role, role]
+            'INSERT INTO org_members (org_id, donor_id, role) VALUES (?, ?, ?)',
+            [orgId, donor_id, role]
         );
 
         res.json({ message: 'Donor added to organization members successfully!' });
@@ -542,6 +718,102 @@ router.post('/outreach', authMiddleware, async (req, res) => {
         // Mock success for now to allow UI testing
         res.json({ message: `Success! Broadcast sent to ${emails.length} members.` });
     } catch (err) {
+        res.status(500).json({ error: 'Server error' });
+    }
+});
+
+// --- MEDICAL REPORTS ---
+
+// GET REPORTS FOR A DONOR
+router.get('/member/:donorId/reports', authMiddleware, async (req, res) => {
+    try {
+        const orgId = req.user.id;
+        const { donorId } = req.params;
+
+        // Verify that the donor is a member of this organization or has a history here
+        const [membership] = await pool.query(
+            'SELECT id FROM org_members WHERE org_id = ? AND donor_id = ?',
+            [orgId, donorId]
+        );
+
+        const [history] = await pool.query(
+            'SELECT id FROM donor_verifications WHERE org_id = ? AND donor_id = ?',
+            [orgId, donorId]
+        );
+
+        if (membership.length === 0 && history.length === 0) {
+            return res.status(403).json({ error: 'Unauthorized to view reports for this donor' });
+        }
+
+        const [rows] = await pool.query(
+            `SELECT mr.*, d.donor_tag 
+             FROM medical_reports mr
+             JOIN donors d ON mr.donor_id = d.id
+             WHERE mr.donor_id = ? AND mr.org_id = ? 
+             ORDER BY mr.test_date DESC`,
+            [donorId, orgId]
+        );
+        res.json(rows);
+    } catch (err) {
+        console.error('Fetch Reports Error:', err);
+        res.status(500).json({ error: 'Server error' });
+    }
+});
+
+// ADD MEDICAL REPORT
+router.post('/member/:donorId/reports', authMiddleware, async (req, res) => {
+    try {
+        const orgId = req.user.id;
+        const { donorId } = req.params;
+        const {
+            hb_level, blood_pressure, pulse_rate, temperature, weight, units_donated,
+            blood_group, rh_factor, hiv_status, hepatitis_b, hepatitis_c,
+            syphilis, malaria, notes
+        } = req.body;
+
+        // --- ADVANCED MEDICAL VALIDATION ---
+        const bpRegex = /^\d{2,3}\/\d{2,3}$/;
+        if (hb_level && (hb_level < 5 || hb_level > 25)) {
+            return res.status(400).json({ error: 'Hemoglobin level must be between 5 and 25 g/dL.' });
+        }
+        if (blood_pressure && !bpRegex.test(blood_pressure)) {
+            return res.status(400).json({ error: 'Blood Pressure must be in systolic/diastolic format (e.g., 120/80).' });
+        }
+        if (pulse_rate && (pulse_rate < 40 || pulse_rate > 200)) {
+            return res.status(400).json({ error: 'Pulse rate must be between 40 and 200 BPM.' });
+        }
+        if (temperature && (temperature < 35 || temperature > 42)) {
+            return res.status(400).json({ error: 'Temperature must be between 35 and 42°C.' });
+        }
+        if (weight && (weight < 30 || weight > 250)) {
+            return res.status(400).json({ error: 'Weight must be between 30 and 250 kg.' });
+        }
+        if (units_donated && (units_donated < 0.1 || units_donated > 5.0)) {
+            return res.status(400).json({ error: 'Units donated must be between 0.1 and 5.0 units.' });
+        }
+
+        await pool.query(
+            `INSERT INTO medical_reports (
+                donor_id, org_id, hb_level, blood_pressure, pulse_rate, 
+                temperature, weight, units_donated, blood_group, rh_factor, hiv_status, 
+                hepatitis_b, hepatitis_c, syphilis, malaria, notes
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            [
+                donorId, orgId, hb_level, blood_pressure, pulse_rate,
+                temperature, weight, units_donated || 1.0, blood_group, rh_factor, hiv_status,
+                hepatitis_b, hepatitis_c, syphilis, malaria, notes
+            ]
+        );
+
+        // Also update the donor's blood type in the donors table if it's missing or if a correction is needed
+        if (blood_group) {
+            const finalBloodType = rh_factor ? `${blood_group}${rh_factor === 'Positive' ? '+' : '-'}` : blood_group;
+            await pool.query('UPDATE donors SET blood_type = ? WHERE id = ? AND (blood_type IS NULL OR blood_type = "")', [finalBloodType, donorId]);
+        }
+
+        res.json({ message: 'Medical report recorded successfully' });
+    } catch (err) {
+        console.error('Add Report Error:', err);
         res.status(500).json({ error: 'Server error' });
     }
 });

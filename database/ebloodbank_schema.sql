@@ -3,7 +3,6 @@ USE ebloodbank;
 
 SET FOREIGN_KEY_CHECKS = 0;
 DROP TABLE IF EXISTS donations;
-DROP TABLE IF EXISTS reminders;
 DROP TABLE IF EXISTS seekers;
 DROP TABLE IF EXISTS donors;
 DROP TABLE IF EXISTS admin;
@@ -33,6 +32,7 @@ CREATE TABLE donors (
   profile_picture TEXT DEFAULT NULL,
   reset_code VARCHAR(4) DEFAULT NULL,
   reset_code_expires_at DATETIME DEFAULT NULL,
+  donor_tag VARCHAR(20) UNIQUE DEFAULT NULL,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
@@ -56,17 +56,9 @@ CREATE TABLE donations (
   donor_id INT NOT NULL,
   date DATE,
   units DECIMAL(5,2) DEFAULT 1.00,
+  hb_level DECIMAL(4,2) NULL,
+  blood_pressure VARCHAR(20) NULL,
   notes TEXT,
-  FOREIGN KEY (donor_id) REFERENCES donors(id) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-
--- Reminders
-CREATE TABLE reminders (
-  id INT AUTO_INCREMENT PRIMARY KEY,
-  donor_id INT NOT NULL,
-  reminder_date DATETIME,
-  message VARCHAR(500),
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (donor_id) REFERENCES donors(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
@@ -144,4 +136,41 @@ CREATE TABLE IF NOT EXISTS org_members (
   FOREIGN KEY (org_id) REFERENCES organizations(id) ON DELETE CASCADE,
   FOREIGN KEY (donor_id) REFERENCES donors(id) ON DELETE CASCADE,
   UNIQUE KEY unique_member (org_id, donor_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- Notifications Table
+CREATE TABLE IF NOT EXISTS notifications (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  recipient_id INT NOT NULL,
+  recipient_type ENUM('Donor', 'Organization') NOT NULL,
+  type VARCHAR(50) NOT NULL,
+  title VARCHAR(255) NOT NULL,
+  message TEXT NOT NULL,
+  source_id INT DEFAULT NULL,
+  is_read BOOLEAN DEFAULT FALSE,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- Medical Reports Table
+CREATE TABLE IF NOT EXISTS medical_reports (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  donor_id INT NOT NULL,
+  org_id INT NOT NULL,
+  hb_level DECIMAL(4,2),
+  blood_pressure VARCHAR(20),
+  pulse_rate INT,
+  temperature DECIMAL(4,1),
+  weight DECIMAL(5,2),
+  units_donated DECIMAL(5,2) DEFAULT 1.00,
+  blood_group VARCHAR(10),
+  rh_factor ENUM('Positive', 'Negative'),
+  hiv_status ENUM('Negative', 'Positive') DEFAULT 'Negative',
+  hepatitis_b ENUM('Negative', 'Positive') DEFAULT 'Negative',
+  hepatitis_c ENUM('Negative', 'Positive') DEFAULT 'Negative',
+  syphilis ENUM('Negative', 'Positive') DEFAULT 'Negative',
+  malaria ENUM('Negative', 'Positive') DEFAULT 'Negative',
+  test_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  notes TEXT,
+  FOREIGN KEY (donor_id) REFERENCES donors(id) ON DELETE CASCADE,
+  FOREIGN KEY (org_id) REFERENCES organizations(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
