@@ -5,6 +5,7 @@
   "scripts": {
     "start": "concurrently \"npm run backend\" \"npm run frontend\"",
     "backend": "cd backend && npm run dev",
+    "test:org-login": "node test/test_login_org.js",
     "frontend": "cd frontend && npm run dev"
   },
   "devDependencies": {

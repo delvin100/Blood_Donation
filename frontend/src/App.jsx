@@ -1,5 +1,5 @@
 import React from 'react';
-import { Routes, Route, Navigate } from 'react-router-dom';
+import { Routes, Route, Navigate, useNavigate } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import Home from './Home';
 import DonorDashboard from './modules/donor/DonorDashboard';
@@ -8,8 +8,30 @@ import DonorRegister from './modules/donor/DonorRegister';
 import OrgLogin from './modules/organization/OrgLogin';
 import OrgRegister from './modules/organization/OrgRegister';
 import OrgDashboard from './modules/organization/OrgDashboard';
+import AdminLogin from './modules/admin/AdminLogin';
+import AdminDashboard from './modules/admin/AdminDashboard';
 
 export default function App() {
+  const navigate = useNavigate();
+
+  // Admin Shortcut: Ctrl + Shift + A
+  React.useEffect(() => {
+    const handleKeyDown = (event) => {
+      // Check for Ctrl + Shift + A
+      if (event.ctrlKey && event.shiftKey && (event.key === 'a' || event.key === 'A')) {
+        event.preventDefault();
+        navigate('/admin/login');
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+
+    // Cleanup listener
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [navigate]);
+
   return (
     <>
       <Toaster position="top-right" />
@@ -26,6 +48,10 @@ export default function App() {
         <Route path="/organization/login" element={<OrgLogin />} />
         <Route path="/organization/register" element={<OrgRegister />} />
         <Route path="/organization/dashboard" element={<OrgDashboard />} />
+
+        {/* Admin Routes */}
+        <Route path="/admin/login" element={<AdminLogin />} />
+        <Route path="/admin/dashboard" element={<AdminDashboard />} />
 
         {/* Legacy Redirects */}
         <Route path="/login" element={<Navigate to="/donor/login" replace />} />

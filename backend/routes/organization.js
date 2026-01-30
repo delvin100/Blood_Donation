@@ -393,17 +393,55 @@ router.post('/verify', authMiddleware, async (req, res) => {
     }
 });
 
-// GET HISTORY (Verified Donations)
 router.get('/history', authMiddleware, async (req, res) => {
     try {
         const orgId = req.user.id;
         const [rows] = await pool.query(`
-            SELECT dv.id, dv.notes, dv.verification_date as created_at, d.full_name, d.blood_type, d.email, d.donor_tag
-            FROM donor_verifications dv
-            JOIN donors d ON dv.donor_id = d.id
-            WHERE dv.org_id = ?
-            ORDER BY dv.verification_date DESC
-        `, [orgId]);
+            SELECT 
+                MAX(id) as id,
+                donor_id,
+                full_name,
+                email,
+                donor_tag,
+                MAX(blood_type) as blood_type,
+                MAX(units) as units,
+                MAX(created_at) as created_at,
+                MIN(type) as type, -- 'Clinical' < 'Verified' alphabetically
+                MAX(notes) as notes
+            FROM (
+                (SELECT 
+                    dv.id, 
+                    dv.donor_id,
+                    d.full_name, 
+                    d.email, 
+                    d.donor_tag,
+                    d.blood_type,
+                    dv.notes, 
+                    dv.verification_date as created_at, 
+                    1.0 as units,
+                    'Verified' as type
+                FROM donor_verifications dv
+                JOIN donors d ON dv.donor_id = d.id
+                WHERE dv.org_id = ?)
+                UNION ALL
+                (SELECT 
+                    mr.id, 
+                    mr.donor_id,
+                    d.full_name, 
+                    d.email, 
+                    d.donor_tag,
+                    mr.blood_group as blood_type,
+                    mr.notes, 
+                    mr.test_date as created_at, 
+                    mr.units_donated as units,
+                    'Clinical' as type
+                FROM medical_reports mr
+                JOIN donors d ON mr.donor_id = d.id
+                WHERE mr.org_id = ?)
+            ) as consolidated
+            GROUP BY donor_id, DATE(created_at)
+            ORDER BY created_at DESC
+        `, [orgId, orgId]);
         res.json(rows);
     } catch (err) {
         console.error("History Error:", err);

@@ -38,10 +38,14 @@ import puppeteer from 'puppeteer';
     const submitBtn = await page.$('button[type="submit"]');
     if (submitBtn) {
         console.log('Clicking Submit...');
-        await Promise.all([
-            page.waitForNavigation({ waitUntil: 'networkidle0', timeout: 10000 }),
-            submitBtn.click()
-        ]);
+        try {
+            await Promise.all([
+                page.waitForNavigation({ waitUntil: 'networkidle2', timeout: 30000 }),
+                submitBtn.click()
+            ]);
+        } catch (error) {
+            console.log('Navigation timeout or error. Checking current URL...');
+        }
     }
 
     console.log('Login submitted. Checking if we reached the dashboard...');

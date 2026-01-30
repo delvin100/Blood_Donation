@@ -351,9 +351,9 @@ export default function OrgDashboard() {
     const downloadHistoryCSV = () => {
         if (history.length === 0) return toast.error("No history to export");
 
-        const headers = ["Donor Name,Email,Blood Type,Date,Notes,Status"];
+        const headers = ["Donor Name,Email,Blood Type,Units,Date,Type,Notes"];
         const rows = history.map(h =>
-            `${h.full_name},${h.email},${h.blood_type},${new Date(h.created_at).toLocaleDateString()},"${h.notes || ''}",Verified`
+            `${h.full_name},${h.email},${h.blood_type},${h.units || '1.0'},${new Date(h.created_at).toLocaleDateString()},${h.type || 'Verified'},"${h.notes || ''}"`
         );
 
         const csvContent = "data:text/csv;charset=utf-8," + [headers, ...rows].join("\n");
@@ -609,7 +609,7 @@ export default function OrgDashboard() {
 
         doc.setFontSize(11);
         doc.text(`Name: ${donor.full_name}`, 20, 68);
-        doc.text(`Digital Health ID: #DH-00${donor.id}`, 20, 75);
+        doc.text(`Digital Health ID: ${donor.donor_tag || '#DH-00' + (donor.donor_id || donor.id)}`, 20, 75);
         doc.text(`Verified Blood Group: ${report.blood_group}${report.rh_factor === 'Positive' ? '+' : '-'}`, 120, 68);
         doc.text(`Assessment Date: ${dateStr}`, 120, 75);
 
@@ -644,7 +644,7 @@ export default function OrgDashboard() {
         doc.line(20, 153, 190, 153);
 
         const screeningTests = [
-            { name: "HIV (Type I & II)", status: report.hiv_status },
+            { name: "HIV", status: report.hiv_status },
             { name: "Hepatitis B (HBsAg)", status: report.hepatitis_b },
             { name: "Hepatitis C (HCV)", status: report.hepatitis_c },
             { name: "Syphilis (VDRL/RPR)", status: report.syphilis },
@@ -1547,8 +1547,9 @@ export default function OrgDashboard() {
                                                     <th className="p-6 text-xs font-black text-gray-400 uppercase tracking-widest">Donor</th>
                                                     <th className="p-6 text-xs font-black text-gray-400 uppercase tracking-widest hidden md:table-cell">Contact</th>
                                                     <th className="p-6 text-xs font-black text-gray-400 uppercase tracking-widest">Blood Type</th>
-                                                    <th className="p-6 text-xs font-black text-gray-400 uppercase tracking-widest hidden md:table-cell">Date Verified</th>
-                                                    <th className="p-6 text-xs font-black text-gray-400 uppercase tracking-widest">Status</th>
+                                                    <th className="p-6 text-xs font-black text-gray-400 uppercase tracking-widest text-center">Units</th>
+                                                    <th className="p-6 text-xs font-black text-gray-400 uppercase tracking-widest hidden md:table-cell">Date</th>
+                                                    <th className="p-6 text-xs font-black text-gray-400 uppercase tracking-widest text-right">Log Type</th>
                                                 </tr>
                                             </thead>
                                             <tbody className="divide-y divide-gray-50">
@@ -1569,14 +1570,24 @@ export default function OrgDashboard() {
                                                                 {item.blood_type}
                                                             </span>
                                                         </td>
-                                                        <td className="p-6 hidden md:table-cell">
-                                                            <span className="text-sm font-medium text-gray-500">
-                                                                {new Date(item.created_at).toLocaleDateString()}
+                                                        <td className="p-6 text-center">
+                                                            <span className="inline-flex items-center justify-center p-2 rounded-xl bg-gray-50 text-gray-900 font-black text-xs border border-gray-100 min-w-[50px]">
+                                                                {item.units || '1.0'}
                                                             </span>
                                                         </td>
-                                                        <td className="p-6">
-                                                            <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-green-50 text-green-700 text-xs font-bold">
-                                                                <i className="fas fa-check-circle text-[10px]"></i> Verified
+                                                        <td className="p-6 hidden md:table-cell">
+                                                            <div className="flex flex-col">
+                                                                <span className="text-sm font-bold text-gray-900">
+                                                                    {new Date(item.created_at).toLocaleDateString()}
+                                                                </span>
+                                                                <span className="text-[10px] text-gray-400 font-medium">
+                                                                    {new Date(item.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                                                </span>
+                                                            </div>
+                                                        </td>
+                                                        <td className="p-6 text-right">
+                                                            <span className={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-tight ${item.type === 'Clinical' ? 'bg-indigo-50 text-indigo-700' : 'bg-emerald-50 text-emerald-700'}`}>
+                                                                <i className={`fas ${item.type === 'Clinical' ? 'fa-file-medical' : 'fa-check-circle'} text-[10px]`}></i> {item.type || 'Verified'}
                                                             </span>
                                                         </td>
                                                     </tr>

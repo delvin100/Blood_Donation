@@ -150,6 +150,24 @@ router.get('/stats', authMiddleware, async (req, res) => {
     }
 });
 
+// Get Medical Reports
+router.get('/reports', authMiddleware, async (req, res) => {
+    try {
+        const donorId = req.user.id;
+        const [rows] = await pool.query(`
+            SELECT mr.*, o.name as org_name, o.city as org_city 
+            FROM medical_reports mr
+            JOIN organizations o ON mr.org_id = o.id
+            WHERE mr.donor_id = ?
+            ORDER BY mr.test_date DESC
+        `, [donorId]);
+        res.json(rows);
+    } catch (err) {
+        console.error('Fetch Reports Error:', err);
+        res.status(500).json({ error: 'Server error' });
+    }
+});
+
 // Add Donation
 router.post('/donation', authMiddleware, async (req, res) => {
     try {

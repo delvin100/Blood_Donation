@@ -104,7 +104,7 @@ const MedicalReports = ({ selectedDonor, onClose, orgDetails }) => {
         doc.setFontSize(10);
         doc.setFont("helvetica", "normal");
         doc.text(`Authenticated Digital Health Record | ${selectedDonor.donor_tag || 'Verified Member'}`, 20, 35);
-        doc.text(`Ref: ${report.donor_tag || selectedDonor.donor_tag || 'DH-00' + selectedDonor.id}`, 190, 35, { align: "right" });
+        doc.text(`Ref: ${selectedDonor.donor_tag || 'DH-00' + (selectedDonor.donor_id || selectedDonor.id)}`, 190, 35, { align: "right" });
 
         // --- DONOR SUMMARY BOX ---
         doc.setFillColor(248, 250, 252);
@@ -120,7 +120,7 @@ const MedicalReports = ({ selectedDonor, onClose, orgDetails }) => {
         doc.setTextColor(15, 23, 42);
         doc.setFontSize(12);
         doc.text(`Name: ${selectedDonor.full_name}`, 25, 80);
-        doc.text(`Donor ID: #DH-00${selectedDonor.id}`, 25, 88);
+        doc.text(`Donor ID: ${selectedDonor.donor_tag || '#DH-00' + (selectedDonor.donor_id || selectedDonor.id)}`, 25, 88);
         doc.text(`Blood Group: ${report.blood_group} ${report.rh_factor}`, 110, 80);
         doc.text(`Units Donated: ${report.units_donated || '1.0'}`, 110, 88);
 
@@ -181,7 +181,7 @@ const MedicalReports = ({ selectedDonor, onClose, orgDetails }) => {
         doc.line(20, 218, 50, 218);
 
         const screeningTests = [
-            { name: "HIV (Type I & II Antibody)", status: report.hiv_status },
+            { name: "HIV", status: report.hiv_status },
             { name: "Hepatitis B Surface Antigen (HBsAg)", status: report.hepatitis_b },
             { name: "Hepatitis C Virus Antibody (HCV)", status: report.hepatitis_c },
             { name: "Syphilis (Treponema pallidum)", status: report.syphilis },
@@ -241,33 +241,30 @@ const MedicalReports = ({ selectedDonor, onClose, orgDetails }) => {
         <div className="fixed inset-0 z-[200] bg-[#f8fafc] flex flex-col animate-in fade-in zoom-in-95 duration-500 overflow-hidden">
             {/* Header Section */}
             <div className="px-8 lg:px-12 py-6 bg-white border-b border-slate-200 flex items-center justify-between sticky top-0 z-30 shadow-sm">
-                <div className="flex items-center gap-10">
-                    <button
-                        onClick={onClose}
-                        className="w-12 h-12 rounded-xl bg-slate-50 text-slate-400 hover:bg-slate-100 hover:text-slate-900 transition-all flex items-center justify-center group border border-slate-100"
-                        title="Close Archive"
-                    >
-                        <i className="fas fa-times group-hover:rotate-180 transition-transform duration-500"></i>
-                    </button>
-
-                    <div className="flex items-center gap-6">
-                        <div className="w-14 h-14 bg-indigo-600 rounded-2xl flex items-center justify-center text-white shadow-xl shadow-indigo-200">
-                            <i className="fas fa-dna text-2xl"></i>
+                <div className="flex items-center gap-6">
+                    <div className="w-14 h-14 bg-indigo-600 rounded-2xl flex items-center justify-center text-white shadow-xl shadow-indigo-200">
+                        <i className="fas fa-dna text-2xl"></i>
+                    </div>
+                    <div className="space-y-0.5">
+                        <div className="flex items-center gap-3">
+                            <h3 className="text-2xl font-bold text-slate-900 tracking-tight">Verified Medical Archive</h3>
+                            <span className="px-3 py-1 bg-emerald-50 text-emerald-600 rounded-full text-[10px] font-black uppercase tracking-wider border border-emerald-100/50">Secure File</span>
                         </div>
-                        <div className="space-y-0.5">
-                            <div className="flex items-center gap-3">
-                                <h3 className="text-2xl font-bold text-slate-900 tracking-tight">Verified Medical Archive</h3>
-                                <span className="px-3 py-1 bg-emerald-50 text-emerald-600 rounded-full text-[10px] font-black uppercase tracking-wider border border-emerald-100/50">Secure File</span>
-                            </div>
-                            <div className="flex items-center gap-3 text-slate-500">
-                                <p className="text-sm font-semibold">{selectedDonor?.full_name}</p>
-                                <span className="w-1 h-1 bg-slate-300 rounded-full"></span>
-                                <p className="text-xs font-medium uppercase tracking-widest text-indigo-600">{selectedDonor?.donor_tag}</p>
-                            </div>
+                        <div className="flex items-center gap-3 text-slate-500">
+                            <p className="text-sm font-semibold">{selectedDonor?.full_name}</p>
+                            <span className="w-1 h-1 bg-slate-300 rounded-full"></span>
+                            <p className="text-xs font-medium uppercase tracking-widest text-indigo-600">{selectedDonor?.donor_tag}</p>
                         </div>
                     </div>
                 </div>
 
+                <button
+                    onClick={onClose}
+                    className="w-12 h-12 rounded-xl bg-slate-50 text-slate-400 hover:bg-slate-100 hover:text-slate-900 transition-all flex items-center justify-center group border border-slate-100"
+                    title="Close Archive"
+                >
+                    <i className="fas fa-times group-hover:rotate-180 transition-transform duration-500"></i>
+                </button>
             </div>
 
             {/* Scrollable Content */}
@@ -364,7 +361,7 @@ const MedicalReports = ({ selectedDonor, onClose, orgDetails }) => {
                                                     </div>
                                                     <div className="grid grid-cols-1 gap-3">
                                                         {[
-                                                            { label: 'HIV (I & II)', status: report.hiv_status },
+                                                            { label: 'HIV', status: report.hiv_status },
                                                             { label: 'Hepatitis B', status: report.hepatitis_b },
                                                             { label: 'Hepatitis C', status: report.hepatitis_c },
                                                             { label: 'Syphilis', status: report.syphilis },

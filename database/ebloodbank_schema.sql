@@ -1,16 +1,28 @@
-CREATE DATABASE IF NOT EXISTS ebloodbank CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+-- Database Initialization Script
+-- Usage: SOURCE /path/to/ebloodbank_schema.sql;
+
+SET NAMES utf8mb4;
+SET FOREIGN_KEY_CHECKS = 0;
+
+-- 1. Drop and Recreate Database
+DROP DATABASE IF EXISTS ebloodbank;
+CREATE DATABASE ebloodbank CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 USE ebloodbank;
 
-SET FOREIGN_KEY_CHECKS = 0;
-DROP TABLE IF EXISTS donations;
-DROP TABLE IF EXISTS seekers;
-DROP TABLE IF EXISTS donors;
-DROP TABLE IF EXISTS admin;
+-- 2. Drop Tables (Redundant if DB is dropped, but good for safety if running manually)
+DROP TABLE IF EXISTS medical_reports;
+DROP TABLE IF EXISTS notifications;
+DROP TABLE IF EXISTS org_members;
 DROP TABLE IF EXISTS donor_verifications;
 DROP TABLE IF EXISTS emergency_requests;
 DROP TABLE IF EXISTS blood_inventory;
+DROP TABLE IF EXISTS donations;
 DROP TABLE IF EXISTS organizations;
-SET FOREIGN_KEY_CHECKS = 1;
+DROP TABLE IF EXISTS admins;
+DROP TABLE IF EXISTS seekers;
+DROP TABLE IF EXISTS donors;
+
+-- 3. Create Tables
 
 -- Donors Table
 CREATE TABLE donors (
@@ -30,13 +42,13 @@ CREATE TABLE donors (
   district VARCHAR(100) DEFAULT NULL,
   city VARCHAR(100) DEFAULT NULL,
   profile_picture TEXT DEFAULT NULL,
-  reset_code VARCHAR(4) DEFAULT NULL,
+  reset_code VARCHAR(10) DEFAULT NULL,
   reset_code_expires_at DATETIME DEFAULT NULL,
   donor_tag VARCHAR(20) UNIQUE DEFAULT NULL,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
--- Seekers Table
+-- Seekers Table (Legacy/Optional)
 CREATE TABLE seekers (
   id INT AUTO_INCREMENT PRIMARY KEY,
   full_name VARCHAR(255),
@@ -50,7 +62,7 @@ CREATE TABLE seekers (
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
--- Donations
+-- Donations Table (Past Donations)
 CREATE TABLE donations (
   id INT AUTO_INCREMENT PRIMARY KEY,
   donor_id INT NOT NULL,
@@ -62,8 +74,8 @@ CREATE TABLE donations (
   FOREIGN KEY (donor_id) REFERENCES donors(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
--- Admin
-CREATE TABLE admin (
+-- Admins Table
+CREATE TABLE admins (
   id INT AUTO_INCREMENT PRIMARY KEY,
   username VARCHAR(100) NOT NULL UNIQUE,
   password_hash VARCHAR(255) NOT NULL,
@@ -84,12 +96,12 @@ CREATE TABLE organizations (
   district VARCHAR(100),
   city VARCHAR(100),
   verified BOOLEAN DEFAULT FALSE,
-  reset_code VARCHAR(4) DEFAULT NULL,
+  reset_code VARCHAR(10) DEFAULT NULL,
   reset_code_expires_at DATETIME DEFAULT NULL,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
--- Blood Inventory
+-- Blood Inventory (Organization Specific)
 CREATE TABLE blood_inventory (
   id INT AUTO_INCREMENT PRIMARY KEY,
   org_id INT NOT NULL,
@@ -126,8 +138,8 @@ CREATE TABLE donor_verifications (
   FOREIGN KEY (donor_id) REFERENCES donors(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
--- Organization Members Table
-CREATE TABLE IF NOT EXISTS org_members (
+-- Organization Members
+CREATE TABLE org_members (
   id INT AUTO_INCREMENT PRIMARY KEY,
   org_id INT NOT NULL,
   donor_id INT NOT NULL,
@@ -138,8 +150,8 @@ CREATE TABLE IF NOT EXISTS org_members (
   UNIQUE KEY unique_member (org_id, donor_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
--- Notifications Table
-CREATE TABLE IF NOT EXISTS notifications (
+-- Notifications
+CREATE TABLE notifications (
   id INT AUTO_INCREMENT PRIMARY KEY,
   recipient_id INT NOT NULL,
   recipient_type ENUM('Donor', 'Organization') NOT NULL,
@@ -151,8 +163,8 @@ CREATE TABLE IF NOT EXISTS notifications (
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
--- Medical Reports Table
-CREATE TABLE IF NOT EXISTS medical_reports (
+-- Medical Reports
+CREATE TABLE medical_reports (
   id INT AUTO_INCREMENT PRIMARY KEY,
   donor_id INT NOT NULL,
   org_id INT NOT NULL,
@@ -174,3 +186,10 @@ CREATE TABLE IF NOT EXISTS medical_reports (
   FOREIGN KEY (donor_id) REFERENCES donors(id) ON DELETE CASCADE,
   FOREIGN KEY (org_id) REFERENCES organizations(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+INSERT INTO admins (username, password_hash)
+VALUES ('admin','$2b$10$s/wNd/VHlfpK4pHMKqC7XehD2sev7CLaGPJkmpP52agx8JcAbJbXi');
+
+SET FOREIGN_KEY_CHECKS = 1;
+
+-- END OF SCRIPT
