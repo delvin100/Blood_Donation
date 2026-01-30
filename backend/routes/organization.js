@@ -621,7 +621,7 @@ router.get('/members', authMiddleware, async (req, res) => {
     try {
         const orgId = req.user.id;
         const [rows] = await pool.query(`
-            SELECT om.id as membership_id, om.role, om.joined_at, d.id as donor_id, d.donor_tag, d.full_name, d.email, d.phone, d.blood_type, d.city
+            SELECT om.id as membership_id, om.role, om.joined_at, d.id as donor_id, d.donor_tag, d.full_name, d.email, d.phone, d.blood_type, d.city, d.availability
             FROM org_members om
             JOIN donors d ON om.donor_id = d.id
             WHERE om.org_id = ?
@@ -808,6 +808,15 @@ router.post('/member/:donorId/reports', authMiddleware, async (req, res) => {
             blood_group, rh_factor, hiv_status, hepatitis_b, hepatitis_c,
             syphilis, malaria, notes
         } = req.body;
+
+        // Check donor availability
+        const [donorRows] = await pool.query('SELECT availability FROM donors WHERE id = ?', [donorId]);
+        if (donorRows.length === 0) {
+            return res.status(404).json({ error: 'Donor not found' });
+        }
+        if (donorRows[0].availability !== 'Available') {
+            return res.status(400).json({ error: 'Donor is currently unavailable for donation.' });
+        }
 
         // --- ADVANCED MEDICAL VALIDATION ---
         const bpRegex = /^\d{2,3}\/\d{2,3}$/;

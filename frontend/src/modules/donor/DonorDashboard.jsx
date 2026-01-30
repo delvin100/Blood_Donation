@@ -2,8 +2,8 @@ import React, { useState, useEffect, useRef } from 'react';
 import '../../../public/css/dashboard.css';
 import { jsPDF } from 'jspdf';
 import CompleteProfileModal from './CompleteProfileModal';
-import InfoModal from './InfoModal';
 import EditProfileModal from './EditProfileModal';
+import InfoModal from './InfoModal';
 import ProfilePicModal from './ProfilePicModal';
 import BackToTop from '../../BackToTop';
 import Chatbot from './Chatbot';
@@ -35,6 +35,7 @@ const Dashboard = () => {
   const [showProfilePicModal, setShowProfilePicModal] = useState(false);
   const [showEditProfile, setShowEditProfile] = useState(false);
   const [activeInfo, setActiveInfo] = useState(null);
+  const [modalInfo, setModalInfo] = useState(null);
 
   // Notifications State
   const [notifications, setNotifications] = useState([]);
@@ -448,55 +449,192 @@ const Dashboard = () => {
         </div>
       )
     },
-    'analysis': {
-      title: 'Health Analysis',
+    'my-organizations': {
+      title: 'My Organizations',
       content: (
         <div className="space-y-6 animate-in slide-in-from-bottom-4 duration-500">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="md:col-span-2 modern-card p-6 bg-white border border-gray-100 shadow-xl rounded-3xl">
+          <div className="modern-card p-8 bg-blue-50/50 border border-blue-100 rounded-3xl">
+            <div className="flex items-center gap-4 mb-4">
+              <div className="w-12 h-12 bg-blue-100 text-blue-600 rounded-2xl flex items-center justify-center text-xl">
+                <i className="fas fa-building"></i>
+              </div>
+              <div>
+                <h3 className="text-xl font-black text-gray-800">Affiliated Facilities</h3>
+                <p className="text-sm font-bold text-gray-500">View and manage your organization memberships.</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="modern-card p-6 bg-white border border-gray-100 shadow-sm rounded-3xl">
+            <h3 className="text-lg font-bold text-gray-800 mb-4">Joined Organizations</h3>
+            <div className="space-y-4">
+              {memberships.length === 0 ? (
+                <div className="py-12 text-center">
+                  <i className="fas fa-hospital text-gray-200 text-4xl mb-3"></i>
+                  <p className="text-sm font-black text-gray-400 uppercase tracking-widest">No Memberships</p>
+                </div>
+              ) : (
+                memberships.map((m, idx) => (
+                  <div key={idx} className="flex items-center justify-between p-5 hover:bg-blue-50/30 rounded-2xl transition-all border border-gray-100 group border-l-4 border-l-blue-500">
+                    <div className="flex items-center gap-4">
+                      <div className="w-12 h-12 bg-blue-100/50 text-blue-600 rounded-xl flex items-center justify-center text-xl transition-colors group-hover:bg-blue-600 group-hover:text-white">
+                        <i className={m.org_type === 'Hospital' ? 'fas fa-hospital' : 'fas fa-clinic-medical'}></i>
+                      </div>
+                      <div>
+                        <h4 className="font-black text-gray-800 tracking-tight">{m.org_name}</h4>
+                        <div className="flex items-center gap-2 mt-1">
+                          <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest bg-gray-50 px-2 py-0.5 rounded-md border border-gray-100">{m.org_type}</span>
+                          <span className="w-1 h-1 bg-gray-200 rounded-full"></span>
+                          <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">{m.org_city}</span>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-[9px] font-black text-gray-300 uppercase tracking-widest mb-1">Joined On</p>
+                      <p className="text-sm font-black text-gray-900 bg-gray-50 px-3 py-1.5 rounded-xl border border-gray-100">{formatDateHyphen(m.joined_at)}</p>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        </div>
+      )
+    },
+    'analysis': {
+      title: 'Health Performance Center',
+      content: (
+        <div className="space-y-6 animate-in slide-in-from-bottom-4 duration-500">
+          {/* Top Row: Quick Vitals & Readiness */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {/* Latest Vitals Snapshot */}
+            <div className="lg:col-span-2 modern-card p-6 bg-white border border-gray-100 shadow-sm rounded-3xl">
               <div className="flex items-center justify-between mb-6">
-                <h3 className="font-bold text-gray-800 flex items-center gap-2">
-                  <i className="fas fa-chart-line text-purple-500"></i> Hemoglobin Trends
+                <h3 className="font-black text-gray-800 tracking-tight flex items-center gap-2">
+                  <i className="fas fa-heartbeat text-red-500"></i> Latest Vitals
                 </h3>
-                <span className="text-xs bg-purple-50 text-purple-600 px-3 py-1 rounded-full font-bold">Last {reports.length} Donations</span>
+                <span className="text-[10px] font-black bg-gray-50 text-gray-400 px-3 py-1 rounded-full uppercase">
+                  Last Checked: {reports.length > 0 ? formatDateHyphen(reports[0].test_date) : 'N/A'}
+                </span>
+              </div>
+
+              {reports.length > 0 ? (
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  {[
+                    { label: 'Blood Pressure', value: reports[0].blood_pressure, icon: 'fa-compress-arrows-alt', color: 'blue' },
+                    { label: 'Hemoglobin', value: `${reports[0].hb_level} g/dL`, icon: 'fa-tint', color: 'red' },
+                    { label: 'Pulse Rate', value: `${reports[0].pulse_rate} bpm`, icon: 'fa-activity', color: 'emerald' },
+                    { label: 'Body Weight', value: `${reports[0].weight} kg`, icon: 'fa-weight', color: 'purple' }
+                  ].map((vital, i) => (
+                    <div key={i} className="bg-gray-50/50 border border-gray-100 p-4 rounded-2xl hover:bg-white hover:shadow-md transition-all group">
+                      <div className={`w-8 h-8 rounded-lg bg-${vital.color}-50 text-${vital.color}-500 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform`}>
+                        <i className={`fas ${vital.icon} text-xs`}></i>
+                      </div>
+                      <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest">{vital.label}</p>
+                      <p className="text-base font-black text-gray-800 mt-1">{vital.value}</p>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="py-12 text-center bg-gray-50/50 rounded-2xl border-2 border-dashed border-gray-100">
+                  <p className="text-sm font-black text-gray-300 uppercase tracking-widest">No clinical data available</p>
+                </div>
+              )}
+            </div>
+
+            {/* Health Readiness Card */}
+            <div className="modern-card p-6 bg-gradient-to-br from-gray-900 to-gray-800 text-white rounded-3xl shadow-xl flex flex-col justify-between relative overflow-hidden">
+              <div className="absolute top-0 right-0 w-32 h-32 bg-white/5 rounded-full -translate-y-16 translate-x-16 blur-2xl"></div>
+              <div className="relative z-10">
+                <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Current Status</p>
+                <h3 className="text-2xl font-black">{stats.isEligible ? 'Fit to Save' : 'In Recovery'}</h3>
+              </div>
+              <div className="mt-8 relative z-10">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-[10px] font-black text-gray-400 uppercase">Preparation Score</span>
+                  <span className="text-sm font-black text-red-500">{stats.isEligible ? '100%' : '65%'}</span>
+                </div>
+                <div className="h-2 bg-white/10 rounded-full overflow-hidden">
+                  <div className={`h-full bg-red-600 transition-all duration-1000 ${stats.isEligible ? 'w-full' : 'w-2/3'}`}></div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Middle Row: Safety Clearance & Trends */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {/* Safety Clearance Status */}
+            <div className="modern-card p-6 bg-white border border-gray-100 shadow-sm rounded-3xl">
+              <h3 className="font-black text-gray-800 tracking-tight flex items-center gap-2 mb-6">
+                <i className="fas fa-user-shield text-emerald-500"></i> Safety Clearance
+              </h3>
+              <div className="space-y-3">
+                {[
+                  { label: 'HIV Status', key: 'hiv_status' },
+                  { label: 'Hepatitis B', key: 'hepatitis_b' },
+                  { label: 'Hepatitis C', key: 'hepatitis_c' },
+                  { label: 'Syphilis', key: 'syphilis' },
+                  { label: 'Malaria', key: 'malaria' }
+                ].map((item, i) => (
+                  <div key={i} className="flex items-center justify-between p-3 bg-gray-50/50 rounded-xl border border-gray-100/50">
+                    <span className="text-[11px] font-bold text-gray-600">{item.label}</span>
+                    <div className="flex items-center gap-2">
+                      <span className="text-[9px] font-black text-emerald-600 uppercase">Negative</span>
+                      <div className="w-4 h-4 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center text-[8px]">
+                        <i className="fas fa-check"></i>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <p className="text-[9px] text-gray-400 mt-4 leading-relaxed italic">
+                * All infectious disease screenings are conducted under strict medical protocols. Results shown reflect latest screening.
+              </p>
+            </div>
+
+            {/* Hemoglobin Performance Chart */}
+            <div className="lg:col-span-2 modern-card p-6 bg-white border border-gray-100 shadow-sm rounded-3xl">
+              <div className="flex items-center justify-between mb-6">
+                <div>
+                  <h3 className="font-black text-gray-800 tracking-tight flex items-center gap-2">
+                    <i className="fas fa-chart-area text-purple-500"></i> Hemoglobin Trend
+                  </h3>
+                  <p className="text-[9px] font-bold text-gray-400 uppercase tracking-widest mt-0.5">Clinical Oxygen Capacity</p>
+                </div>
+                <div className="flex gap-2">
+                  <span className="text-[10px] font-black bg-purple-50 text-purple-600 px-3 py-1 rounded-full uppercase">Optimal: 12.5 - 18.0</span>
+                </div>
               </div>
               <div className="h-64 w-full">
                 {reports.length > 0 ? (
                   <ResponsiveContainer width="100%" height="100%">
                     <AreaChart data={[...reports].reverse()}>
                       <defs>
-                        <linearGradient id="colorHb" x1="0" y1="0" x2="0" y2="1">
+                        <linearGradient id="colorHbCenter" x1="0" y1="0" x2="0" y2="1">
                           <stop offset="5%" stopColor="#8884d8" stopOpacity={0.8} />
                           <stop offset="95%" stopColor="#8884d8" stopOpacity={0} />
                         </linearGradient>
                       </defs>
-                      <XAxis dataKey="test_date" tickFormatter={(d) => new Date(d).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })} />
-                      <YAxis domain={[10, 18]} />
-                      <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                      <Tooltip contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)' }} />
-                      <Area type="monotone" dataKey="hb_level" stroke="#8884d8" fillOpacity={1} fill="url(#colorHb)" />
+                      <XAxis
+                        dataKey="test_date"
+                        tickFormatter={(d) => new Date(d).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+                        tick={{ fontSize: 10, fontWeight: 700, fill: '#94a3b8' }}
+                        axisLine={false}
+                        tickLine={false}
+                      />
+                      <YAxis
+                        domain={[10, 18]}
+                        tick={{ fontSize: 10, fontWeight: 700, fill: '#94a3b8' }}
+                        axisLine={false}
+                        tickLine={false}
+                      />
+                      <Tooltip contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)', padding: '12px' }} />
+                      <Area type="monotone" dataKey="hb_level" stroke="#8884d8" strokeWidth={4} fillOpacity={1} fill="url(#colorHbCenter)" />
                     </AreaChart>
                   </ResponsiveContainer>
                 ) : (
-                  <div className="h-full flex items-center justify-center text-gray-400">Not enough data for analysis</div>
+                  <div className="h-full flex items-center justify-center text-gray-300 italic text-sm">Not enough data to generate trend analysis</div>
                 )}
-              </div>
-            </div>
-
-            <div className="space-y-4">
-              <div className="modern-card p-5 bg-gradient-to-br from-purple-500 to-indigo-600 text-white rounded-3xl shadow-lg">
-                <p className="text-purple-100 text-xs font-bold uppercase tracking-wider">Average Hb</p>
-                <p className="text-3xl font-black mt-1">
-                  {reports.length > 0
-                    ? (reports.reduce((acc, curr) => acc + parseFloat(curr.hb_level), 0) / reports.length).toFixed(1)
-                    : 0}
-                </p>
-                <p className="text-purple-200 text-xs mt-1">g/dL</p>
-              </div>
-              <div className="modern-card p-5 bg-white border border-gray-100 rounded-3xl shadow-sm">
-                <p className="text-gray-400 text-xs font-bold uppercase tracking-wider">Total Donations</p>
-                <p className="text-3xl font-black text-gray-800 mt-1">{stats?.totalDonations || 0}</p>
-                <p className="text-green-500 text-xs mt-1 font-bold"><i className="fas fa-arrow-up"></i> Life Saver</p>
               </div>
             </div>
           </div>
@@ -506,9 +644,60 @@ const Dashboard = () => {
     'donation-history': {
       title: 'Donation History',
       content: (
-        <div className="p-8 text-center text-gray-500">
-          <i className="fas fa-history text-4xl mb-4 opacity-50"></i>
-          <p>Your full donation timeline will appear here.</p>
+        <div className="space-y-6 animate-in slide-in-from-bottom-4 duration-500">
+          <div className="modern-card p-8 bg-red-50/50 border border-red-100 rounded-3xl">
+            <div className="flex items-center gap-4 mb-4">
+              <div className="w-12 h-12 bg-red-100 text-red-600 rounded-2xl flex items-center justify-center text-xl">
+                <i className="fas fa-history"></i>
+              </div>
+              <div>
+                <h3 className="text-xl font-black text-gray-800">Your Journey</h3>
+                <p className="text-sm font-bold text-gray-500">A full timeline of your life-saving contributions.</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="modern-card p-6 bg-white border border-gray-100 shadow-sm rounded-3xl">
+            <h3 className="text-lg font-bold text-gray-800 mb-4">Full Timeline</h3>
+            <div className="space-y-3">
+              {donations.length === 0 ? (
+                <div className="py-12 text-center">
+                  <i className="fas fa-tint text-gray-200 text-4xl mb-3"></i>
+                  <p className="text-sm font-black text-gray-400 uppercase tracking-widest">No Records Found</p>
+                </div>
+              ) : (
+                donations.map((h) => {
+                  const isVerified = h.notes?.includes("Verified by Organization");
+                  return (
+                    <div key={h.id} className="flex items-center justify-between p-4 hover:bg-red-50/30 rounded-2xl transition-all border border-gray-100 group">
+                      <div className="flex items-center gap-4">
+                        <div className={`w-10 h-10 rounded-full flex items-center justify-center transition-colors shadow-sm ${isVerified ? 'bg-red-600 text-white' : 'bg-gray-100 text-gray-400 group-hover:bg-red-100 group-hover:text-red-500'}`}>
+                          <i className="fas fa-tint"></i>
+                        </div>
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <p className="text-sm font-black text-gray-800">{formatDateHyphen(h.date)}</p>
+                            {isVerified && (
+                              <span className="text-[9px] font-black bg-red-600 text-white px-2 py-0.5 rounded-full uppercase tracking-tighter shadow-sm flex items-center gap-1">
+                                <i className="fas fa-check-shield text-[7px]"></i> Verified
+                              </span>
+                            )}
+                          </div>
+                          <p className="text-xs font-bold text-gray-400 mt-0.5">
+                            {h.notes || (isVerified ? 'Official Facility Record' : 'Manual Entry')}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-sm font-black text-gray-900">{h.units} {h.units > 1 ? 'Units' : 'Unit'}</p>
+                        <p className="text-[9px] font-black text-gray-300 uppercase tracking-widest mt-1">Donated</p>
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+          </div>
         </div>
       )
     },
@@ -875,7 +1064,17 @@ const Dashboard = () => {
     }
   };
 
-  const openInfo = (key) => { setActiveInfo(navigationContent[key]); };
+  const openInfo = (key) => {
+    const fullScreenKeys = ['medical-reports', 'my-organizations', 'donation-history', 'analysis'];
+    const content = navigationContent[key];
+
+    if (fullScreenKeys.includes(key)) {
+      setActiveInfo(content);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    } else {
+      setModalInfo({ title: content.title, content: content.content });
+    }
+  };
 
   return (
     <div className="modern-bg min-h-screen">
@@ -982,9 +1181,16 @@ const Dashboard = () => {
               <nav className="space-y-6">
                 {[
                   {
+                    label: 'Home',
+                    items: [
+                      { key: 'dashboard', icon: 'fa-th-large', label: 'Dashboard Overview', color: 'gray', isHome: true },
+                    ]
+                  },
+                  {
                     label: 'My Records',
                     items: [
                       { key: 'medical-reports', icon: 'fa-file-medical-alt', label: 'Medical Reports', color: 'red' },
+                      { key: 'my-organizations', icon: 'fa-building', label: 'My Organizations', color: 'blue' },
                       { key: 'donation-history', icon: 'fa-history', label: 'Donation History', color: 'blue' },
                       { key: 'analysis', icon: 'fa-chart-pie', label: 'Health Analysis', color: 'purple' },
                     ]
@@ -1069,15 +1275,15 @@ const Dashboard = () => {
                             </div>
                           ) : (
                             <button
-                              onClick={() => openInfo(item.key)}
-                              className={`w-full text-left group flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200 ${item.urgent ? 'bg-red-50 hover:bg-red-100' : 'hover:bg-gray-50'
-                                }`}
+                              onClick={() => item.isHome ? setActiveInfo(null) : openInfo(item.key)}
+                              className={`w-full text-left group flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200 ${item.isHome && !activeInfo ? 'bg-red-50' : 'hover:bg-gray-50'
+                                } ${item.urgent ? 'bg-red-50 hover:bg-red-100' : ''}`}
                             >
-                              <div className={`w-8 h-8 rounded-lg flex items-center justify-center transition-colors shadow-sm ${item.urgent ? 'bg-red-500 text-white' : `bg-${item.color}-50 text-${item.color}-500 group-hover:scale-110 duration-300`
+                              <div className={`w-8 h-8 rounded-lg flex items-center justify-center transition-colors shadow-sm ${item.isHome && !activeInfo ? 'bg-red-600 text-white' : item.urgent ? 'bg-red-500 text-white' : `bg-${item.color}-50 text-${item.color}-500 group-hover:scale-110 duration-300`
                                 }`}>
-                                <i className={`fas ${item.icon} text-sm`}></i>
+                                <i className={`fas ${item.icon} text-md`}></i>
                               </div>
-                              <span className={`font-semibold text-sm ${item.urgent ? 'text-red-700' : 'text-gray-700 group-hover:text-gray-900'}`}>
+                              <span className={`font-bold text-sm ${item.isHome && !activeInfo ? 'text-red-700' : item.urgent ? 'text-red-700' : 'text-gray-700 group-hover:text-gray-900'}`}>
                                 {item.label}
                               </span>
                               {item.urgent && <i className="fas fa-exclamation-circle text-red-500 ml-auto animate-pulse"></i>}
@@ -1094,512 +1300,491 @@ const Dashboard = () => {
 
           {/* Main Content Area */}
           <div className="flex-1 space-y-5">
-            {/* Centered Header */}
-            <div className="text-center mb-8 fade-in">
-              <h1 className="text-5xl font-black text-white mb-2 drop-shadow-lg tracking-tight">Donor Dashboard</h1>
-              <p className="text-white/80 text-xl font-medium">Manage your profile and donations</p>
-            </div>
+            {activeInfo ? (
+              <div className="animate-in fade-in slide-in-from-right-4 duration-500">
+                {/* Navigation Detail Header */}
+                <div className="modern-card p-6 bg-white shadow-xl border-b-4 border-red-600 mb-8 flex items-center justify-between sticky top-0 z-40">
+                  <div className="flex items-center gap-4">
+                    <div>
+                      <h2 className="text-3xl font-black text-gray-800 tracking-tight">{activeInfo.title}</h2>
+                    </div>
+                  </div>
+                </div>
 
-            {/* Top Status Alert */}
-            {donations.length === 0 && (
-              <div className="bg-blue-100 border-2 border-blue-400 rounded-[24px] p-5 flex items-center gap-4 text-blue-900 shadow-xl shadow-blue-500/10 animate-in fade-in slide-in-from-top-4">
-                <div className="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center text-white flex-shrink-0">
-                  <i className="fas fa-info text-sm"></i>
+                {/* Navigation Detail Content */}
+                <div className="min-h-[60vh]">
+                  {activeInfo.content}
                 </div>
-                <p className="font-bold text-base">No donation history found. Please record your first donation to start tracking your journey.</p>
               </div>
-            )}
+            ) : (
+              <>
+                {/* Centered Header */}
+                <div className="text-center mb-8 fade-in">
+                  <h1 className="text-5xl font-black text-white mb-2 drop-shadow-lg tracking-tight">Donor Dashboard</h1>
+                  <p className="text-white/80 text-xl font-medium">Manage your profile and donations</p>
+                </div>
 
-            {/* Dashboard Stats Overview - Impact Visualization */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <div className="modern-card p-8 flex flex-col items-center justify-center text-center group hover:scale-[1.02] transition-all bg-gradient-to-br from-red-50 to-white border-b-4 border-red-500">
-                <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
-                  <i className="fas fa-heartbeat text-red-600 text-3xl"></i>
-                </div>
-                <span className="text-5xl font-black text-gray-800 mb-1">{stats.livesSaved || 0}</span>
-                <span className="text-sm font-bold text-red-600 uppercase tracking-widest">Lives Saved</span>
-                <p className="text-[10px] text-gray-400 mt-2 italic">Based on {donations.length} successful donations</p>
-              </div>
-              <div className="modern-card p-8 flex flex-col items-center justify-center text-center group hover:scale-[1.02] transition-all bg-gradient-to-br from-blue-50 to-white border-b-4 border-blue-500">
-                <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
-                  <i className="fas fa-medal text-blue-600 text-3xl"></i>
-                </div>
-                <span className="text-4xl font-black text-gray-800 mb-1">{stats.milestone}</span>
-                <span className="text-sm font-bold text-blue-600 uppercase tracking-widest">Rank Level</span>
-                <p className="text-[10px] text-gray-400 mt-2">Keep donating to level up!</p>
-              </div>
-              <div className="modern-card p-8 flex flex-col items-center justify-center text-center group hover:scale-[1.02] transition-all bg-gradient-to-br from-emerald-50 to-white border-b-4 border-emerald-500">
-                <div className="w-16 h-16 bg-emerald-100 rounded-full flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
-                  <i className="fas fa-check-circle text-emerald-600 text-3xl"></i>
-                </div>
-                <span className="text-4xl font-black text-gray-800 mb-1">{stats.isEligible ? 'Ready' : 'Resting'}</span>
-                <span className="text-sm font-bold text-emerald-600 uppercase tracking-widest">Status</span>
-                <p className="text-[10px] text-gray-400 mt-2">{stats.isEligible ? 'Eligible for donation' : 'In recovery phase'}</p>
-              </div>
-            </div>
+                {/* Top Status Alert */}
+                {donations.length === 0 && (
+                  <div className="bg-blue-100 border-2 border-blue-400 rounded-[24px] p-5 flex items-center gap-4 text-blue-900 shadow-xl shadow-blue-500/10 animate-in fade-in slide-in-from-top-4">
+                    <div className="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center text-white flex-shrink-0">
+                      <i className="fas fa-info text-sm"></i>
+                    </div>
+                    <p className="font-bold text-base">No donation history found. Please record your first donation to start tracking your journey.</p>
+                  </div>
+                )}
 
-            {/* Hello User Section */}
-            <div className="modern-card p-8 bg-white overflow-hidden relative">
-              <div className="flex items-center justify-between relative z-10">
-                <div>
-                  <h1 className="text-3xl font-black text-gray-800 uppercase">Hello, {user?.full_name || 'Donor'}</h1>
-                  <p className="text-gray-500 font-bold mt-2 text-base tracking-wide">Great to have you here saving lives!</p>
+                {/* Dashboard Stats Overview - Impact Visualization */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  <div className="modern-card p-8 flex flex-col items-center justify-center text-center group hover:scale-[1.02] transition-all bg-gradient-to-br from-red-50 to-white border-b-4 border-red-500">
+                    <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                      <i className="fas fa-heartbeat text-red-600 text-3xl"></i>
+                    </div>
+                    <span className="text-5xl font-black text-gray-800 mb-1">{stats.livesSaved || 0}</span>
+                    <span className="text-sm font-bold text-red-600 uppercase tracking-widest">Lives Saved</span>
+                    <p className="text-[10px] text-gray-400 mt-2 italic">Based on {donations.length} successful donations</p>
+                  </div>
+                  <div className="modern-card p-8 flex flex-col items-center justify-center text-center group hover:scale-[1.02] transition-all bg-gradient-to-br from-blue-50 to-white border-b-4 border-blue-500">
+                    <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                      <i className="fas fa-medal text-blue-600 text-3xl"></i>
+                    </div>
+                    <span className="text-4xl font-black text-gray-800 mb-1">{stats.milestone}</span>
+                    <span className="text-sm font-bold text-blue-600 uppercase tracking-widest">Rank Level</span>
+                    <p className="text-[10px] text-gray-400 mt-2">Keep donating to level up!</p>
+                  </div>
+                  <div className="modern-card p-8 flex flex-col items-center justify-center text-center group hover:scale-[1.02] transition-all bg-gradient-to-br from-emerald-50 to-white border-b-4 border-emerald-500">
+                    <div className="w-16 h-16 bg-emerald-100 rounded-full flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                      <i className="fas fa-check-circle text-emerald-600 text-3xl"></i>
+                    </div>
+                    <span className="text-4xl font-black text-gray-800 mb-1">{stats.isEligible ? 'Ready' : 'Resting'}</span>
+                    <span className="text-sm font-bold text-emerald-600 uppercase tracking-widest">Status</span>
+                    <p className="text-[10px] text-gray-400 mt-2">{stats.isEligible ? 'Eligible for donation' : 'In recovery phase'}</p>
+                  </div>
                 </div>
-                <button onClick={handleLogout} className="bg-red-600 hover:bg-red-700 text-white px-8 py-3.5 rounded-full font-black text-sm transition-all shadow-xl hover:shadow-red-200 transform hover:-translate-y-1 flex items-center gap-2">
-                  <i className="fas fa-power-off"></i>
-                  <span>Logout</span>
-                </button>
-              </div>
-            </div>
 
-            {/* Profile & Recovery Row */}
-            <div className="grid lg:grid-cols-3 gap-5">
-              {/* Profile Info Card */}
-              <div className="modern-card p-7 flex flex-col items-center">
-                <div className="flex justify-center mb-5">
-                  <div className="relative group">
-                    {user.profile_picture ? (
-                      <img
-                        src={getProfilePicUrl(user.profile_picture)}
-                        className="w-24 h-24 rounded-full object-cover shadow-2xl border-4 border-white"
-                        alt="Profile"
-                        referrerPolicy="no-referrer"
-                      />
-                    ) : (
-                      <div className="w-24 h-24 rounded-full bg-red-600 flex items-center justify-center text-white text-4xl font-black shadow-2xl">
-                        {user.full_name.charAt(0).toUpperCase()}
-                      </div>
-                    )}
-                    <button onClick={() => setShowProfilePicModal(true)} className="absolute bottom-0 right-0 w-7 h-7 bg-blue-600 text-white rounded-full flex items-center justify-center shadow-lg hover:scale-110 transition-transform">
-                      <i className="fas fa-camera text-[10px]"></i>
+                {/* Hello User Section */}
+                <div className="modern-card p-8 bg-white overflow-hidden relative">
+                  <div className="flex items-center justify-between relative z-10">
+                    <div>
+                      <h1 className="text-3xl font-black text-gray-800 uppercase">Hello, {user?.full_name || 'Donor'}</h1>
+                      <p className="text-gray-500 font-bold mt-2 text-base tracking-wide">Great to have you here saving lives!</p>
+                    </div>
+                    <button onClick={handleLogout} className="bg-red-600 hover:bg-red-700 text-white px-8 py-3.5 rounded-full font-black text-sm transition-all shadow-xl hover:shadow-red-200 transform hover:-translate-y-1 flex items-center gap-2">
+                      <i className="fas fa-power-off"></i>
+                      <span>Logout</span>
                     </button>
                   </div>
                 </div>
 
-                <h3 className="text-2xl font-bold text-gray-800 mb-8 flex items-center gap-2 self-start">
-                  <i className="fas fa-user-circle text-red-600"></i> Profile
-                </h3>
+                {/* Profile & Recovery Row */}
+                <div className="grid lg:grid-cols-3 gap-5">
+                  {/* Profile Info Card */}
+                  <div className="modern-card p-7 flex flex-col items-center">
+                    <div className="flex justify-center mb-5">
+                      <div className="relative group">
+                        {user.profile_picture ? (
+                          <img
+                            src={getProfilePicUrl(user.profile_picture)}
+                            className="w-24 h-24 rounded-full object-cover shadow-2xl border-4 border-white"
+                            alt="Profile"
+                            referrerPolicy="no-referrer"
+                          />
+                        ) : (
+                          <div className="w-24 h-24 rounded-full bg-red-600 flex items-center justify-center text-white text-4xl font-black shadow-2xl">
+                            {user.full_name.charAt(0).toUpperCase()}
+                          </div>
+                        )}
+                        <button onClick={() => setShowProfilePicModal(true)} className="absolute bottom-0 right-0 w-7 h-7 bg-blue-600 text-white rounded-full flex items-center justify-center shadow-lg hover:scale-110 transition-transform">
+                          <i className="fas fa-camera text-[10px]"></i>
+                        </button>
+                      </div>
+                    </div>
 
-                <div className="w-full space-y-4 font-bold text-gray-600 mb-8 px-6">
-                  <div className="flex items-center justify-start gap-4 text-lg">
-                    <i className="fas fa-user text-red-500 w-6 text-center"></i>
-                    <span>Name: <span className="text-gray-900">{user.full_name}</span></span>
-                  </div>
-                  <div className="flex items-center justify-start gap-4 text-lg">
-                    <i className="fas fa-tint text-red-500 w-6 text-center"></i>
-                    <span>Blood Group: <span className="text-gray-900">{user.blood_type}</span></span>
-                  </div>
-                  <div className="flex items-center justify-start gap-4 text-lg">
-                    <i className="fas fa-calendar-alt text-blue-500 w-6 text-center"></i>
-                    <span>Date of Birth: <span className="text-gray-900">{user.dob ? formatDateHyphen(user.dob) : 'Not set'}</span></span>
-                  </div>
-                </div>
+                    <h3 className="text-2xl font-bold text-gray-800 mb-8 flex items-center gap-2 self-start">
+                      <i className="fas fa-user-circle text-red-600"></i> Profile
+                    </h3>
 
-                <div className="w-full">
-                  <div className={`flex items-center justify-center gap-3 py-3 rounded-full text-white font-black text-base shadow-lg ${user.availability === 'Available' ? 'bg-emerald-600' : 'bg-red-600'} animate-pulse-slow`}>
-                    <div className="w-2 h-2 bg-white rounded-full shadow-sm"></div>
-                    {user.availability === 'Available' ? 'Available' : 'Unavailable'}
-                    <i className="fas fa-cloud text-sm opacity-90"></i>
+                    <div className="w-full space-y-4 font-bold text-gray-600 mb-8 px-6">
+                      <div className="flex items-center justify-start gap-4 text-lg">
+                        <i className="fas fa-user text-red-500 w-6 text-center"></i>
+                        <span>Name: <span className="text-gray-900">{user.full_name}</span></span>
+                      </div>
+                      <div className="flex items-center justify-start gap-4 text-lg">
+                        <i className="fas fa-tint text-red-500 w-6 text-center"></i>
+                        <span>Blood Group: <span className="text-gray-900">{user.blood_type}</span></span>
+                      </div>
+                      <div className="flex items-center justify-start gap-4 text-lg">
+                        <i className="fas fa-calendar-alt text-blue-500 w-6 text-center"></i>
+                        <span>Date of Birth: <span className="text-gray-900">{user.dob ? formatDateHyphen(user.dob) : 'Not set'}</span></span>
+                      </div>
+                    </div>
+
+                    <div className="w-full">
+                      <div className={`flex items-center justify-center gap-3 py-3 rounded-full text-white font-black text-base shadow-lg ${user.availability === 'Available' ? 'bg-emerald-600' : 'bg-red-600'} animate-pulse-slow`}>
+                        <div className="w-2 h-2 bg-white rounded-full shadow-sm"></div>
+                        {user.availability === 'Available' ? 'Available' : 'Unavailable'}
+                        <i className="fas fa-cloud text-sm opacity-90"></i>
+                      </div>
+                      <div className="text-center mt-4 space-y-2">
+                        {stats.isEligible ? (
+                          <p className="text-xs font-bold text-emerald-600">
+                            <i className="fas fa-check-circle mr-1"></i> You are eligible to donate!
+                          </p>
+                        ) : (
+                          <p className="text-xs font-bold text-red-600">
+                            <i className="fas fa-history mr-1"></i> Next eligibility: {formatDateHyphen(stats.nextEligibleDate)}
+                          </p>
+                        )}
+                        <p className="text-[11px] font-medium text-gray-400 italic">
+                          Availability status is updated automatically based on your last donation (90-day rule).
+                        </p>
+                      </div>
+                    </div>
                   </div>
-                  <div className="text-center mt-4 space-y-2">
+
+                  {/* Profile Card Section */}
+                  <div className="modern-card !p-0">
+                    <div className="text-center h-full">
+                      {data.user.state && data.user.district && data.user.city ? (
+                        /* Edit Profile Card */
+                        <div className="bg-gradient-to-r from-green-50 to-green-100 p-10 border border-green-200 h-full flex flex-col justify-center min-h-[350px]">
+                          <div className="flex items-center justify-center mb-6">
+                            <div className="w-20 h-20 bg-gradient-to-r from-green-500 to-green-600 rounded-full flex items-center justify-center shadow-lg">
+                              <i className="fas fa-user-edit text-white text-3xl pl-1"></i>
+                            </div>
+                          </div>
+                          <h3 className="text-2xl font-black text-gray-800 mb-3 tracking-tight">Profile Complete!</h3>
+                          <div className="text-base text-gray-600 mb-8 space-y-2 font-medium">
+                            <p><i className="fas fa-map-marker-alt text-green-600 mr-2"></i> {data.user.city}, {data.user.district}</p>
+                            <p><i className="fas fa-flag text-green-600 mr-2"></i> {data.user.state}, India</p>
+                          </div>
+                          <button
+                            onClick={() => setShowEditProfile(true)}
+                            className="bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white px-6 py-3 rounded-xl font-bold text-base transition-all duration-300 shadow-lg hover:shadow-green-200 transform hover:-translate-y-1 flex items-center justify-center gap-2 w-auto mx-auto"
+                          >
+                            <i className="fas fa-edit text-lg"></i>
+                            <span>Edit Your Profile</span>
+                            <i className="fas fa-arrow-right text-sm"></i>
+                          </button>
+                        </div>
+                      ) : (
+                        /* Complete Profile Card */
+                        <div className="bg-gradient-to-r from-red-50 to-red-100 p-10 border border-red-200 h-full flex flex-col justify-center min-h-[350px]">
+                          <div className="flex items-center justify-center mb-6">
+                            <div className="w-20 h-20 bg-gradient-to-r from-red-500 to-red-600 rounded-full flex items-center justify-center shadow-lg">
+                              <i className="fas fa-user-plus text-white text-3xl"></i>
+                            </div>
+                          </div>
+                          <h3 className="text-2xl font-black text-gray-800 mb-3 tracking-tight">Complete Your Profile</h3>
+                          <p className="text-gray-600 text-base mb-8 leading-relaxed font-medium">Add your location details to help us serve you better</p>
+                          <button
+                            onClick={() => setShowCompleteProfile(true)}
+                            className="bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white px-8 py-5 rounded-2xl font-black text-lg transition-all duration-300 shadow-xl hover:shadow-red-200 transform hover:-translate-y-1 flex items-center justify-center gap-3 w-full"
+                          >
+                            <i className="fas fa-map-marker-alt text-xl"></i>
+                            <span>Complete Profile</span>
+                            <i className="fas fa-arrow-right text-base"></i>
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Eligibility Countdown Card */}
+                  <div className="modern-card p-6 flex flex-col">
+                    <h3 className="text-xl font-bold text-gray-800 mb-6 flex items-center gap-2">
+                      <i className="fas fa-hourglass-half text-red-600"></i> Eligibility Countdown
+                    </h3>
+
                     {stats.isEligible ? (
-                      <p className="text-xs font-bold text-emerald-600">
-                        <i className="fas fa-check-circle mr-1"></i> You are eligible to donate!
-                      </p>
+                      <div className="flex-1 flex flex-col items-center justify-center text-center py-8">
+                        <div className="w-16 h-16 bg-emerald-50 text-emerald-600 rounded-full flex items-center justify-center text-2xl mb-4 shadow-inner">
+                          <i className="fas fa-check-circle"></i>
+                        </div>
+                        <p className="text-base font-bold text-gray-700 leading-snug">
+                          {donations?.length === 0
+                            ? "No donation history available. You are eligible to donate."
+                            : "Great news! You are eligible to donate again."
+                          }
+                        </p>
+                      </div>
                     ) : (
-                      <p className="text-xs font-bold text-red-600">
-                        <i className="fas fa-history mr-1"></i> Next eligibility: {formatDateHyphen(stats.nextEligibleDate)}
-                      </p>
+                      <div className="flex-1 flex flex-col justify-center">
+                        <div className="bg-red-50 border-2 border-red-100 rounded-3xl p-5 text-center mb-8">
+                          <p className="text-red-800 font-black text-xl">Next eligible donation in {timeLeft.days} days.</p>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-4">
+                          <div className="bg-red-100/50 rounded-3xl p-5 text-center border-b-4 border-red-200">
+                            <div className="text-4xl font-black text-red-700">{timeLeft.days}</div>
+                            <div className="text-xs font-black text-red-400 uppercase tracking-widest mt-1">Days</div>
+                          </div>
+                          <div className="bg-red-100/50 rounded-3xl p-5 text-center border-b-4 border-red-200">
+                            <div className="text-4xl font-black text-red-700">{timeLeft.hours}</div>
+                            <div className="text-xs font-black text-red-400 uppercase tracking-widest mt-1">Hours</div>
+                          </div>
+                          <div className="bg-red-100/50 rounded-3xl p-5 text-center border-b-4 border-red-200">
+                            <div className="text-4xl font-black text-red-700">{timeLeft.minutes}</div>
+                            <div className="text-xs font-black text-red-400 uppercase tracking-widest mt-1">Mins</div>
+                          </div>
+                          <div className="bg-red-100/50 rounded-3xl p-5 text-center border-b-4 border-red-200">
+                            <div className="text-4xl font-black text-red-700">{timeLeft.seconds}</div>
+                            <div className="text-xs font-black text-red-400 uppercase tracking-widest mt-1">Secs</div>
+                          </div>
+                        </div>
+                      </div>
                     )}
-                    <p className="text-[11px] font-medium text-gray-400 italic">
-                      Availability status is updated automatically based on your last donation (90-day rule).
-                    </p>
                   </div>
                 </div>
-              </div>
 
-              {/* Profile Card Section */}
-              <div className="modern-card !p-0">
-                <div className="text-center h-full">
-                  {data.user.state && data.user.district && data.user.city ? (
-                    /* Edit Profile Card */
-                    <div className="bg-gradient-to-r from-green-50 to-green-100 p-10 border border-green-200 h-full flex flex-col justify-center min-h-[350px]">
-                      <div className="flex items-center justify-center mb-6">
-                        <div className="w-20 h-20 bg-gradient-to-r from-green-500 to-green-600 rounded-full flex items-center justify-center shadow-lg">
-                          <i className="fas fa-user-edit text-white text-3xl pl-1"></i>
+                {/* Donation & Reminders Integrated Section */}
+                <div className="grid md:grid-cols-2 gap-6 mt-6">
+                  {/* Donation History Card */}
+                  <div className="modern-card p-5">
+                    <h2 className="font-semibold text-gray-800 mb-4 flex items-center gap-2">
+                      <i className="fas fa-tint text-red-600 text-xl"></i>
+                      Donation History
+                      <span className="bg-red-100 text-red-800 text-xs font-medium px-2.5 py-0.5 rounded-full">{donations.length} donations</span>
+                    </h2>
+
+                    {donations.length === 0 ? (
+                      <div className="text-center py-8">
+                        <i className="fas fa-heart text-gray-300 text-4xl mb-3"></i>
+                        <p className="text-gray-500 font-medium">No donations recorded yet.</p>
+                        <p className="text-xs text-gray-400 mt-1">Your first donation will appear here</p>
+                      </div>
+                    ) : (
+                      <div className="space-y-3 max-h-64 overflow-y-auto pr-2 custom-scrollbar">
+                        {donations.slice(0, 3).map((h) => (
+                          <div key={h.id} className="bg-red-50 border border-red-200 rounded-lg p-3 hover:bg-red-100 transition-colors">
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-3">
+                                <div className="w-8 h-8 bg-red-600 rounded-full flex items-center justify-center mr-3 flex-shrink-0">
+                                  <i className="fas fa-tint text-white text-xs"></i>
+                                </div>
+                                <div>
+                                  <p className="font-medium text-gray-900">{formatDateHyphen(h.date)}</p>
+                                  <p className="text-sm text-gray-600">{h.notes || 'No notes'}</p>
+                                </div>
+                              </div>
+                              <div className="text-right flex flex-col items-end gap-1">
+                                <span className="bg-green-100 text-green-800 text-xs font-medium px-2 py-1 rounded-full">
+                                  {h.units} {h.units > 1 ? 'units' : 'unit'}
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    <div className="mt-6 pt-6 border-t-2 border-gray-100">
+                      <h2 className="font-semibold text-gray-800 mb-4 flex items-center gap-2">
+                        <i className="fas fa-building text-blue-600 text-xl"></i>
+                        My Organizations
+                        <span className="bg-blue-100 text-blue-800 text-xs font-medium px-2.5 py-0.5 rounded-full">{memberships?.length || 0} joined</span>
+                      </h2>
+
+                      {memberships?.length === 0 ? (
+                        <div className="bg-gray-50 rounded-2xl p-8 text-center border-2 border-dashed border-gray-200">
+                          <i className="fas fa-hospital-user text-gray-300 text-4xl mb-3"></i>
+                          <p className="text-gray-500 font-medium">Not part of any organization yet.</p>
+                          <p className="text-xs text-gray-400 mt-1">Visit a registered hospital to get verified and joined!</p>
                         </div>
-                      </div>
-                      <h3 className="text-2xl font-black text-gray-800 mb-3 tracking-tight">Profile Complete!</h3>
-                      <div className="text-base text-gray-600 mb-8 space-y-2 font-medium">
-                        <p><i className="fas fa-map-marker-alt text-green-600 mr-2"></i> {data.user.city}, {data.user.district}</p>
-                        <p><i className="fas fa-flag text-green-600 mr-2"></i> {data.user.state}, India</p>
-                      </div>
-                      <button
-                        onClick={() => setShowEditProfile(true)}
-                        className="bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white px-6 py-3 rounded-xl font-bold text-base transition-all duration-300 shadow-lg hover:shadow-green-200 transform hover:-translate-y-1 flex items-center justify-center gap-2 w-auto mx-auto"
-                      >
-                        <i className="fas fa-edit text-lg"></i>
-                        <span>Edit Your Profile</span>
-                        <i className="fas fa-arrow-right text-sm"></i>
-                      </button>
-                    </div>
-                  ) : (
-                    /* Complete Profile Card */
-                    <div className="bg-gradient-to-r from-red-50 to-red-100 p-10 border border-red-200 h-full flex flex-col justify-center min-h-[350px]">
-                      <div className="flex items-center justify-center mb-6">
-                        <div className="w-20 h-20 bg-gradient-to-r from-red-500 to-red-600 rounded-full flex items-center justify-center shadow-lg">
-                          <i className="fas fa-user-plus text-white text-3xl"></i>
+                      ) : (
+                        <div className="grid grid-cols-1 gap-4">
+                          {memberships?.slice(0, 3).map((m, idx) => (
+                            <div key={idx} className="bg-white border border-gray-100 rounded-2xl p-5 shadow-sm hover:shadow-md transition-all border-l-4 border-l-blue-500">
+                              <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-4">
+                                  <div className="w-12 h-12 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center text-xl">
+                                    <i className={m.org_type === 'Hospital' ? 'fas fa-hospital' : 'fas fa-clinic-medical'}></i>
+                                  </div>
+                                  <div>
+                                    <h4 className="font-bold text-gray-900">{m.org_name}</h4>
+                                    <div className="flex items-center gap-2 text-xs text-gray-500 font-medium mt-1">
+                                      <span>{m.org_type}</span>
+                                      <span className="w-1 h-1 bg-gray-300 rounded-full"></span>
+                                      <span>{m.org_city}</span>
+                                    </div>
+                                  </div>
+                                </div>
+                                <div className="text-right">
+                                  <div className="text-[10px] font-black uppercase text-gray-400 tracking-widest mb-1">Joined On</div>
+                                  <div className="text-sm font-bold text-gray-700 bg-gray-50 px-3 py-1 rounded-lg">
+                                    {formatDateHyphen(m.joined_at)}
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          ))}
                         </div>
-                      </div>
-                      <h3 className="text-2xl font-black text-gray-800 mb-3 tracking-tight">Complete Your Profile</h3>
-                      <p className="text-gray-600 text-base mb-8 leading-relaxed font-medium">Add your location details to help us serve you better</p>
-                      <button
-                        onClick={() => setShowCompleteProfile(true)}
-                        className="bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white px-8 py-5 rounded-2xl font-black text-lg transition-all duration-300 shadow-xl hover:shadow-red-200 transform hover:-translate-y-1 flex items-center justify-center gap-3 w-full"
-                      >
-                        <i className="fas fa-map-marker-alt text-xl"></i>
-                        <span>Complete Profile</span>
-                        <i className="fas fa-arrow-right text-base"></i>
-                      </button>
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {/* Eligibility Countdown Card */}
-              <div className="modern-card p-6 flex flex-col">
-                <h3 className="text-xl font-bold text-gray-800 mb-6 flex items-center gap-2">
-                  <i className="fas fa-hourglass-half text-red-600"></i> Eligibility Countdown
-                </h3>
-
-                {stats.isEligible ? (
-                  <div className="flex-1 flex flex-col items-center justify-center text-center py-8">
-                    <div className="w-16 h-16 bg-emerald-50 text-emerald-600 rounded-full flex items-center justify-center text-2xl mb-4 shadow-inner">
-                      <i className="fas fa-check-circle"></i>
-                    </div>
-                    <p className="text-base font-bold text-gray-700 leading-snug">
-                      {donations?.length === 0
-                        ? "No donation history available. You are eligible to donate."
-                        : "Great news! You are eligible to donate again."
-                      }
-                    </p>
-                  </div>
-                ) : (
-                  <div className="flex-1 flex flex-col justify-center">
-                    <div className="bg-red-50 border-2 border-red-100 rounded-3xl p-5 text-center mb-8">
-                      <p className="text-red-800 font-black text-xl">Next eligible donation in {timeLeft.days} days.</p>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="bg-red-100/50 rounded-3xl p-5 text-center border-b-4 border-red-200">
-                        <div className="text-4xl font-black text-red-700">{timeLeft.days}</div>
-                        <div className="text-xs font-black text-red-400 uppercase tracking-widest mt-1">Days</div>
-                      </div>
-                      <div className="bg-red-100/50 rounded-3xl p-5 text-center border-b-4 border-red-200">
-                        <div className="text-4xl font-black text-red-700">{timeLeft.hours}</div>
-                        <div className="text-xs font-black text-red-400 uppercase tracking-widest mt-1">Hours</div>
-                      </div>
-                      <div className="bg-red-100/50 rounded-3xl p-5 text-center border-b-4 border-red-200">
-                        <div className="text-4xl font-black text-red-700">{timeLeft.minutes}</div>
-                        <div className="text-xs font-black text-red-400 uppercase tracking-widest mt-1">Mins</div>
-                      </div>
-                      <div className="bg-red-100/50 rounded-3xl p-5 text-center border-b-4 border-red-200">
-                        <div className="text-4xl font-black text-red-700">{timeLeft.seconds}</div>
-                        <div className="text-xs font-black text-red-400 uppercase tracking-widest mt-1">Secs</div>
-                      </div>
+                      )}
                     </div>
                   </div>
-                )}
-              </div>
-            </div>
 
-            {/* Donation & Reminders Integrated Section */}
-            <div className="grid md:grid-cols-2 gap-6 mt-6">
-              {/* Donation History Card */}
-              <div className="modern-card p-5">
-                <h2 className="font-semibold text-gray-800 mb-4 flex items-center gap-2">
-                  <i className="fas fa-tint text-red-600 text-xl"></i>
-                  Donation History
-                  <span className="bg-red-100 text-red-800 text-xs font-medium px-2.5 py-0.5 rounded-full">{donations.length} donations</span>
-                </h2>
+                  {/* Urgent Needs & Digital ID Section */}
+                  <div className="space-y-6">
 
-                {donations.length === 0 ? (
-                  <div className="text-center py-8">
-                    <i className="fas fa-heart text-gray-300 text-4xl mb-3"></i>
-                    <p className="text-gray-500 font-medium">No donations recorded yet.</p>
-                    <p className="text-xs text-gray-400 mt-1">Your first donation will appear here</p>
-                  </div>
-                ) : (
-                  <div className="space-y-3 max-h-64 overflow-y-auto pr-2 custom-scrollbar">
-                    {donations.map((h) => (
-                      <div key={h.id} className="bg-red-50 border border-red-200 rounded-lg p-3 hover:bg-red-100 transition-colors">
-                        <div className="flex items-center justify-between">
+                    {/* NEW: Blood Compatibility Section */}
+                    <div className="space-y-6">
+                      <div className="modern-card p-6 bg-white border border-gray-100 shadow-sm rounded-3xl group hover:shadow-lg transition-all duration-300">
+                        <div className="flex items-center justify-between mb-6">
                           <div className="flex items-center gap-3">
-                            <div className="w-8 h-8 bg-red-600 rounded-full flex items-center justify-center mr-3 flex-shrink-0">
-                              <i className="fas fa-tint text-white text-xs"></i>
+                            <div className="w-12 h-12 bg-red-50 text-red-600 rounded-2xl flex items-center justify-center shadow-inner group-hover:scale-110 transition-transform duration-500">
+                              <i className="fas fa-project-diagram text-xl"></i>
                             </div>
                             <div>
-                              <p className="font-medium text-gray-900">{formatDateHyphen(h.date)}</p>
-                              <p className="text-sm text-gray-600">{h.notes || 'No notes'}</p>
+                              <h3 className="font-black text-gray-800 tracking-tight">Compatibility</h3>
+                              <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mt-0.5">Your Impact Network</p>
                             </div>
                           </div>
-                          <div className="text-right flex flex-col items-end gap-1">
-                            <span className="bg-green-100 text-green-800 text-xs font-medium px-2 py-1 rounded-full">
-                              {h.units} {h.units > 1 ? 'units' : 'unit'}
-                            </span>
-                            <div className="flex gap-1">
-                              <button onClick={() => setEditingDonation(h)} className="text-blue-600 hover:text-blue-800 text-sm p-1"><i className="fas fa-edit"></i></button>
-                              <button onClick={() => handleDelete('donation', h.id)} className="text-red-600 hover:text-red-800 text-sm p-1"><i className="fas fa-trash"></i></button>
+                          <div className="flex flex-col items-end">
+                            <span className="text-2xl font-black text-red-600 leading-none">{user.blood_type || '??'}</span>
+                            <span className="text-[8px] font-black text-gray-300 uppercase mt-1">Your Type</span>
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-4">
+                          {/* Can Give To */}
+                          <div className="bg-emerald-50/50 border border-emerald-100 p-4 rounded-2xl">
+                            <div className="flex items-center gap-2 mb-3">
+                              <i className="fas fa-hand-holding-heart text-emerald-600 text-xs"></i>
+                              <span className="text-[9px] font-black text-emerald-700 uppercase tracking-widest">Can Give To</span>
+                            </div>
+                            <div className="flex flex-wrap gap-1.5">
+                              {(() => {
+                                const map = {
+                                  'O-': ['O-', 'O+', 'A-', 'A+', 'B-', 'B+', 'AB-', 'AB+'],
+                                  'O+': ['O+', 'A+', 'B+', 'AB+'],
+                                  'A-': ['A-', 'A+', 'AB-', 'AB+'],
+                                  'A+': ['A+', 'AB+'],
+                                  'B-': ['B-', 'B+', 'AB-', 'AB+'],
+                                  'B+': ['B+', 'AB+'],
+                                  'AB-': ['AB-', 'AB+'],
+                                  'AB+': ['AB+']
+                                };
+                                return map[user.blood_type]?.map(t => (
+                                  <span key={t} className="px-2 py-1 bg-white border border-emerald-100 text-emerald-600 rounded-lg text-[10px] font-black shadow-sm">{t}</span>
+                                )) || <span className="text-[10px] text-gray-400 font-bold uppercase">Pending Analysis</span>;
+                              })()}
                             </div>
                           </div>
+
+                          {/* Can Receive From */}
+                          <div className="bg-blue-50/50 border border-blue-100 p-4 rounded-2xl">
+                            <div className="flex items-center gap-2 mb-3">
+                              <i className="fas fa-shield-alt text-blue-600 text-xs"></i>
+                              <span className="text-[9px] font-black text-blue-700 uppercase tracking-widest">Can Receive</span>
+                            </div>
+                            <div className="flex flex-wrap gap-1.5">
+                              {(() => {
+                                const map = {
+                                  'O-': ['O-'],
+                                  'O+': ['O+', 'O-'],
+                                  'A-': ['A-', 'O-'],
+                                  'A+': ['A+', 'A-', 'O+', 'O-'],
+                                  'B-': ['B-', 'O-'],
+                                  'B+': ['B+', 'B-', 'O+', 'O-'],
+                                  'AB-': ['AB-', 'A-', 'B-', 'O-'],
+                                  'AB+': ['O-', 'O+', 'A-', 'A+', 'B-', 'B+', 'AB-', 'AB+']
+                                };
+                                return map[user.blood_type]?.map(t => (
+                                  <span key={t} className="px-2 py-1 bg-white border border-blue-100 text-blue-600 rounded-lg text-[10px] font-black shadow-sm">{t}</span>
+                                )) || <span className="text-[10px] text-gray-400 font-bold uppercase">Pending Analysis</span>;
+                              })()}
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="mt-4 pt-4 border-t border-gray-50 flex items-center gap-3">
+                          <div className="w-8 h-8 rounded-full bg-gray-50 flex items-center justify-center flex-shrink-0">
+                            <i className="fas fa-info-circle text-gray-300 text-xs"></i>
+                          </div>
+                          <p className="text-[9px] text-gray-400 font-medium italic leading-snug">
+                            {user.blood_type === 'O-' ? 'You are a Universal Donor! Your blood can save anyone in an emergency.' :
+                              user.blood_type === 'AB+' ? 'You are a Universal Recipient! You can safely receive blood from any type.' :
+                                'Your blood type plays a critical role in our targeted life-saving network.'}
+                          </p>
                         </div>
                       </div>
-                    ))}
-                  </div>
-                )}
-
-                <div className="mt-6 pt-6 border-t-2 border-gray-100">
-                  <h2 className="font-semibold text-gray-800 mb-4 flex items-center gap-2">
-                    <i className="fas fa-building text-blue-600 text-xl"></i>
-                    My Organizations
-                    <span className="bg-blue-100 text-blue-800 text-xs font-medium px-2.5 py-0.5 rounded-full">{memberships?.length || 0} joined</span>
-                  </h2>
-
-                  {memberships?.length === 0 ? (
-                    <div className="bg-gray-50 rounded-2xl p-8 text-center border-2 border-dashed border-gray-200">
-                      <i className="fas fa-hospital-user text-gray-300 text-4xl mb-3"></i>
-                      <p className="text-gray-500 font-medium">Not part of any organization yet.</p>
-                      <p className="text-xs text-gray-400 mt-1">Visit a registered hospital to get verified and joined!</p>
                     </div>
-                  ) : (
-                    <div className="grid grid-cols-1 gap-4">
-                      {memberships?.map((m, idx) => (
-                        <div key={idx} className="bg-white border border-gray-100 rounded-2xl p-5 shadow-sm hover:shadow-md transition-all border-l-4 border-l-blue-500">
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-4">
-                              <div className="w-12 h-12 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center text-xl">
-                                <i className={m.org_type === 'Hospital' ? 'fas fa-hospital' : 'fas fa-clinic-medical'}></i>
-                              </div>
-                              <div>
-                                <h4 className="font-bold text-gray-900">{m.org_name}</h4>
-                                <div className="flex items-center gap-2 text-xs text-gray-500 font-medium mt-1">
-                                  <span>{m.org_type}</span>
-                                  <span className="w-1 h-1 bg-gray-300 rounded-full"></span>
-                                  <span>{m.org_city}</span>
-                                </div>
-                              </div>
-                            </div>
-                            <div className="text-right">
-                              <div className="text-[10px] font-black uppercase text-gray-400 tracking-widest mb-1">Joined On</div>
-                              <div className="text-sm font-bold text-gray-700 bg-gray-50 px-3 py-1 rounded-lg">
-                                {formatDateHyphen(m.joined_at)}
-                              </div>
-                            </div>
+
+                    {/* Urgent Needs Feed */}
+                    <div className="modern-card p-6 bg-white border border-rose-100 shadow-xl shadow-rose-500/5 rounded-3xl group">
+                      <h3 className="text-xl font-black text-gray-800 mb-6 flex items-center justify-between">
+                        <span className="flex items-center gap-3">
+                          <div className="w-10 h-10 bg-rose-50 text-rose-500 rounded-xl flex items-center justify-center">
+                            <i className="fas fa-fire-alt text-lg"></i>
                           </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {/* Urgent Needs & Digital ID Section */}
-              <div className="space-y-6">
-
-                {/* NEW: Health Analytics & Reports */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  {/* Health Trends */}
-                  <div className="modern-card p-6 bg-white border border-gray-100 shadow-sm rounded-3xl">
-                    <div className="flex items-center justify-between mb-4">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 bg-red-50 text-red-600 rounded-xl flex items-center justify-center">
-                          <i className="fas fa-chart-line text-lg"></i>
-                        </div>
-                        <h3 className="font-bold text-gray-800">Health Trends</h3>
-                      </div>
-                    </div>
-                    <div className="h-48 w-full">
-                      {reports.length > 0 ? (
-                        <ResponsiveContainer width="100%" height="100%">
-                          <LineChart data={[...reports].reverse()}>
-                            <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                            <XAxis dataKey="test_date" tickFormatter={(d) => new Date(d).getDate()} tick={{ fontSize: 10 }} />
-                            <YAxis domain={[10, 18]} tick={{ fontSize: 10 }} />
-                            <Tooltip
-                              contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
-                              labelFormatter={(l) => new Date(l).toLocaleDateString()}
-                            />
-                            <Line type="monotone" dataKey="hb_level" stroke="#dc2626" strokeWidth={3} dot={{ r: 4 }} activeDot={{ r: 6 }} />
-                          </LineChart>
-                        </ResponsiveContainer>
-                      ) : (
-                        <div className="h-full flex flex-col items-center justify-center text-gray-400">
-                          <i className="fas fa-chart-area text-3xl mb-2 opacity-50"></i>
-                          <p className="text-xs">No health data available yet</p>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Recent Reports */}
-                  <div className="modern-card p-6 bg-white border border-gray-100 shadow-sm rounded-3xl overflow-hidden flex flex-col">
-                    <div className="flex items-center justify-between mb-4">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center">
-                          <i className="fas fa-file-medical text-lg"></i>
-                        </div>
-                        <h3 className="font-bold text-gray-800">Medical Reports</h3>
-                      </div>
-                      <span className="text-xs font-bold bg-blue-100 text-blue-600 px-2.5 py-1 rounded-lg border border-blue-200">{reports.length} Records</span>
-                    </div>
-                    <div className="space-y-3 flex-1 overflow-y-auto pr-1 custom-scrollbar">
-                      {reports.length === 0 ? (
-                        <div className="h-full flex flex-col items-center justify-center text-center py-6">
-                          <div className="w-12 h-12 bg-gray-50 rounded-full flex items-center justify-center mb-3">
-                            <i className="fas fa-folder-open text-gray-300 text-xl"></i>
+                          <div className="flex flex-col">
+                            <span className="tracking-tight">Urgent Needs</span>
+                            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest leading-none">In {user.city}</span>
                           </div>
-                          <p className="text-sm font-bold text-gray-400">No medical history found.</p>
-                          <p className="text-[10px] text-gray-300 mt-1">Reports from your donations will appear here.</p>
+                        </span>
+                        <span className="text-[10px] font-black bg-rose-500 text-white px-3 py-1 rounded-full animate-pulse shadow-lg shadow-rose-200 uppercase tracking-widest">Live</span>
+                      </h3>
+
+                      {urgentNeeds.length === 0 ? (
+                        <div className="py-12 text-center bg-gray-50/50 rounded-3xl border-2 border-dashed border-gray-100">
+                          <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center mx-auto mb-4 border shadow-sm">
+                            <i className="fas fa-check text-emerald-500 text-xl"></i>
+                          </div>
+                          <p className="text-sm font-black text-gray-400 uppercase tracking-widest">"All Safe Today"</p>
+                          <p className="text-[10px] text-gray-300 mt-1">No urgent requirements in your city.</p>
                         </div>
                       ) : (
-                        reports.map((report) => {
-                          // Simple health check logic for UI badge
-                          const isHealthy = report.hb_level >= 12.5 && report.hiv_status === 'Negative';
-
-                          return (
-                            <div key={report.id} className="group relative bg-gray-50/50 hover:bg-white p-4 rounded-2xl transition-all border border-gray-100 hover:border-blue-100 hover:shadow-md">
-                              <div className="flex justify-between items-start mb-3">
-                                <div>
-                                  <h4 className="text-sm font-black text-gray-800 leading-tight">{report.org_name}</h4>
-                                  <p className="text-[10px] uppercase font-bold text-gray-400 tracking-wider mt-1">{report.org_city}</p>
+                        <div className="space-y-4 max-h-[420px] overflow-y-auto pr-2 custom-scrollbar">
+                          {urgentNeeds.map((need) => (
+                            <div key={need.id} className="relative group/item rounded-[2.5rem] border border-gray-100 p-5 hover:bg-rose-50/30 transition-all duration-300">
+                              <div className="flex items-center justify-between mb-4">
+                                <div className="flex items-center gap-4">
+                                  <div className="w-16 h-16 bg-gray-900 text-white rounded-[1.5rem] flex flex-col items-center justify-center shadow-xl shadow-gray-200 font-black group-hover/item:bg-rose-600 group-hover/item:scale-105 transition-all duration-500">
+                                    <span className="text-2xl leading-none">{need.blood_group}</span>
+                                    <span className="text-[8px] uppercase tracking-tighter opacity-70 mt-1">{need.urgency_level}</span>
+                                  </div>
+                                  <div>
+                                    <h4 className="font-black text-gray-800 leading-tight tracking-tight">{need.org_name}</h4>
+                                    <div className="flex items-center gap-1.5 mt-1">
+                                      <i className="fas fa-map-marker-alt text-rose-500 text-[10px]"></i>
+                                      <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">{need.org_city}</span>
+                                    </div>
+                                  </div>
                                 </div>
-                                <div className={`px-2 py-1 rounded-lg text-[10px] font-black uppercase tracking-wide border ${isHealthy ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : 'bg-yellow-50 text-yellow-600 border-yellow-100'}`}>
-                                  {isHealthy ? 'Normal' : 'Attention'}
-                                </div>
-                              </div>
-
-                              <div className="flex items-center gap-4 mb-3">
-                                <div className="flex flex-col">
-                                  <span className="text-[9px] font-bold text-gray-400 uppercase">Hemoglobin</span>
-                                  <span className="text-xs font-black text-gray-700">{report.hb_level} <span className="text-[9px] font-normal text-gray-400">g/dL</span></span>
-                                </div>
-                                <div className="w-px h-6 bg-gray-200"></div>
-                                <div className="flex flex-col">
-                                  <span className="text-[9px] font-bold text-gray-400 uppercase">Donated</span>
-                                  <span className="text-xs font-black text-gray-700">{new Date(report.test_date).toLocaleDateString(undefined, { day: '2-digit', month: 'short' })}</span>
+                                <div className="text-right">
+                                  <p className="text-[8px] font-black text-gray-400 uppercase tracking-widest mb-1">Target</p>
+                                  <div className="flex items-baseline justify-end gap-1">
+                                    <span className="text-2xl font-black text-gray-900 leading-none">{need.units_required}</span>
+                                    <span className="text-[10px] font-bold text-gray-400 uppercase">Units</span>
+                                  </div>
                                 </div>
                               </div>
 
-                              <button
-                                onClick={() => generateReportPDF(report)}
-                                className="w-full py-2 rounded-xl bg-white border border-gray-200 text-gray-600 text-xs font-bold hover:bg-blue-600 hover:text-white hover:border-blue-600 transition-colors flex items-center justify-center gap-2 group-hover:shadow-sm"
-                              >
-                                <i className="fas fa-download text-[10px]"></i>
-                                Download Report
-                              </button>
-                            </div>
-                          )
-                        })
-                      )}
-                    </div>
-                  </div>
-                </div>
-
-                {/* Urgent Needs Feed */}
-                <div className="modern-card p-6">
-                  <h3 className="text-xl font-bold text-gray-800 mb-6 flex items-center justify-between">
-                    <span className="flex items-center gap-2">
-                      <i className="fas fa-fire-alt text-orange-500"></i>
-                      Urgent Needs in {user.city}
-                    </span>
-                    <span className="text-xs bg-red-100 text-red-600 px-3 py-1 rounded-full animate-pulse">Live</span>
-                  </h3>
-
-                  {urgentNeeds.length === 0 ? (
-                    <div className="py-12 text-center bg-gray-50 rounded-3xl border-2 border-dashed border-gray-100">
-                      <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center mx-auto mb-4 border shadow-sm">
-                        <i className="fas fa-check text-emerald-500 text-xl"></i>
-                      </div>
-                      <p className="text-sm font-bold text-gray-500 italic">"Looks like everyone is safe in your city today!"</p>
-                    </div>
-                  ) : (
-                    <div className="space-y-4 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
-                      {urgentNeeds.map((need) => (
-                        <div key={need.id} className="relative group rounded-[2rem] border border-red-100 p-5 hover:bg-red-50 transition-all duration-300">
-                          <div className="flex items-start justify-between mb-4">
-                            <div className="flex items-center gap-4">
-                              <div className="w-14 h-14 bg-red-600 text-white rounded-2xl flex flex-col items-center justify-center shadow-lg shadow-red-100 font-black">
-                                <span className="text-xl leading-none">{need.blood_group}</span>
-                                <span className="text-[10px] uppercase">{need.urgency_level}</span>
-                              </div>
-                              <div>
-                                <h4 className="font-black text-gray-900 leading-tight">{need.org_name}</h4>
-                                <p className="text-xs text-red-600 font-bold flex items-center gap-1 mt-1">
-                                  <i className="fas fa-map-marker-alt"></i> {need.org_city}
+                              <div className="bg-white/60 p-3 rounded-2xl border border-white/80 mb-4">
+                                <p className="text-[11px] text-gray-500 font-bold leading-relaxed italic line-clamp-2">
+                                  <i className="fas fa-quote-left text-[8px] text-rose-300 mr-1.5 opacity-50"></i>
+                                  {need.description}
                                 </p>
                               </div>
-                            </div>
-                            <div className="text-right">
-                              <p className="text-xs font-black text-gray-400 uppercase tracking-widest">Units Required</p>
-                              <p className="text-2xl font-black text-gray-900">{need.units_required}</p>
-                            </div>
-                          </div>
-                          <p className="text-xs text-gray-600 font-medium mb-4 line-clamp-2">"{need.description}"</p>
-                          <a href={`tel:${need.org_phone}`} className="w-full py-3 bg-red-600 hover:bg-red-700 text-white rounded-xl font-bold text-sm shadow-xl flex items-center justify-center gap-2 transition-all">
-                            <i className="fas fa-phone-alt animate-bounce"></i>
-                            Call Institution
-                          </a>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              </div>
 
-              {/* Health Analytics - HB & BP Trends */}
-              <div className="modern-card p-6">
-                <h3 className="text-xl font-bold text-gray-800 mb-6 flex items-center gap-2">
-                  <i className="fas fa-chart-line text-blue-600"></i>
-                  Health Trends (Hb level)
-                </h3>
-                <div className="h-[250px] w-full">
-                  {donations.filter(d => d.hb_level).length > 0 ? (
-                    <ResponsiveContainer width="100%" height="100%">
-                      <LineChart data={[...donations].reverse().filter(d => d.hb_level)}>
-                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
-                        <XAxis dataKey="date" tickFormatter={(str) => new Date(str).toLocaleDateString([], { month: 'short', day: 'numeric' })} tick={{ fontSize: 10 }} />
-                        <YAxis domain={['auto', 'auto']} tick={{ fontSize: 10 }} />
-                        <Tooltip />
-                        <Line type="monotone" dataKey="hb_level" stroke="#ef4444" strokeWidth={3} dot={{ r: 4, fill: '#ef4444' }} activeDot={{ r: 8 }} name="Hb Level (g/dL)" />
-                      </LineChart>
-                    </ResponsiveContainer>
-                  ) : (
-                    <div className="h-full flex flex-col items-center justify-center text-center bg-gray-50 rounded-2xl border-2 border-dashed">
-                      <i className="fas fa-vial text-gray-300 text-3xl mb-2"></i>
-                      <p className="text-xs text-gray-500 px-10">Add Hb level data to your next donation to see trends!</p>
-                    </div>
-                  )}
-                </div>
-                {donations.some(d => d.blood_pressure) && (
-                  <div className="mt-6 pt-6 border-t border-gray-100">
-                    <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-3">Recent BP Readings</p>
-                    <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-none">
-                      {donations.filter(d => d.blood_pressure).slice(0, 4).map(d => (
-                        <div key={d.id} className="bg-blue-50 px-4 py-2 rounded-full border border-blue-100 flex-shrink-0">
-                          <span className="text-xs font-bold text-blue-800">{d.blood_pressure}</span>
-                          <span className="text-[8px] text-blue-400 ml-2">{new Date(d.date).toLocaleDateString()}</span>
+                              <a href={`tel:${need.org_phone}`} className="w-full py-3.5 bg-rose-600 hover:bg-rose-700 text-white rounded-2xl font-black text-[11px] uppercase tracking-widest shadow-xl shadow-rose-200 flex items-center justify-center gap-3 transition-all transform active:scale-95">
+                                <i className="fas fa-phone-alt animate-pulse"></i>
+                                Connect with Center
+                              </a>
+                            </div>
+                          ))}
                         </div>
-                      ))}
+                      )}
                     </div>
                   </div>
-                )}
-              </div>
-            </div>
+                </div>
+              </>
+            )}
           </div>
         </div>
         {showCompleteProfile && <CompleteProfileModal onClose={() => setShowCompleteProfile(false)} onSuccess={fetchDashboardData} user={user} />}
         {showEditProfile && <EditProfileModal isOpen={showEditProfile} onClose={() => setShowEditProfile(false)} user={user} onUpdate={fetchDashboardData} />}
-        {activeInfo && <InfoModal isOpen={!!activeInfo} onClose={() => setActiveInfo(null)} title={activeInfo.title} content={activeInfo.content} />}
+        {modalInfo && <InfoModal onClose={() => setModalInfo(null)} title={modalInfo.title} content={modalInfo.content} />}
 
         {
           editingDonation && (

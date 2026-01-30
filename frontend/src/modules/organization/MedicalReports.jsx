@@ -64,6 +64,10 @@ const MedicalReports = ({ selectedDonor, onClose, orgDetails }) => {
 
     const handleAddReport = async (e) => {
         e.preventDefault();
+        if (selectedDonor.availability !== 'Available') {
+            return toast.error("Donor is currently unavailable for donation.");
+        }
+
         if (!validateMedicalForm()) {
             return toast.error("Please correct the clinical indicators");
         }
@@ -417,42 +421,47 @@ const MedicalReports = ({ selectedDonor, onClose, orgDetails }) => {
                                             <div className="space-y-2">
                                                 <label className="text-xs font-black text-slate-400 uppercase tracking-widest ml-1">Hemoglobin (Hb)</label>
                                                 <input
-                                                    type="number" step="0.1" value={reportForm.hb_level}
+                                                    type="number" step="0.1" min="5" max="25" value={reportForm.hb_level}
                                                     onChange={e => setReportForm({ ...reportForm, hb_level: e.target.value })}
-                                                    className={`w-full bg-slate-50 border-2 ${formErrors.hb_level ? 'border-rose-400 ring-4 ring-rose-50' : 'border-slate-100'} rounded-2xl px-6 py-4 font-bold text-slate-900 focus:bg-white focus:border-indigo-600 outline-none transition-all`}
+                                                    className={`w-full bg-slate-50 border-2 ${formErrors.hb_level ? 'border-red-400 ring-4 ring-red-50' : 'border-slate-100'} rounded-2xl px-6 py-4 font-bold text-slate-900 focus:bg-white focus:border-indigo-600 outline-none transition-all`}
                                                     placeholder="g/dL"
                                                 />
-                                                {formErrors.hb_level && <p className="text-[10px] text-rose-500 font-bold mt-1 ml-1">{formErrors.hb_level}</p>}
+                                                {formErrors.hb_level && <p className="text-[11px] text-red-600 font-bold mt-1.5 ml-1">{formErrors.hb_level}</p>}
                                             </div>
                                             <div className="space-y-2">
                                                 <label className="text-xs font-black text-slate-400 uppercase tracking-widest ml-1">B. Pressure</label>
                                                 <input
-                                                    type="text" value={reportForm.blood_pressure}
-                                                    onChange={e => setReportForm({ ...reportForm, blood_pressure: e.target.value })}
-                                                    className={`w-full bg-slate-50 border-2 ${formErrors.blood_pressure ? 'border-rose-400 ring-4 ring-rose-50' : 'border-slate-100'} rounded-2xl px-6 py-4 font-bold text-slate-900 focus:bg-white focus:border-indigo-600 outline-none transition-all`}
+                                                    type="text"
+                                                    pattern="[0-9]{2,3}/[0-9]{2,3}"
+                                                    value={reportForm.blood_pressure}
+                                                    onChange={e => {
+                                                        const val = e.target.value.replace(/[^0-9/]/g, '');
+                                                        setReportForm({ ...reportForm, blood_pressure: val });
+                                                    }}
+                                                    className={`w-full bg-slate-50 border-2 ${formErrors.blood_pressure ? 'border-red-400 ring-4 ring-red-50' : 'border-slate-100'} rounded-2xl px-6 py-4 font-bold text-slate-900 focus:bg-white focus:border-indigo-600 outline-none transition-all`}
                                                     placeholder="120/80"
                                                 />
-                                                {formErrors.blood_pressure && <p className="text-[10px] text-rose-500 font-bold mt-1 ml-1">{formErrors.blood_pressure}</p>}
+                                                {formErrors.blood_pressure && <p className="text-[11px] text-red-600 font-bold mt-1.5 ml-1">{formErrors.blood_pressure}</p>}
                                             </div>
                                             <div className="space-y-2">
                                                 <label className="text-xs font-black text-slate-400 uppercase tracking-widest ml-1">Units (Blood)</label>
                                                 <input
-                                                    type="number" step="0.1" value={reportForm.units_donated}
+                                                    type="number" step="0.1" min="0.1" max="5.0" value={reportForm.units_donated}
                                                     onChange={e => setReportForm({ ...reportForm, units_donated: e.target.value })}
-                                                    className={`w-full bg-slate-50 border-2 ${formErrors.units_donated ? 'border-rose-400 ring-4 ring-rose-50' : 'border-slate-100'} rounded-2xl px-6 py-4 font-bold text-slate-900 focus:bg-white focus:border-indigo-600 outline-none transition-all`}
+                                                    className={`w-full bg-slate-50 border-2 ${formErrors.units_donated ? 'border-red-400 ring-4 ring-red-50' : 'border-slate-100'} rounded-2xl px-6 py-4 font-bold text-slate-900 focus:bg-white focus:border-indigo-600 outline-none transition-all`}
                                                     placeholder="1.0"
                                                 />
-                                                {formErrors.units_donated && <p className="text-[10px] text-rose-500 font-bold mt-1 ml-1">{formErrors.units_donated}</p>}
+                                                {formErrors.units_donated && <p className="text-[11px] text-red-600 font-bold mt-1.5 ml-1">{formErrors.units_donated}</p>}
                                             </div>
                                             <div className="space-y-2">
                                                 <label className="text-xs font-black text-slate-400 uppercase tracking-widest ml-1">Weight (kg)</label>
                                                 <input
-                                                    type="number" value={reportForm.weight}
+                                                    type="number" min="30" max="250" value={reportForm.weight}
                                                     onChange={e => setReportForm({ ...reportForm, weight: e.target.value })}
-                                                    className={`w-full bg-slate-50 border-2 ${formErrors.weight ? 'border-rose-400 ring-4 ring-rose-50' : 'border-slate-100'} rounded-2xl px-6 py-4 font-bold text-slate-900 focus:bg-white focus:border-indigo-600 outline-none transition-all`}
+                                                    className={`w-full bg-slate-50 border-2 ${formErrors.weight ? 'border-red-400 ring-4 ring-red-50' : 'border-slate-100'} rounded-2xl px-6 py-4 font-bold text-slate-900 focus:bg-white focus:border-indigo-600 outline-none transition-all`}
                                                     placeholder="kg"
                                                 />
-                                                {formErrors.weight && <p className="text-[10px] text-rose-500 font-bold mt-1 ml-1">{formErrors.weight}</p>}
+                                                {formErrors.weight && <p className="text-[11px] text-red-600 font-bold mt-1.5 ml-1">{formErrors.weight}</p>}
                                             </div>
                                         </div>
 
@@ -461,22 +470,22 @@ const MedicalReports = ({ selectedDonor, onClose, orgDetails }) => {
                                             <div className="space-y-2">
                                                 <label className="text-xs font-black text-slate-400 uppercase tracking-widest ml-1">Pulse Rate</label>
                                                 <input
-                                                    type="number" value={reportForm.pulse_rate}
+                                                    type="number" min="40" max="200" value={reportForm.pulse_rate}
                                                     onChange={e => setReportForm({ ...reportForm, pulse_rate: e.target.value })}
-                                                    className={`w-full bg-slate-50 border-2 ${formErrors.pulse_rate ? 'border-rose-400 ring-4 ring-rose-50' : 'border-slate-100'} rounded-2xl px-5 py-4 font-bold text-slate-900 focus:bg-white focus:border-indigo-600 outline-none transition-all`}
+                                                    className={`w-full bg-slate-50 border-2 ${formErrors.pulse_rate ? 'border-red-400 ring-4 ring-red-50' : 'border-slate-100'} rounded-2xl px-5 py-4 font-bold text-slate-900 focus:bg-white focus:border-indigo-600 outline-none transition-all`}
                                                     placeholder="BPM"
                                                 />
-                                                {formErrors.pulse_rate && <p className="text-[10px] text-rose-500 font-bold mt-1 ml-1">{formErrors.pulse_rate}</p>}
+                                                {formErrors.pulse_rate && <p className="text-[11px] text-red-600 font-bold mt-1.5 ml-1">{formErrors.pulse_rate}</p>}
                                             </div>
                                             <div className="space-y-2">
                                                 <label className="text-xs font-black text-slate-400 uppercase tracking-widest ml-1">Temperature</label>
                                                 <input
-                                                    type="number" step="0.1" value={reportForm.temperature}
+                                                    type="number" step="0.1" min="35" max="42" value={reportForm.temperature}
                                                     onChange={e => setReportForm({ ...reportForm, temperature: e.target.value })}
-                                                    className={`w-full bg-slate-50 border-2 ${formErrors.temperature ? 'border-rose-400 ring-4 ring-rose-50' : 'border-slate-100'} rounded-2xl px-5 py-4 font-bold text-slate-900 focus:bg-white focus:border-indigo-600 outline-none transition-all`}
+                                                    className={`w-full bg-slate-50 border-2 ${formErrors.temperature ? 'border-red-400 ring-4 ring-red-50' : 'border-slate-100'} rounded-2xl px-5 py-4 font-bold text-slate-900 focus:bg-white focus:border-indigo-600 outline-none transition-all`}
                                                     placeholder="°C"
                                                 />
-                                                {formErrors.temperature && <p className="text-[10px] text-rose-500 font-bold mt-1 ml-1">{formErrors.temperature}</p>}
+                                                {formErrors.temperature && <p className="text-[11px] text-red-600 font-bold mt-1.5 ml-1">{formErrors.temperature}</p>}
                                             </div>
                                             <div className="space-y-2">
                                                 <label className="text-xs font-black text-slate-400 uppercase tracking-widest ml-1">Blood Group</label>
@@ -533,11 +542,21 @@ const MedicalReports = ({ selectedDonor, onClose, orgDetails }) => {
 
                                         <button
                                             type="submit"
-                                            className="w-full py-6 bg-slate-900 text-white rounded-[2rem] font-black text-lg hover:bg-black hover:shadow-2xl hover:shadow-indigo-500/20 transition-all flex items-center justify-center gap-4 group shadow-xl"
+                                            disabled={selectedDonor.availability !== 'Available'}
+                                            className={`w-full py-6 rounded-[2rem] font-black text-lg transition-all flex items-center justify-center gap-4 group shadow-xl ${selectedDonor.availability === 'Available'
+                                                ? 'bg-slate-900 text-white hover:bg-black hover:shadow-indigo-500/20'
+                                                : 'bg-slate-100 text-slate-400 cursor-not-allowed shadow-none'
+                                                }`}
                                         >
-                                            <span>Securely Record Result</span>
-                                            <i className="fas fa-shield-alt text-indigo-400 group-hover:rotate-12 transition-transform"></i>
+                                            <span>{selectedDonor.availability === 'Available' ? 'Securely Record Result' : 'Unavailable for Donation'}</span>
+                                            <i className={`fas ${selectedDonor.availability === 'Available' ? 'fa-shield-alt text-indigo-400 group-hover:rotate-12' : 'fa-lock text-slate-300'} transition-transform`}></i>
                                         </button>
+                                        {selectedDonor.availability !== 'Available' && (
+                                            <p className="text-center text-[11px] font-bold text-rose-500 uppercase tracking-widest mt-4">
+                                                <i className="fas fa-exclamation-triangle mr-2"></i>
+                                                This donor is currently restricted from new collection entries.
+                                            </p>
+                                        )}
                                     </form>
                                 </div>
                             </div>
