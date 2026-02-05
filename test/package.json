@@ -4,7 +4,10 @@
   "type": "module",
   "main": "test_login_donor.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test:donor:login": "node donor/test_login_donor.js",
+    "test:donor:register": "node donor/test_register_donor.js",
+    "test:org:login": "node organization/test_login_org.js",
+    "test:org:register": "node organization/test_register_org.js"
   },
   "keywords": [],
   "author": "",

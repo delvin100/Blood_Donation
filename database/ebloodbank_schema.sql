@@ -1,5 +1,4 @@
 -- Database Initialization Script
--- Usage: SOURCE /path/to/ebloodbank_schema.sql;
 
 SET NAMES utf8mb4;
 SET FOREIGN_KEY_CHECKS = 0;
@@ -45,10 +44,12 @@ CREATE TABLE donors (
   reset_code VARCHAR(10) DEFAULT NULL,
   reset_code_expires_at DATETIME DEFAULT NULL,
   donor_tag VARCHAR(20) UNIQUE DEFAULT NULL,
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  INDEX idx_blood_type (blood_type),
+  INDEX idx_location (city, district)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
--- Seekers Table (Legacy/Optional)
+-- Seekers Table
 CREATE TABLE seekers (
   id INT AUTO_INCREMENT PRIMARY KEY,
   full_name VARCHAR(255),
@@ -59,27 +60,9 @@ CREATE TABLE seekers (
   country VARCHAR(100) DEFAULT 'India',
   state VARCHAR(100),
   district VARCHAR(100),
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-
--- Donations Table (Past Donations)
-CREATE TABLE donations (
-  id INT AUTO_INCREMENT PRIMARY KEY,
-  donor_id INT NOT NULL,
-  date DATE,
-  units DECIMAL(5,2) DEFAULT 1.00,
-  hb_level DECIMAL(4,2) NULL,
-  blood_pressure VARCHAR(20) NULL,
-  notes TEXT,
-  FOREIGN KEY (donor_id) REFERENCES donors(id) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-
--- Admins Table
-CREATE TABLE admins (
-  id INT AUTO_INCREMENT PRIMARY KEY,
-  username VARCHAR(100) NOT NULL UNIQUE,
-  password_hash VARCHAR(255) NOT NULL,
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  INDEX idx_seekers_blood (blood_type),
+  INDEX idx_seekers_district (district)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- Organizations Table
@@ -98,6 +81,32 @@ CREATE TABLE organizations (
   verified BOOLEAN DEFAULT FALSE,
   reset_code VARCHAR(10) DEFAULT NULL,
   reset_code_expires_at DATETIME DEFAULT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  INDEX idx_org_city (city),
+  INDEX idx_org_type (type)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- Donations Table (Past Donations)
+CREATE TABLE donations (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  donor_id INT NOT NULL,
+  org_id INT DEFAULT NULL,
+  date DATE,
+  units DECIMAL(5,2) DEFAULT 1.00,
+  hb_level DECIMAL(4,2) NULL,
+  blood_pressure VARCHAR(20) NULL,
+  notes TEXT,
+  INDEX idx_donations_donor (donor_id),
+  INDEX idx_donations_org (org_id),
+  FOREIGN KEY (donor_id) REFERENCES donors(id) ON DELETE CASCADE,
+  FOREIGN KEY (org_id) REFERENCES organizations(id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- Admins Table
+CREATE TABLE admins (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  username VARCHAR(100) NOT NULL UNIQUE,
+  password_hash VARCHAR(255) NOT NULL,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
@@ -160,7 +169,8 @@ CREATE TABLE notifications (
   message TEXT NOT NULL,
   source_id INT DEFAULT NULL,
   is_read BOOLEAN DEFAULT FALSE,
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  INDEX idx_notif_recipient (recipient_id, recipient_type, is_read)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- Medical Reports
@@ -187,8 +197,64 @@ CREATE TABLE medical_reports (
   FOREIGN KEY (org_id) REFERENCES organizations(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+-- Organization Activity Logs
+CREATE TABLE org_logs (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  org_id INT NOT NULL,
+  action_type VARCHAR(50) NOT NULL,
+  entity_name VARCHAR(255) DEFAULT NULL,
+  description TEXT,
+  details JSON DEFAULT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (org_id) REFERENCES organizations(id) ON DELETE CASCADE,
+  INDEX idx_org_logs_org_id (org_id),
+  INDEX idx_org_logs_created_at (created_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+
 INSERT INTO admins (username, password_hash)
 VALUES ('admin','$2b$10$s/wNd/VHlfpK4pHMKqC7XehD2sev7CLaGPJkmpP52agx8JcAbJbXi');
+
+-- =========================
+-- DONORS
+-- =========================
+INSERT INTO donors
+(username, full_name, email, password_hash, blood_type, dob, availability, phone, gender, state, district, city, donor_tag)
+VALUES
+('jmathew', 'Joseph Mathew', 'joseph.mathew@gmail.com', NULL, 'A+', '1996-04-12', 'Available', '9876543210', 'male', 'Kerala', 'Kottayam', 'Pala', 'DON-000001'),
+('tgeorge', 'Thomas George', 'thomas.george@gmail.com', NULL, 'O+', '1994-08-20', 'Available', '9876543211', 'male', 'Kerala', 'Kottayam', 'Ettumanoor', 'DON-000002'),
+('amary', 'Annie Mary', 'annie.mary@gmail.com', NULL, 'B+', '1998-01-05', 'Unavailable', '9876543212', 'female', 'Kerala', 'Kottayam', 'Changanassery', 'DON-000003'),
+('pjohn', 'Paul John', 'paul.john@gmail.com', NULL, 'AB+', '1992-06-18', 'Available', '9876543213', 'male', 'Kerala', 'Kottayam', 'Kanjirappally', 'DON-000004'),
+('rthomas', 'Riya Thomas', 'riya.thomas@gmail.com', NULL, 'O-', '1999-11-09', 'Available', '9876543214', 'female', 'Kerala', 'Kottayam', 'Vaikom', 'DON-000005'),
+('sjoseph', 'Samuel Joseph', 'samuel.j@gmail.com', NULL, 'A-', '1995-03-22', 'Unavailable', '9876543215', 'male', 'Kerala', 'Kottayam', 'Pampady', 'DON-000006'),
+('lmathew', 'Linda Mathew', 'linda.mathew@gmail.com', NULL, 'B-', '2000-07-14', 'Available', '9876543216', 'female', 'Kerala', 'Kottayam', 'Kuravilangad', 'DON-000007'),
+('ajames', 'Alex James', 'alex.james@gmail.com', NULL, 'AB-', '1993-12-01', 'Available', '9876543217', 'male', 'Kerala', 'Kottayam', 'Pala', 'DON-000008'),
+('mgeorge', 'Maria George', 'maria.george@gmail.com', NULL, 'A+', '1997-09-27', 'Available', '9876543218', 'female', 'Kerala', 'Kottayam', 'Changanassery', 'DON-000009'),
+('vpaul', 'Vincent Paul', 'vincent.paul@gmail.com', NULL, 'O+', '1991-02-10', 'Unavailable', '9876543219', 'male', 'Kerala', 'Kottayam', 'Ettumanoor', 'DON-000010');
+
+-- =========================
+-- SET DONOR PASSWORD = 12345678
+-- =========================
+UPDATE donors
+SET password_hash = '$2b$10$Rb4ZJwP4Qah906tg.b58Tudr5XxMcWhhTopFdmyCl5PbfAsrMAaSS';
+
+-- =========================
+-- ORGANIZATIONS
+-- =========================
+INSERT INTO organizations
+(name, email, phone, password_hash, license_number, type, address, state, district, city, verified)
+VALUES
+('Caritas Hospital', 'info@caritashospital.org', '04822260000', NULL, 'LIC-KTM-001', 'Hospital', 'Thellakom PO', 'Kerala', 'Kottayam', 'Thellakom', TRUE),
+('Government Medical College Kottayam', 'gmckottayam@kerala.gov.in', '04812562000', NULL, 'LIC-KTM-002', 'Hospital', 'Gandhinagar', 'Kerala', 'Kottayam', 'Gandhinagar', TRUE),
+('Lourdes Hospital', 'contact@lourdeskottayam.com', '04812300000', NULL, 'LIC-KTM-003', 'Hospital', 'Collectorate PO', 'Kerala', 'Kottayam', 'Kottayam', TRUE),
+('SH Medical Centre', 'admin@shmedical.org', '04812420000', NULL, 'LIC-KTM-004', 'Hospital', 'Changanassery', 'Kerala', 'Kottayam', 'Changanassery', TRUE),
+('Marian Medical Centre', 'info@marianmedicalcentre.com', '04822270000', NULL, 'LIC-KTM-005', 'Hospital', 'Pala', 'Kerala', 'Kottayam', 'Pala', TRUE);
+
+-- =========================
+-- SET ORGANIZATION PASSWORD = 12345678
+-- =========================
+UPDATE organizations
+SET password_hash = '$2b$10$Rb4ZJwP4Qah906tg.b58Tudr5XxMcWhhTopFdmyCl5PbfAsrMAaSS';
 
 SET FOREIGN_KEY_CHECKS = 1;
 

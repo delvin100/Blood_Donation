@@ -8,12 +8,12 @@ app.use(cors());
 app.use(express.json());
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
-const homeRoutes = require('./routes/home');
-const authRoutes = require('./routes/auth');
-const donorRoutes = require('./routes/donor');
+const homeRoutes = require('./src/routes/home');
+const authRoutes = require('./src/routes/auth');
+const donorRoutes = require('./src/routes/donor');
 
-const organizationRoutes = require('./routes/organization');
-const adminRoutes = require('./routes/admin');
+const organizationRoutes = require('./src/routes/organization');
+const adminRoutes = require('./src/routes/admin');
 
 app.use('/api', homeRoutes);
 app.use('/api/auth', authRoutes);

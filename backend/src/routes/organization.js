@@ -1,0 +1,28 @@
+const express = require('express');
+const router = express.Router();
+const orgController = require('../controllers/orgController');
+const authMiddleware = require('../middlewares/authMiddleware');
+
+router.post('/register', orgController.register);
+router.post('/login', orgController.login);
+router.get('/stats', authMiddleware, orgController.getStats);
+router.get('/profile', authMiddleware, orgController.getProfile);
+router.put('/profile', authMiddleware, orgController.updateProfile);
+router.get('/donor/search', authMiddleware, orgController.searchDonor);
+router.get('/analytics', authMiddleware, orgController.getAnalytics);
+router.get('/geographic-stats', authMiddleware, orgController.getGeographicStats);
+router.get('/inventory', authMiddleware, orgController.getInventory);
+router.post('/inventory/update', authMiddleware, orgController.updateInventory);
+router.get('/history', authMiddleware, orgController.getHistory);
+router.get('/requests', authMiddleware, orgController.getRequests);
+router.post('/request/create', authMiddleware, orgController.createRequest);
+router.put('/request/:id/status', authMiddleware, orgController.updateRequestStatus);
+router.get('/recent-activity', authMiddleware, orgController.getRecentActivity);
+router.get('/member/:donorId/reports', authMiddleware, orgController.getDonorReports);
+router.post('/member/:donorId/reports', authMiddleware, orgController.createMedicalReport);
+router.post('/verify', authMiddleware, orgController.verifyDonor);
+router.get('/members', authMiddleware, orgController.getMembers);
+router.post('/members/add', authMiddleware, orgController.addMember);
+router.delete('/members/:donorId', authMiddleware, orgController.removeMember);
+
+module.exports = router;

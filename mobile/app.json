@@ -1,0 +1,40 @@
+{
+  "expo": {
+    "name": "mobile",
+    "slug": "mobile",
+    "owner": "delvin100",
+    "scheme": "ebloodbank",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "splash": {
+      "image": "./assets/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#ffffff"
+    },
+    "ios": {
+      "supportsTablet": true
+    },
+    "android": {
+      "package": "com.delvin.blooddonation",
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#ffffff"
+      },
+      "edgeToEdgeEnabled": false
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "extra": {
+      "eas": {
+        "projectId": "0dfb4277-df4c-4d39-bebe-51b3c3f3513f"
+      }
+    },
+    "plugins": [
+      "expo-web-browser",
+      "@react-native-community/datetimepicker"
+    ]
+  }
+}

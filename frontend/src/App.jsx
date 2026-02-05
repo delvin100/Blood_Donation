@@ -1,15 +1,15 @@
 import React from 'react';
 import { Routes, Route, Navigate, useNavigate } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
-import Home from './Home';
-import DonorDashboard from './modules/donor/DonorDashboard';
-import DonorLogin from './modules/donor/DonorLogin';
-import DonorRegister from './modules/donor/DonorRegister';
-import OrgLogin from './modules/organization/OrgLogin';
-import OrgRegister from './modules/organization/OrgRegister';
-import OrgDashboard from './modules/organization/OrgDashboard';
-import AdminLogin from './modules/admin/AdminLogin';
-import AdminDashboard from './modules/admin/AdminDashboard';
+import Home from './pages/Home/Home';
+import DonorDashboard from './pages/Donor/DonorDashboard';
+import DonorLogin from './pages/Donor/DonorLogin';
+import DonorRegister from './pages/Donor/DonorRegister';
+import OrgLogin from './pages/Organization/OrgLogin';
+import OrgRegister from './pages/Organization/OrgRegister';
+import OrgDashboard from './pages/Organization/OrgDashboard';
+import AdminLogin from './pages/Admin/AdminLogin';
+import AdminDashboard from './pages/Admin/AdminDashboard';
 
 export default function App() {
   const navigate = useNavigate();
