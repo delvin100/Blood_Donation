@@ -17,19 +17,22 @@ body {
 }
 
 @keyframes bloodDrop {
-    0% { 
+    0% {
         transform: translateY(-20px) scale(0.8);
         opacity: 0;
     }
+
     10% {
         opacity: 1;
         transform: translateY(0px) scale(1);
     }
+
     90% {
         transform: translateY(100vh) scale(1.2);
         opacity: 0.8;
     }
-    100% { 
+
+    100% {
         transform: translateY(120vh) scale(0.5);
         opacity: 0;
     }
@@ -42,8 +45,8 @@ body {
 
 /* Header and Footer alignment fixes */
 /* Header and Footer alignment - match PHP exactly */
-header > .container,
-footer > .container {
+header>.container,
+footer>.container {
     max-width: 100% !important;
     width: 100% !important;
 }
@@ -83,8 +86,15 @@ footer .grid {
 }
 
 @keyframes heartbeat {
-    0%, 100% { transform: scale(1); }
-    50% { transform: scale(1.1); }
+
+    0%,
+    100% {
+        transform: scale(1);
+    }
+
+    50% {
+        transform: scale(1.1);
+    }
 }
 
 .fade-in {
@@ -92,8 +102,15 @@ footer .grid {
 }
 
 @keyframes fadeIn {
-    from { opacity: 0; transform: translateY(30px); }
-    to { opacity: 1; transform: translateY(0); }
+    from {
+        opacity: 0;
+        transform: translateY(30px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
 
 .gradient-bg {
@@ -154,18 +171,39 @@ footer .grid {
 }
 
 @keyframes slideInLeft {
-    from { transform: translateX(-100px); opacity: 0; }
-    to { transform: translateX(0); opacity: 1; }
+    from {
+        transform: translateX(-100px);
+        opacity: 0;
+    }
+
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
 }
 
 @keyframes slideInRight {
-    from { transform: translateX(100px); opacity: 0; }
-    to { transform: translateX(0); opacity: 1; }
+    from {
+        transform: translateX(100px);
+        opacity: 0;
+    }
+
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
 }
 
 @keyframes slideInUp {
-    from { transform: translateY(50px); opacity: 0; }
-    to { transform: translateY(0); opacity: 1; }
+    from {
+        transform: translateY(50px);
+        opacity: 0;
+    }
+
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
 }
 
 .glow-effect {
@@ -193,15 +231,17 @@ footer .grid {
 }
 
 @keyframes bloodFlow {
-    0% { 
+    0% {
         transform: translateY(-20px);
         opacity: 0.3;
     }
+
     50% {
         transform: translateY(10px);
         opacity: 0.6;
     }
-    100% { 
+
+    100% {
         transform: translateY(-20px);
         opacity: 0.3;
     }
@@ -270,6 +310,7 @@ footer .grid {
         opacity: 0;
         transform: scale(0.9) translateY(20px);
     }
+
     to {
         opacity: 1;
         transform: scale(1) translateY(0);
@@ -281,13 +322,27 @@ footer .grid {
 }
 
 @keyframes float {
-    0%, 100% { transform: translateY(0px) rotate(0deg); }
-    50% { transform: translateY(-10px) rotate(180deg); }
+
+    0%,
+    100% {
+        transform: translateY(0px) rotate(0deg);
+    }
+
+    50% {
+        transform: translateY(-10px) rotate(180deg);
+    }
 }
 
 @keyframes float-delayed {
-    0%, 100% { transform: translateY(0px) rotate(0deg); }
-    50% { transform: translateY(-15px) rotate(-180deg); }
+
+    0%,
+    100% {
+        transform: translateY(0px) rotate(0deg);
+    }
+
+    50% {
+        transform: translateY(-15px) rotate(-180deg);
+    }
 }
 
 .animate-float {
@@ -364,8 +419,15 @@ footer .grid {
 }
 
 @keyframes heartbeat {
-    0%, 100% { transform: scale(1); }
-    50% { transform: scale(1.1); }
+
+    0%,
+    100% {
+        transform: scale(1);
+    }
+
+    50% {
+        transform: scale(1.1);
+    }
 }
 
 .animate-heartbeat {
@@ -377,6 +439,7 @@ footer .grid {
         opacity: 0;
         transform: translateY(20px);
     }
+
     to {
         opacity: 1;
         transform: translateY(0);
@@ -399,7 +462,36 @@ footer .grid {
     border: 1px solid #d97706;
 }
 
-html {
-    scroll-behavior: smooth;
+
+.back-chip {
+    position: fixed;
+    bottom: 28px;
+    left: 28px;
+    width: 52px;
+    height: 52px;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: #111827;
+    color: #fff;
+    font-weight: 700;
+    border: 2px solid rgba(255, 255, 255, 0.08);
+    box-shadow: 0 10px 24px rgba(0, 0, 0, 0.2);
+    transition: all 0.25s ease;
+    text-decoration: none;
+    font-size: 18px;
+    z-index: 60;
 }
 
+.back-chip svg {
+    width: 20px;
+    height: 20px;
+}
+
+.back-chip:hover {
+    transform: translateY(-2px);
+    background: #ef4444;
+    /* Changed to red for Seeker page context */
+    box-shadow: 0 12px 30px rgba(239, 68, 68, 0.3);
+}

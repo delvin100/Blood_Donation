@@ -60,6 +60,7 @@ CREATE TABLE seekers (
   country VARCHAR(100) DEFAULT 'India',
   state VARCHAR(100),
   district VARCHAR(100),
+  city VARCHAR(100),
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   INDEX idx_seekers_blood (blood_type),
   INDEX idx_seekers_district (district)

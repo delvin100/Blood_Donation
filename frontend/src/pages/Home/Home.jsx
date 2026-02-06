@@ -1,10 +1,24 @@
-import React, { useState } from "react";
-import { Link } from "react-router-dom";
+import React, { useState, useEffect } from "react";
+import { Link, useLocation } from "react-router-dom";
 import BackToTop from "../../components/common/BackToTop";
 import "../../assets/css/home.css";
 
 export default function Home() {
   const [activeModal, setActiveModal] = useState(null);
+  const location = useLocation();
+
+  useEffect(() => {
+    if (location.hash) {
+      const id = location.hash.substring(1);
+      const element = document.getElementById(id);
+      if (element) {
+        // Small timeout to ensure content is rendered
+        setTimeout(() => {
+          element.scrollIntoView({ behavior: "smooth" });
+        }, 100);
+      }
+    }
+  }, [location]);
 
   const openModal = (e, type) => {
     e.preventDefault();
@@ -128,7 +142,7 @@ export default function Home() {
             <nav className="flex space-x-6" aria-label="Primary">
               <a href="#home" className="hover:text-red-200 transition-colors">Home</a>
               <a href="#action-cards" className="hover:text-red-200 transition-colors">Donors</a>
-              <a href="#action-cards" className="hover:text-red-200 transition-colors">Seekers</a>
+              <Link to="/seeker" className="hover:text-red-200 transition-colors">Seekers</Link>
               <a href="#aboutt" className="hover:text-red-200 transition-colors">About</a>
               <a href="#contact" className="hover:text-red-200 transition-colors">Contact</a>
             </nav>
@@ -332,7 +346,7 @@ export default function Home() {
               </div>
 
               {/* Seeker Card */}
-              <div className="card-gradient-2 rounded-2xl shadow-xl p-8 card-hover slide-in-right">
+              <div id="seeker-section" className="card-gradient-2 rounded-2xl shadow-xl p-8 card-hover slide-in-right">
                 <div className="text-center">
                   <img
                     src="https://mdspatientsupport.org.uk/wp-content/uploads/2024/06/bloodtransfusio_940_602.jpg"
@@ -343,13 +357,13 @@ export default function Home() {
                   <p className="text-gray-600 mb-6">
                     Need blood urgently? Find compatible donors in your area quickly and easily.
                   </p>
-                  <a
-                    href="/seeker.html"
+                  <Link
+                    to="/seeker"
                     className="block text-center w-full bg-blue-500 hover:bg-blue-600 text-white font-semibold py-3 px-6 rounded-lg transition-colors glow-effect"
                     aria-label="Find blood"
                   >
                     Find Blood
-                  </a>
+                  </Link>
                 </div>
               </div>
 
