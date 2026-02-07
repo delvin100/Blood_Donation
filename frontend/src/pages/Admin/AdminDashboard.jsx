@@ -7,6 +7,7 @@ import {
     PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer,
     BarChart, Bar, XAxis, YAxis, CartesianGrid
 } from 'recharts';
+import ModernModal from '../../components/common/ModernModal';
 
 // --- COLORS & THEME ---
 const COLORS = ['#ef4444', '#f97316', '#eab308', '#22c55e', '#06b6d4', '#3b82f6', '#8b5cf6', '#d946ef'];
@@ -33,6 +34,16 @@ export default function AdminDashboard() {
     const [selectedReport, setSelectedReport] = useState(null);
     const [selectedOrg, setSelectedOrg] = useState(null); // For Detail View
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false); // Mobile Menu State
+
+    // Modern Modal State
+    const [isModalOpen, setIsModalOpen] = useState(false);
+    const [modalConfig, setModalConfig] = useState({
+        title: '',
+        message: '',
+        confirmText: 'Confirm',
+        onConfirm: () => { },
+        type: 'info'
+    });
 
     const navigate = useNavigate();
 
@@ -94,22 +105,40 @@ export default function AdminDashboard() {
     // --- ACTIONS ---
 
     const handleDeleteDonor = async (id) => {
-        if (!window.confirm('Are you sure?')) return;
-        try {
-            await axios.delete(`/api/admin/donors/${id}`, getAuthConfig());
-            toast.success('Donor deleted');
-            fetchAllData();
-        } catch (error) { toast.error('Failed to delete'); }
+        setModalConfig({
+            title: 'Delete Donor?',
+            message: 'Are you sure you want to permanently delete this donor? This action cannot be undone.',
+            confirmText: 'Delete',
+            type: 'danger',
+            onConfirm: async () => {
+                setIsModalOpen(false);
+                try {
+                    await axios.delete(`/api/admin/donors/${id}`, getAuthConfig());
+                    toast.success('Donor deleted');
+                    fetchAllData();
+                } catch (error) { toast.error('Failed to delete'); }
+            }
+        });
+        setIsModalOpen(true);
     };
 
     const handleDeleteOrg = async (id) => {
-        if (!window.confirm('Delete Organization?')) return;
-        try {
-            await axios.delete(`/api/admin/organizations/${id}`, getAuthConfig());
-            toast.success('Organization deleted');
-            if (selectedOrg?.id === id) setSelectedOrg(null);
-            fetchAllData();
-        } catch (error) { toast.error('Failed to delete'); }
+        setModalConfig({
+            title: 'Delete Organization?',
+            message: 'Are you sure you want to delete this organization? All associated data will be removed.',
+            confirmText: 'Delete',
+            type: 'danger',
+            onConfirm: async () => {
+                setIsModalOpen(false);
+                try {
+                    await axios.delete(`/api/admin/organizations/${id}`, getAuthConfig());
+                    toast.success('Organization deleted');
+                    if (selectedOrg?.id === id) setSelectedOrg(null);
+                    fetchAllData();
+                } catch (error) { toast.error('Failed to delete'); }
+            }
+        });
+        setIsModalOpen(true);
     };
 
     const handleVerifyOrg = async (id) => {
@@ -191,14 +220,23 @@ export default function AdminDashboard() {
     };
 
     const handleDeleteAdmin = async (id) => {
-        if (!window.confirm('Delete this admin?')) return;
-        try {
-            await axios.delete(`/api/admin/admins/${id}`, getAuthConfig());
-            toast.success('Admin deleted');
-            fetchAllData();
-        } catch (error) {
-            toast.error(error.response?.data?.error || 'Failed to delete');
-        }
+        setModalConfig({
+            title: 'Delete Admin?',
+            message: 'Are you sure you want to revoke admin privileges for this user?',
+            confirmText: 'Delete',
+            type: 'danger',
+            onConfirm: async () => {
+                setIsModalOpen(false);
+                try {
+                    await axios.delete(`/api/admin/admins/${id}`, getAuthConfig());
+                    toast.success('Admin deleted');
+                    fetchAllData();
+                } catch (error) {
+                    toast.error(error.response?.data?.error || 'Failed to delete');
+                }
+            }
+        });
+        setIsModalOpen(true);
     };
 
     const handleBroadcast = async (e) => {
@@ -1528,6 +1566,16 @@ function ReportDetailView({ report, onBack }) {
                     </div>
                 </div>
             </div>
+            <ModernModal
+                isOpen={isModalOpen}
+                onClose={() => setIsModalOpen(false)}
+                onConfirm={modalConfig.onConfirm}
+                title={modalConfig.title}
+                message={modalConfig.message}
+                confirmText={modalConfig.confirmText}
+                type={modalConfig.type}
+            />
         </div>
     );
 }
+

@@ -13,6 +13,8 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons, FontAwesome5 } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
+import apiService from '../../api/apiService';
+
 
 const ChatbotScreen = ({ navigation, route }) => {
     const { user, stats } = route.params || {};
@@ -44,125 +46,63 @@ const ChatbotScreen = ({ navigation, route }) => {
     };
 
     const handleSendMessage = async () => {
-        if (!inputValue.trim()) return;
+        if (!inputValue.trim() || isTyping) return;
 
+        const messageText = inputValue.trim();
         const userMsg = {
             id: Date.now(),
             type: 'user',
-            text: inputValue.trim()
+            text: messageText
         };
 
         setMessages(prev => [...prev, userMsg]);
         setInputValue("");
         setIsTyping(true);
 
-        // Simulate network delay
-        setTimeout(() => {
-            const { text: botResponse, intent } = getBotResponse(userMsg.text);
+        try {
+            const res = await apiService.post('/donor/chat', {
+                message: messageText,
+                history: messages.slice(-10),
+                lastIntent: lastBotIntent,
+                context: {
+                    bloodType: user?.blood_type,
+                    isEligible: stats?.isEligible,
+                    nextEligibleDate: stats?.nextEligibleDate
+                }
+            });
+
             setMessages(prev => [...prev, {
                 id: Date.now() + 1,
                 type: 'bot',
-                text: botResponse
+                text: res.data.text
             }]);
-            setLastBotIntent(intent);
+            setLastBotIntent(res.data.intent);
+        } catch (err) {
+            console.error('Chat error:', err);
+
+            // Handle 429 Quota Error
+            if (err.response?.status === 429) {
+                setMessages(prev => [...prev, {
+                    id: Date.now() + 1,
+                    type: 'bot',
+                    text: err.response.data.text || "AI Quota Exceeded. I can still help with Eligibility and Compatibility! 🤖"
+                }]);
+            } else {
+                setMessages(prev => [...prev, {
+                    id: Date.now() + 1,
+                    type: 'bot',
+                    text: "I'm having trouble connecting to my brain right now. Please try again! 🤖"
+                }]);
+            }
+        } finally {
             setIsTyping(false);
-        }, 1000 + Math.random() * 1000);
+        }
     };
+
 
     const handleQuickReply = (text) => {
-        const userMsg = {
-            id: Date.now(),
-            type: 'user',
-            text: text
-        };
-        setMessages(prev => [...prev, userMsg]);
-        setIsTyping(true);
-
-        setTimeout(() => {
-            const { text: botResponse, intent } = getBotResponse(text);
-            setMessages(prev => [...prev, {
-                id: Date.now() + 1,
-                type: 'bot',
-                text: botResponse
-            }]);
-            setLastBotIntent(intent);
-            setIsTyping(false);
-        }, 1000);
-    };
-
-    const getBotResponse = (input) => {
-        const lowerInput = input.toLowerCase().trim();
-        const userName = user?.full_name?.split(' ')[0] || 'friend';
-
-        if (lastBotIntent === 'offer_profile_guide' && (lowerInput === 'yes' || lowerInput.includes('sure') || lowerInput.includes('yeah'))) {
-            return {
-                text: `Of course! 🗺️ Tap the profile icon at the top of the dashboard. Inside, you can update your 'Personal Info', 'Location', and 'Account Security'. Need anything else?`,
-                intent: null
-            };
-        }
-
-        if (lastBotIntent === 'offer_eligibility_check' && (lowerInput === 'yes' || lowerInput.includes('sure') || lowerInput.includes('yeah'))) {
-            if (stats?.isEligible) {
-                return {
-                    text: `Analyzing your records... 🧬 Done! You are ELIGIBLE to donate. Your body has fully recovered from your last donation. Ready to schedule a visit?`,
-                    intent: null
-                };
-            } else if (stats?.nextEligibleDate) {
-                const diffDays = Math.ceil(Math.abs(new Date(stats.nextEligibleDate) - new Date()) / (1000 * 60 * 60 * 24));
-                return {
-                    text: `Checking your history... 🧪 I see you've been a hero recently! You need ${diffDays} more days for your body to fully replenish its life-saving power. Eligible on ${new Date(stats.nextEligibleDate).toLocaleDateString()}.`,
-                    intent: null
-                };
-            }
-        }
-
-        if (lastBotIntent === 'offer_science_facts' && (lowerInput === 'yes' || lowerInput.includes('sure') || lowerInput.includes('yeah'))) {
-            return {
-                text: `Fascinating Facts: \n💉 Your body replaces lost plasma within 24 hours! \n🌟 One donation can save up to 3 separate lives. \n🩸 10% of your body weight is blood. \nReady to be a living, breathing miracle?`,
-                intent: null
-            };
-        }
-
-        if (lowerInput === 'no' || lowerInput.includes('nope') || lowerInput.includes('not now')) {
-            return { text: "No problem! I'm here if you change your mind. 🩸", intent: null };
-        }
-
-        if (lowerInput.includes("eligible") || lowerInput.includes("can i donate") || lowerInput.includes("am i fit")) {
-            if (stats?.isEligible) {
-                return {
-                    text: `Good news, ${userName}! 🌟 My analysis indicates you are ELIGIBLE to donate. Would you like me to check the exact details?`,
-                    intent: 'offer_eligibility_check'
-                };
-            } else if (stats?.nextEligibleDate) {
-                return {
-                    text: `My systems show you're on a recovery break, ${userName}. ⏳ I can calculate exactly how many days are left if you'd like?`,
-                    intent: 'offer_eligibility_check'
-                };
-            }
-        }
-
-        if (lowerInput.includes("compatibility") || lowerInput.includes("group") || lowerInput.includes("receiver")) {
-            return {
-                text: `Understanding Compatibility: \n• O- can give to anyone (Universal Donor).\n• AB+ can receive from anyone.\n• You are ${user?.blood_type || 'a hero'}. Would you like more science facts?`,
-                intent: 'offer_science_facts'
-            };
-        }
-
-        if (lowerInput.includes("profile") || lowerInput.includes("update") || lowerInput.includes("password")) {
-            return {
-                text: `You can update your account and security settings. Need a quick guide on where to find it?`,
-                intent: 'offer_profile_guide'
-            };
-        }
-
-        if (lowerInput.includes("hi") || lowerInput.includes("hello") || lowerInput.includes("hey")) {
-            return { text: `Hello, ${userName}! 👋 I'm your AI assistant. I can help with eligibility, compatibility, or profile management. what's on your mind?`, intent: null };
-        }
-
-        return {
-            text: `I'm not 100% sure, but you might be asking about 'Eligibility', 'Compatibility', or 'Managing Profile'. Try typing one of those!`,
-            intent: null
-        };
+        setInputValue(text);
+        setTimeout(() => handleSendMessage(), 0);
     };
 
     const quickReplies = [
@@ -171,6 +111,7 @@ const ChatbotScreen = ({ navigation, route }) => {
         "How to donate?",
         "Update profile"
     ];
+
 
     return (
         <SafeAreaView style={styles.container}>

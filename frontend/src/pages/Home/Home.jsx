@@ -141,7 +141,7 @@ export default function Home() {
             </div>
             <nav className="flex space-x-6" aria-label="Primary">
               <a href="#home" className="hover:text-red-200 transition-colors">Home</a>
-              <a href="#action-cards" className="hover:text-red-200 transition-colors">Donors</a>
+              <Link to={getDonorRedirectPath()} className="hover:text-red-200 transition-colors">Donors</Link>
               <Link to="/seeker" className="hover:text-red-200 transition-colors">Seekers</Link>
               <a href="#aboutt" className="hover:text-red-200 transition-colors">About</a>
               <a href="#contact" className="hover:text-red-200 transition-colors">Contact</a>
@@ -176,8 +176,7 @@ export default function Home() {
                   <img
                     src="https://media.istockphoto.com/id/2154964150/photo/the-concept-of-donation-blood-transfusion.jpg?s=612x612&w=0&k=20&c=EPcXA2NNoTk6vRYRDIwAgXf9UFMKu1K2nlnCzoRtD64="
                     alt="Blood donation hero image"
-                    className="w-48 h-48 mx-auto rounded-full object-cover shadow-2xl border-4 border-white cursor-pointer"
-                    title="Blood Donation"
+                    className="w-48 h-48 mx-auto rounded-full object-cover shadow-2xl border-4 border-white"
                   />
                   <div className="absolute -top-2 -right-2 w-16 h-16 bg-red-600 rounded-full flex items-center justify-center pulse-heart">
                     <svg className="w-8 h-8 text-white" fill="currentColor" viewBox="0 0 24 24">

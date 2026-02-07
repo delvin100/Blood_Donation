@@ -7,6 +7,7 @@ import InfoModal from '../../components/modals/InfoModal';
 import ProfilePicModal from '../../components/modals/ProfilePicModal';
 import BackToTop from '../../components/common/BackToTop';
 import Chatbot from '../../components/donor/Chatbot';
+import ModernModal from '../../components/common/ModernModal';
 import axios from 'axios';
 import { toast } from 'react-hot-toast';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area } from 'recharts';
@@ -54,6 +55,16 @@ const Dashboard = () => {
   const [newDonation, setNewDonation] = useState({ date: '', units: 1, notes: '', hb_level: '', blood_pressure: '' });
 
   const [timeLeft, setTimeLeft] = useState({ days: 0, hours: 0, minutes: 0, seconds: 0 });
+
+  // Modern Modal State
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [modalConfig, setModalConfig] = useState({
+    title: '',
+    message: '',
+    confirmText: 'Confirm',
+    onConfirm: () => { },
+    type: 'info'
+  });
 
   const fetchDashboardData = async () => {
     try {
@@ -314,19 +325,28 @@ const Dashboard = () => {
   };
 
   const handleDelete = async (type, id) => {
-    if (!window.confirm(`Are you sure you want to delete this ${type}?`)) return;
-    try {
-      const token = localStorage.getItem('authToken') || sessionStorage.getItem('authToken');
-      const res = await fetch(`/api/donor/${type}/${id}`, {
-        method: 'DELETE',
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      if (!res.ok) throw new Error(`Failed to delete ${type}`);
-      setMessage(`${type.charAt(0).toUpperCase() + type.slice(1)} deleted`);
-      fetchDashboardData();
-    } catch (err) {
-      setMessage(`Error: ${err.message}`);
-    }
+    setModalConfig({
+      title: `Delete ${type.charAt(0).toUpperCase() + type.slice(1)}?`,
+      message: `Are you sure you want to permanently remove this ${type}? This action cannot be undone.`,
+      confirmText: 'Delete',
+      type: 'danger',
+      onConfirm: async () => {
+        setIsModalOpen(false);
+        try {
+          const token = localStorage.getItem('authToken') || sessionStorage.getItem('authToken');
+          const res = await fetch(`/api/donor/${type}/${id}`, {
+            method: 'DELETE',
+            headers: { 'Authorization': `Bearer ${token}` }
+          });
+          if (!res.ok) throw new Error(`Failed to delete ${type}`);
+          toast.success(`${type.charAt(0).toUpperCase() + type.slice(1)} deleted successfully`);
+          fetchDashboardData();
+        } catch (err) {
+          toast.error(`Error: ${err.message}`);
+        }
+      }
+    });
+    setIsModalOpen(true);
   };
 
 
@@ -783,14 +803,17 @@ const Dashboard = () => {
             Driven by passion and united by a cause. Meet the visionaries who started it all.
           </p>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {[1, 2].map(i => (
+            {[
+              { name: "Dr. Vikram Sethi", role: "Co-Founder & CEO", img: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=2070&auto=format&fit=crop", quote: "Believing in the power of humanity to save lives." },
+              { name: "Ananya Sharma", role: "Co-Founder & CTO", img: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?q=80&w=2070&auto=format&fit=crop", quote: "Technology is our bridge to a blood-scarcity free world." }
+            ].map((f, i) => (
               <div key={i} className="bg-white p-6 rounded-2xl shadow-lg border-t-4 border-red-500 hover:-translate-y-2 transition-transform duration-300">
-                <div className="w-20 h-20 mx-auto bg-gray-200 rounded-full mb-4 flex items-center justify-center text-3xl text-gray-400">
-                  <i className="fas fa-user"></i>
+                <div className="w-24 h-24 mx-auto mb-4 relative">
+                  <img src={f.img} alt={f.name} className="w-full h-full object-cover rounded-full shadow-md border-4 border-white" />
                 </div>
-                <h4 className="text-center text-xl font-bold text-gray-800">Founder Name {i}</h4>
-                <p className="text-center text-red-500 font-medium text-sm mb-3">Co-Founder</p>
-                <p className="text-center text-gray-500 text-sm">"Believing in the power of humanity to save lives."</p>
+                <h4 className="text-center text-xl font-bold text-gray-800">{f.name}</h4>
+                <p className="text-center text-red-500 font-medium text-sm mb-3">{f.role}</p>
+                <p className="text-center text-gray-500 text-sm italic">"{f.quote}"</p>
               </div>
             ))}
           </div>
@@ -813,7 +836,7 @@ const Dashboard = () => {
               <i className="fas fa-layer-group text-blue-500"></i> Tech Stack
             </h5>
             <div className="flex flex-wrap gap-2">
-              {['React', 'Node.js', 'PostgreSQL', 'Tailwind', 'Maps API'].map(tag => (
+              {['React', 'Node.js', 'MySQL', 'Tailwind', 'Maps API'].map(tag => (
                 <span key={tag} className="px-3 py-1 bg-white border border-gray-200 rounded-full text-xs font-semibold text-gray-600 shadow-sm">{tag}</span>
               ))}
             </div>
@@ -878,8 +901,14 @@ const Dashboard = () => {
     'donation-process': { title: '4 Simple Steps', content: <div className="space-y-4">{['Registration', 'Medical Check', 'Donation', 'Refreshment'].map((step, i) => (<div key={i} className="flex items-center gap-4 bg-white p-4 rounded-xl shadow-sm"><div className="w-10 h-10 bg-red-100 text-red-600 rounded-full flex items-center justify-center font-bold">{i + 1}</div><span className="font-bold text-gray-700">{step}</span></div>))}</div> },
     'blood-types': {
       title: 'Blood Types Compatibility',
-      content: <div className="bg-white rounded-xl shadow-lg overflow-hidden"><table className="w-full text-sm text-left"><thead className="bg-gray-100 text-gray-700"><tr><th className="p-3">Type</th><th className="p-3">Give To</th><th className="p-3">Receive From</th></tr></thead><tbody className="divide-y">{[
-        { t: 'O-', g: 'All', r: 'O-' }, { t: 'O+', g: 'O+, A+, B+, AB+', r: 'O+, O-' }, { t: 'A+', g: 'A+, AB+', r: 'A+, A-, O+, O-' }, { t: 'AB+', g: 'AB+', r: 'All' }
+      content: <div className="bg-white rounded-xl shadow-lg overflow-hidden max-h-[400px] overflow-y-auto custom-scrollbar"><table className="w-full text-sm text-left"><thead className="bg-gray-100 text-gray-700 sticky top-0"><tr><th className="p-3">Type</th><th className="p-3">Give To</th><th className="p-3">Receive From</th></tr></thead><tbody className="divide-y">{[
+        { t: 'O-', g: 'All', r: 'O-' }, { t: 'O+', g: 'O+, A+, B+, AB+', r: 'O+, O-' }, { t: 'A-', g: 'A+, A-, AB+, AB-', r: 'A-, O-' }, { t: 'A+', g: 'A+, AB+', r: 'A+, A-, O+, O-' },
+        { t: 'B-', g: 'B+, B-, AB+, AB-', r: 'B-, O-' }, { t: 'B+', g: 'B+, AB+', r: 'B+, B-, O+, O-' }, { t: 'AB-', g: 'AB+, AB-', r: 'AB-, A-, B-, O-' }, { t: 'AB+', g: 'AB+', r: 'All' },
+        { t: 'A1-', g: 'A1+, A1-, A1B+, A1B-, AB+, AB-', r: 'A1-, O-' }, { t: 'A1+', g: 'A1+, A1B+, AB+', r: 'A1+, A1-, O+, O-' },
+        { t: 'A1B-', g: 'A1B+, A1B-, AB+, AB-', r: 'A1B-, A1-, B-, O-' }, { t: 'A1B+', g: 'A1B+, AB+', r: 'A1+, A1-, A1B+, A1B-, B+, B-, O+, O-' },
+        { t: 'A2-', g: 'A1+, A1-, A2+, A2-, A1B+, A1B-, A2B+, A2B-, AB+, AB-', r: 'A2-, O-' }, { t: 'A2+', g: 'A1+, A2+, A1B+, A2B+, AB+', r: 'A2+, A2-, O+, O-' },
+        { t: 'A2B-', g: 'A2B+, A2B-, AB+, AB-', r: 'A2B-, A2-, B-, O-' }, { t: 'A2B+', g: 'A2B+, AB+', r: 'A2+, A2-, A2B+, A2B-, B+, B-, O+, O-' },
+        { t: 'Bombay Blood Group', g: 'All', r: 'Bombay Blood Group' }, { t: 'INRA', g: 'All', r: 'INRA' }
       ].map(r => (<tr key={r.t} className="hover:bg-gray-50"><td className="p-3 font-bold text-red-600">{r.t}</td><td className="p-3">{r.g}</td><td className="p-3">{r.r}</td></tr>))}</tbody></table></div>
     },
     'health-benefits': { title: 'Why Donate?', content: <ul className="grid grid-cols-2 gap-3">{['Heart Health', 'Cancer Risk Reduction', 'Free Health Checkup', 'Calorie Burn', 'Iron Balance', 'Mental Satisfaction'].map(b => (<li key={b} className="bg-emerald-50 text-emerald-800 p-3 rounded-lg text-sm font-bold flex items-center gap-2"><i className="fas fa-leaf"></i> {b}</li>))}</ul> },
@@ -995,23 +1024,31 @@ const Dashboard = () => {
       title: 'Real Heroes',
       content: (
         <div className="space-y-6">
-          <div className="relative rounded-2xl overflow-hidden group">
-            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent z-10"></div>
-            <div className="h-64 bg-gray-300 bg-[url('https://images.unsplash.com/photo-1615461168409-0d21818d2d66?q=80&w=2070&auto=format&fit=crop')] bg-cover bg-center group-hover:scale-105 transition-transform duration-700"></div>
-            <div className="absolute bottom-0 left-0 p-6 z-20 text-white">
-              <span className="bg-red-600 text-xs font-bold px-2 py-1 rounded mb-2 inline-block">Featured Story</span>
-              <h4 className="text-xl font-bold mb-1">"A stranger saved my daughter."</h4>
-              <p className="text-sm opacity-90 line-clamp-2">When 5-year-old Ananya needed rare AB- blood, a donor from eBloodBank traveled 50km in the rain to save her.</p>
+          <div className="relative rounded-2xl overflow-hidden group shadow-2xl">
+            <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent z-10"></div>
+            <div
+              className="h-64 bg-cover bg-center group-hover:scale-110 transition-transform duration-700"
+              style={{ backgroundImage: `url('https://images.unsplash.com/photo-1516627145497-ae6968895b74?q=80&w=2070&auto=format&fit=crop')` }}
+            ></div>
+            <div className="absolute bottom-0 left-0 p-8 z-20 text-white">
+              <span className="bg-red-600 text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-full mb-3 inline-block shadow-lg">Featured Story</span>
+              <h4 className="text-2xl font-black mb-2 tracking-tight">"A stranger saved my daughter."</h4>
+              <p className="text-sm font-medium opacity-90 line-clamp-2 max-w-md">When 5-year-old Ananya needed rare AB- blood, a donor from eBloodBank traveled 50km in the rain to save her.</p>
             </div>
           </div>
-          <div className="bg-gray-50 p-6 rounded-2xl text-center">
-            <i className="fas fa-quote-left text-3xl text-gray-300 mb-3"></i>
-            <p className="text-gray-600 italic mb-4">"I never knew my blood could be someone's lifeline. It's the best feeling in the world."</p>
-            <div className="flex items-center justify-center gap-3">
-              <div className="w-10 h-10 bg-gray-200 rounded-full"></div>
+          <div className="bg-white p-8 rounded-[2.5rem] text-center shadow-xl border border-gray-100 relative overflow-hidden group">
+            <div className="absolute top-0 right-0 w-32 h-32 bg-red-50 rounded-full -translate-y-16 translate-x-16 blur-2xl group-hover:scale-150 transition-transform duration-1000"></div>
+            <i className="fas fa-quote-left text-4xl text-red-100 mb-4 block"></i>
+            <p className="text-gray-700 italic text-lg font-medium mb-6 relative z-10">"I never knew my blood could be someone's lifeline. It's the best feeling in the world."</p>
+            <div className="flex items-center justify-center gap-4 relative z-10">
+              <img
+                src="https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?q=80&w=2070&auto=format&fit=crop"
+                className="w-14 h-14 rounded-full object-cover border-2 border-red-500 shadow-md"
+                alt="Rahul Sharma"
+              />
               <div className="text-left">
-                <p className="font-bold text-gray-900 text-sm">Rahul Sharma</p>
-                <p className="text-xs text-gray-500">Regular Donor (15+ donations)</p>
+                <p className="font-black text-gray-900 text-base">Rahul Sharma</p>
+                <p className="text-xs font-bold text-red-500 uppercase tracking-widest">Regular Donor (15+ donations)</p>
               </div>
             </div>
           </div>
@@ -1066,11 +1103,112 @@ const Dashboard = () => {
           </div>
         </div>
       )
+    },
+    'urgent-needs': {
+      title: 'Urgent Needs',
+      content: (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {urgentNeeds.length === 0 ? (
+            <div className="md:col-span-2 relative overflow-hidden rounded-[2.5rem] bg-gradient-to-br from-emerald-50 via-teal-50 to-emerald-50 border border-emerald-100 p-12 text-center group">
+              {/* Background Accents */}
+              <div className="absolute top-0 right-0 w-64 h-64 bg-emerald-100/50 rounded-full blur-3xl -translate-y-16 translate-x-16"></div>
+              <div className="absolute bottom-0 left-0 w-64 h-64 bg-teal-100/50 rounded-full blur-3xl translate-y-16 -translate-x-16"></div>
+
+              <div className="relative z-10">
+                <div className="w-24 h-24 bg-white/80 backdrop-blur-xl rounded-[2rem] flex items-center justify-center mx-auto mb-6 shadow-2xl shadow-emerald-200/50 group-hover:scale-110 transition-transform duration-500">
+                  <i className="fas fa-shield-alt text-5xl text-emerald-500"></i>
+                </div>
+
+                <h3 className="text-3xl font-black text-emerald-900 tracking-tight mb-2">All Clear!</h3>
+                <p className="text-sm font-bold text-emerald-600/80 uppercase tracking-widest mb-6">Community is Safe</p>
+                <p className="text-emerald-700/70 font-medium max-w-md mx-auto leading-relaxed">
+                  There are no urgent blood requirements in your network at the moment
+                </p>
+              </div>
+            </div>
+          ) : (
+            urgentNeeds.map((need) => (
+              <div key={need.id} className="relative overflow-hidden rounded-[2.5rem] bg-white shadow-2xl shadow-blue-900/10 border border-white/50 group/card transition-all duration-500 hover:scale-[1.02]">
+                {/* Glassmorphism Background Gradient */}
+                <div className="absolute inset-0 bg-gradient-to-br from-blue-50/50 via-white/50 to-purple-50/50 opacity-100 group-hover/card:opacity-90 transition-opacity"></div>
+
+                {/* Decorative Blur Circles */}
+                <div className="absolute -top-20 -right-20 w-60 h-60 bg-red-500/10 rounded-full blur-3xl group-hover/card:bg-red-500/20 transition-colors"></div>
+                <div className="absolute -bottom-20 -left-20 w-60 h-60 bg-blue-500/10 rounded-full blur-3xl group-hover/card:bg-blue-500/20 transition-colors"></div>
+
+                <div className="relative p-8 z-10">
+                  {/* Header: Blood Group & Hospital */}
+                  <div className="flex items-start justify-between mb-8">
+                    <div className="flex items-center gap-6">
+                      {/* Hero Blood Group Badge */}
+                      <div className="relative">
+                        <div className={`w-24 h-24 rounded-[2rem] flex flex-col items-center justify-center shadow-xl shadow-red-500/20 z-10 relative 
+                          ${need.blood_group === user.blood_type ? 'bg-gradient-to-br from-red-500 to-rose-600 text-white' : 'bg-white text-gray-900'}`}>
+                          <span className="text-4xl font-black tracking-tighter leading-none mb-1">{need.blood_group}</span>
+                          <span className={`text-[10px] font-black uppercase tracking-widest ${need.blood_group === user.blood_type ? 'text-white/80' : 'text-gray-400'}`}>Group</span>
+                        </div>
+                        {need.blood_group === user.blood_type && (
+                          <div className="absolute inset-0 bg-red-500/30 rounded-[2rem] blur-lg animate-pulse"></div>
+                        )}
+                      </div>
+
+                      <div>
+                        {need.is_member > 0 && (
+                          <span className="inline-block px-3 py-1 bg-blue-100 text-blue-700 text-[10px] font-black rounded-lg uppercase tracking-widest mb-2">
+                            <i className="fas fa-building mr-1.5"></i>My Organization
+                          </span>
+                        )}
+                        <h4 className="font-black text-gray-900 text-2xl tracking-tight leading-tight mb-2">
+                          {need.org_name}
+                        </h4>
+                        <div className="flex items-center gap-2 text-gray-500">
+                          <i className="fas fa-location-dot text-red-500 text-sm"></i>
+                          <span className="text-xs font-bold uppercase tracking-wide">{need.org_city}</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {need.blood_group === user.blood_type && (
+                      <div className="px-4 py-2 bg-gradient-to-r from-red-500 to-rose-600 text-white text-xs font-black rounded-xl shadow-lg shadow-red-500/30 animate-bounce">
+                        MATCH FOUND!
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Message Box */}
+                  <div className="bg-white/60 backdrop-blur-md p-6 rounded-3xl border border-white shadow-sm mb-8 flex gap-4 items-start">
+                    <i className="fas fa-quote-left text-3xl text-rose-500/20 shrink-0"></i>
+                    <p className="text-sm text-gray-700 font-bold leading-relaxed italic pt-1">
+                      {need.description || 'Critically low on stock. Immediate donation requested to save lives.'}
+                    </p>
+                  </div>
+
+                  {/* Footer: Stats & Action */}
+                  <div className="flex items-center justify-between gap-6">
+                    <div className="flex flex-col">
+                      <span className="text-5xl font-black text-gray-900 leading-none tracking-tighter">{need.units_required}</span>
+                      <span className="text-xs font-black text-gray-400 uppercase tracking-widest pl-1">Units Needed</span>
+                    </div>
+
+                    <a
+                      href={`tel:${need.org_phone || '0000000000'}`}
+                      className="flex-1 py-5 bg-gray-900 hover:bg-black text-white rounded-2xl font-black text-sm uppercase tracking-[0.1em] shadow-2xl shadow-gray-900/20 flex items-center justify-center gap-4 transition-all transform hover:-translate-y-1 active:scale-95 group/btn"
+                    >
+                      <i className="fas fa-phone-volume text-lg group-hover/btn:animate-wiggle"></i>
+                      <span>{need.org_phone || 'Call Now'}</span>
+                    </a>
+                  </div>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+      )
     }
   };
 
   const openInfo = (key) => {
-    const fullScreenKeys = ['medical-reports', 'my-organizations', 'donation-history', 'analysis'];
+    const fullScreenKeys = ['medical-reports', 'my-organizations', 'donation-history', 'analysis', 'urgent-needs'];
     const content = navigationContent[key];
 
     if (fullScreenKeys.includes(key)) {
@@ -1080,6 +1218,16 @@ const Dashboard = () => {
       setModalInfo({ title: content.title, content: content.content });
     }
   };
+
+  // Dynamic Rank Calculation
+  const donationCount = data?.stats?.totalDonations || 0;
+  const getRankInfo = (count) => {
+    if (count >= 11) return { current: 'Platinum', next: 'Champion', needed: 0, progress: 100, icon: 'fa-crown', color: 'text-purple-600', bg: 'from-purple-50', border: 'border-purple-500', barInfo: 'bg-purple-500' };
+    if (count >= 6) return { current: 'Gold', next: 'Platinum', needed: 11 - count, progress: ((count - 6) / 5) * 100, icon: 'fa-trophy', color: 'text-yellow-500', bg: 'from-yellow-50', border: 'border-yellow-500', barInfo: 'bg-yellow-500' };
+    if (count >= 3) return { current: 'Silver', next: 'Gold', needed: 6 - count, progress: ((count - 3) / 3) * 100, icon: 'fa-medal', color: 'text-gray-400', bg: 'from-gray-50', border: 'border-gray-400', barInfo: 'bg-gray-400' };
+    return { current: 'Bronze', next: 'Silver', needed: 3 - count, progress: (count / 3) * 100, icon: 'fa-shield-alt', color: 'text-orange-600', bg: 'from-orange-50', border: 'border-orange-500', barInfo: 'bg-orange-500' };
+  };
+  const rankInfo = getRankInfo(donationCount);
 
   return (
     <div className="modern-bg min-h-screen">
@@ -1105,10 +1253,10 @@ const Dashboard = () => {
                   className={`w-12 h-12 rounded-[1.2rem] flex items-center justify-center transition-all duration-300 relative group
                                     ${showNotifications ? 'bg-red-600 text-white shadow-lg shadow-red-200' : 'bg-white/10 text-white hover:bg-white/20'}`}
                 >
-                  <i className={`fas fa-bell text-lg ${data?.stats?.unreadNotifications > 0 ? 'animate-bounce' : ''}`}></i>
-                  {data?.stats?.unreadNotifications > 0 && (
+                  <i className="fas fa-bell text-lg"></i>
+                  {(data?.stats?.unreadNotifications > 0 || urgentNeeds.length > 0) && (
                     <span className="absolute top-0 right-0 w-5 h-5 bg-red-600 border-2 border-white rounded-full flex items-center justify-center text-[8px] font-black text-white transform translate-x-1 -translate-y-1">
-                      {data.stats.unreadNotifications}
+                      {(data?.stats?.unreadNotifications || 0) + urgentNeeds.length}
                     </span>
                   )}
                 </button>
@@ -1129,7 +1277,7 @@ const Dashboard = () => {
                     </div>
 
                     <div className="max-h-[400px] overflow-y-auto px-4 space-y-3 custom-scrollbar">
-                      {notifications.length === 0 ? (
+                      {notifications.length === 0 && urgentNeeds.length === 0 ? (
                         <div className="py-16 text-center">
                           <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-4">
                             <i className="fas fa-ghost text-gray-200 text-2xl"></i>
@@ -1137,31 +1285,60 @@ const Dashboard = () => {
                           <p className="text-xs font-black text-gray-300 uppercase tracking-widest">No Alerts</p>
                         </div>
                       ) : (
-                        notifications.map(n => (
-                          <div
-                            key={n.id}
-                            onClick={() => !n.is_read && markAsRead(n.id)}
-                            className={`p-6 rounded-[2rem] transition-all cursor-pointer group relative overflow-hidden
-                                                        ${n.is_read ? 'bg-white opacity-60' : 'bg-red-50/50 hover:bg-red-50 border border-red-100/50'}`}
-                          >
-                            <div className="flex gap-5 relative z-10">
-                              <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 shadow-lg 
-                                                            ${n.type === 'Emergency' ? 'bg-red-600 text-white' : 'bg-gray-900 text-white'}`}>
-                                <i className={`fas ${n.type === 'Emergency' ? 'fa-radiation' : 'fa-info-circle'} text-md`}></i>
+                        <>
+                          {/* Urgent Needs in Notifications */}
+                          {urgentNeeds.length > 0 && (
+                            <div className="mb-4">
+                              <h4 className="px-6 text-[10px] font-black text-red-500 uppercase tracking-widest mb-2">Urgent Requests</h4>
+                              {urgentNeeds.slice(0, 3).map(need => (
+                                <div key={`urgent-${need.id}`} className="px-4 mb-2">
+                                  <div className="bg-red-50 border border-red-100 p-4 rounded-2xl flex items-start gap-4 cursor-pointer hover:bg-red-100 transition-colors" onClick={() => openInfo('urgent-needs')}>
+                                    <div className="w-10 h-10 bg-red-600 rounded-xl flex items-center justify-center text-white shrink-0 shadow-lg shadow-red-200">
+                                      <span className="text-xs font-black">{need.blood_group}</span>
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                      <h5 className="font-bold text-gray-900 text-xs truncate">{need.org_name}</h5>
+                                      <p className="text-[10px] text-gray-500 line-clamp-1">{need.org_city} • {need.units_required} Units</p>
+                                    </div>
+                                    {need.blood_group === user.blood_type && (
+                                      <span className="px-2 py-1 bg-red-600 text-white text-[8px] font-black rounded-lg uppercase">Match</span>
+                                    )}
+                                  </div>
+                                </div>
+                              ))}
+                              <div className="px-6">
+                                <div className="h-px bg-gray-100 my-2"></div>
+                                <h4 className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">Recent Alerts</h4>
                               </div>
-                              <div className="space-y-1 flex-1">
-                                <h4 className={`text-sm font-black tracking-tight ${!n.is_read ? 'text-gray-900' : 'text-gray-500'}`}>{n.title}</h4>
-                                <p className="text-[11px] font-bold text-gray-400 leading-relaxed line-clamp-2">{n.message}</p>
-                                <div className="flex items-center gap-3 pt-2">
-                                  <span className="text-[10px] font-black text-gray-300 uppercase tracking-widest">
-                                    {new Date(n.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                                  </span>
-                                  {!n.is_read && <span className="w-2 h-2 rounded-full bg-red-500"></span>}
+                            </div>
+                          )}
+
+                          {notifications.map(n => (
+                            <div
+                              key={n.id}
+                              onClick={() => !n.is_read && markAsRead(n.id)}
+                              className={`p-6 rounded-[2rem] transition-all cursor-pointer group relative overflow-hidden
+                                                        ${n.is_read ? 'bg-white opacity-60' : 'bg-red-50/50 hover:bg-red-50 border border-red-100/50'}`}
+                            >
+                              <div className="flex gap-5 relative z-10">
+                                <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 shadow-lg 
+                                                            ${n.type === 'Emergency' ? 'bg-red-600 text-white' : 'bg-gray-900 text-white'}`}>
+                                  <i className={`fas ${n.type === 'Emergency' ? 'fa-radiation' : 'fa-info-circle'} text-md`}></i>
+                                </div>
+                                <div className="space-y-1 flex-1">
+                                  <h4 className={`text-sm font-black tracking-tight ${!n.is_read ? 'text-gray-900' : 'text-gray-500'}`}>{n.title}</h4>
+                                  <p className="text-[11px] font-bold text-gray-400 leading-relaxed line-clamp-2">{n.message}</p>
+                                  <div className="flex items-center gap-3 pt-2">
+                                    <span className="text-[10px] font-black text-gray-300 uppercase tracking-widest">
+                                      {new Date(n.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                    </span>
+                                    {!n.is_read && <span className="w-2 h-2 rounded-full bg-red-500"></span>}
+                                  </div>
                                 </div>
                               </div>
                             </div>
-                          </div>
-                        ))
+                          ))}
+                        </>
                       )}
                     </div>
                   </div>
@@ -1196,6 +1373,7 @@ const Dashboard = () => {
                     items: [
                       { key: 'medical-reports', icon: 'fa-file-medical-alt', label: 'Medical Reports', color: 'red' },
                       { key: 'my-organizations', icon: 'fa-building', label: 'My Organizations', color: 'blue' },
+                      { key: 'urgent-needs', icon: 'fa-exclamation-circle', label: 'Urgent Needs', color: 'red', urgent: urgentNeeds.length > 0 },
                       { key: 'donation-history', icon: 'fa-history', label: 'Donation History', color: 'blue' },
                       { key: 'analysis', icon: 'fa-chart-pie', label: 'Health Analysis', color: 'purple' },
                     ]
@@ -1349,13 +1527,25 @@ const Dashboard = () => {
                     <span className="text-sm font-bold text-red-600 uppercase tracking-widest">Lives Saved</span>
                     <p className="text-[10px] text-gray-400 mt-2 italic">Based on {donations.length} successful donations</p>
                   </div>
-                  <div className="modern-card p-8 flex flex-col items-center justify-center text-center group hover:scale-[1.02] transition-all bg-gradient-to-br from-blue-50 to-white border-b-4 border-blue-500">
-                    <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
-                      <i className="fas fa-medal text-blue-600 text-3xl"></i>
+                  <div className={`modern-card p-8 flex flex-col items-center justify-center text-center group hover:scale-[1.02] transition-all bg-gradient-to-br ${rankInfo.bg} to-white border-b-4 ${rankInfo.border}`}>
+                    <div className={`w-16 h-16 rounded-full flex items-center justify-center mb-4 group-hover:scale-110 transition-transform shadow-lg bg-white`}>
+                      <i className={`fas ${rankInfo.icon} ${rankInfo.color} text-3xl`}></i>
                     </div>
-                    <span className="text-4xl font-black text-gray-800 mb-1">{stats.milestone}</span>
-                    <span className="text-sm font-bold text-blue-600 uppercase tracking-widest">Rank Level</span>
-                    <p className="text-[10px] text-gray-400 mt-2">Keep donating to level up!</p>
+                    <span className="text-4xl font-black text-gray-800 mb-1">{rankInfo.current}</span>
+                    <span className={`text-[10px] font-black uppercase tracking-widest ${rankInfo.color}`}>Rank Level</span>
+
+                    <div className="w-full mt-4">
+                      <div className="flex justify-between text-[9px] uppercase font-black text-gray-400 mb-1">
+                        <span>Progress</span>
+                        <span>{Math.round(rankInfo.progress)}%</span>
+                      </div>
+                      <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                        <div className={`h-full ${rankInfo.barInfo} transition-all duration-1000`} style={{ width: `${rankInfo.progress}%` }}></div>
+                      </div>
+                      <p className="text-[9px] text-gray-400 mt-2 font-bold">
+                        {rankInfo.needed > 0 ? `${rankInfo.needed} donations to ${rankInfo.next}` : 'Maximum Rank Achieved!'}
+                      </p>
+                    </div>
                   </div>
                   <div className="modern-card p-8 flex flex-col items-center justify-center text-center group hover:scale-[1.02] transition-all bg-gradient-to-br from-emerald-50 to-white border-b-4 border-emerald-500">
                     <div className="w-16 h-16 bg-emerald-100 rounded-full flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
@@ -1543,91 +1733,256 @@ const Dashboard = () => {
                 </div>
 
                 {/* Donation & Reminders Integrated Section */}
-                <div className="grid md:grid-cols-2 gap-6 mt-6">
-                  {/* Donation History Card */}
-                  <div className="modern-card p-5">
-                    <h2 className="font-semibold text-gray-800 mb-4 flex items-center gap-2">
-                      <i className="fas fa-tint text-red-600 text-xl"></i>
-                      Donation History
-                      <span className="bg-red-100 text-red-800 text-xs font-medium px-2.5 py-0.5 rounded-full">{donations.length} donations</span>
-                    </h2>
+                <div className="flex flex-col gap-8 mt-8">
+                  {/* Row 1: Urgent Needs & Blood Synergy */}
+                  <div className="grid lg:grid-cols-2 gap-8 items-stretch">
+                    {/* Enhanced Urgent Needs Feed */}
+                    <div className="modern-card h-full p-8 bg-white border-2 border-rose-100 shadow-2xl shadow-rose-500/5 rounded-[3rem] relative overflow-hidden">
+                      <div className="absolute top-0 right-0 w-32 h-32 bg-rose-50 rounded-full blur-3xl -mr-16 -mt-16 opacity-50"></div>
 
-                    {donations.length === 0 ? (
-                      <div className="text-center py-8">
-                        <i className="fas fa-heart text-gray-300 text-4xl mb-3"></i>
-                        <p className="text-gray-500 font-medium">No donations recorded yet.</p>
-                        <p className="text-xs text-gray-400 mt-1">Your first donation will appear here</p>
-                      </div>
-                    ) : (
-                      <div className="space-y-3 max-h-64 overflow-y-auto pr-2 custom-scrollbar">
-                        {donations.slice(0, 4).map((h) => (
-                          <div key={h.id} className="bg-red-50 border border-red-200 rounded-lg p-3 hover:bg-red-100 transition-colors">
-                            <div className="flex items-center justify-between">
-                              <div className="flex items-center gap-3">
-                                <div className="w-8 h-8 bg-red-600 rounded-full flex items-center justify-center mr-3 flex-shrink-0">
-                                  <i className="fas fa-tint text-white text-xs"></i>
-                                </div>
-                                <div>
-                                  <div className="flex items-center gap-2">
-                                    <p className="font-medium text-gray-900">{formatDateHyphen(h.date)}</p>
-                                  </div>
-                                  <p className="text-sm text-gray-800 font-medium flex items-center gap-1.5">
-                                    {h.org_name ? (
-                                      <>
-                                        <i className="fas fa-check-circle text-red-600 text-xs"></i>
-                                        {`Verified by ${h.org_name}`}
-                                      </>
-                                    ) : (h.notes || 'No notes')}
-                                  </p>
-                                </div>
-                              </div>
-                              <div className="text-right flex flex-col items-end gap-1">
-                                <span className="bg-green-100 text-green-800 text-xs font-medium px-2 py-1 rounded-full">
-                                  {h.units} {h.units > 1 ? 'units' : 'unit'}
-                                </span>
-                              </div>
-                            </div>
+                      <h3 className="text-2xl font-black text-gray-900 mb-8 flex items-center justify-between relative z-10">
+                        <span className="flex items-center gap-4">
+                          <div className="w-12 h-12 bg-rose-600 text-white rounded-2xl flex items-center justify-center shadow-lg shadow-rose-200">
+                            <i className="fas fa-bullhorn text-xl"></i>
                           </div>
-                        ))}
-                      </div>
-                    )}
+                          <div className="flex flex-col">
+                            <span className="tracking-tight">Urgent Needs</span>
+                            <span className="text-[10px] font-black text-rose-400 uppercase tracking-[0.2em] leading-none mt-1">Active Broadcasts</span>
+                          </div>
+                        </span>
+                        <div className="flex items-center gap-2 bg-rose-50 px-3 py-1.5 rounded-full border border-rose-100">
+                          <span className="w-2 h-2 rounded-full bg-rose-500 animate-ping"></span>
+                          <span className="text-[10px] font-black text-rose-600 uppercase tracking-widest">Live Pulse</span>
+                        </div>
+                      </h3>
 
-                    <div className="mt-6 pt-6 border-t-2 border-gray-100">
-                      <h2 className="font-semibold text-gray-800 mb-4 flex items-center gap-2">
-                        <i className="fas fa-building text-blue-600 text-xl"></i>
-                        My Organizations
-                        <span className="bg-blue-100 text-blue-800 text-xs font-medium px-2.5 py-0.5 rounded-full">{memberships?.length || 0} joined</span>
-                      </h2>
+                      {urgentNeeds.length === 0 ? (
+                        <div className="md:col-span-2 relative overflow-hidden rounded-[2.5rem] bg-gradient-to-br from-emerald-50 via-teal-50 to-emerald-50 border border-emerald-100 p-12 text-center group">
+                          {/* Background Accents */}
+                          <div className="absolute top-0 right-0 w-64 h-64 bg-emerald-100/50 rounded-full blur-3xl -translate-y-16 translate-x-16"></div>
+                          <div className="absolute bottom-0 left-0 w-64 h-64 bg-teal-100/50 rounded-full blur-3xl translate-y-16 -translate-x-16"></div>
 
-                      {memberships?.length === 0 ? (
-                        <div className="bg-gray-50 rounded-2xl p-8 text-center border-2 border-dashed border-gray-200">
-                          <i className="fas fa-hospital-user text-gray-300 text-4xl mb-3"></i>
-                          <p className="text-gray-500 font-medium">Not part of any organization yet.</p>
-                          <p className="text-xs text-gray-400 mt-1">Visit a registered hospital to get verified and joined!</p>
+                          <div className="relative z-10">
+                            <div className="w-24 h-24 bg-white/80 backdrop-blur-xl rounded-[2rem] flex items-center justify-center mx-auto mb-6 shadow-2xl shadow-emerald-200/50 group-hover:scale-110 transition-transform duration-500">
+                              <i className="fas fa-shield-alt text-5xl text-emerald-500"></i>
+                            </div>
+
+                            <h3 className="text-3xl font-black text-emerald-900 tracking-tight mb-2">All Clear!</h3>
+                            <p className="text-sm font-bold text-emerald-600/80 uppercase tracking-widest mb-6">Community is Safe</p>
+                            <p className="text-emerald-700/70 font-medium max-w-md mx-auto leading-relaxed">
+                              There are no urgent blood requirements in your network at the moment.
+                            </p>
+                          </div>
                         </div>
                       ) : (
-                        <div className="grid grid-cols-1 gap-4">
-                          {memberships?.slice(0, 3).map((m, idx) => (
-                            <div key={idx} className="bg-white border border-gray-100 rounded-2xl p-5 shadow-sm hover:shadow-md transition-all border-l-4 border-l-blue-500">
-                              <div className="flex items-center justify-between">
-                                <div className="flex items-center gap-4">
-                                  <div className="w-12 h-12 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center text-xl">
-                                    <i className={m.org_type === 'Hospital' ? 'fas fa-hospital' : 'fas fa-clinic-medical'}></i>
+                        <div className="space-y-6 max-h-[600px] overflow-y-auto pr-4 custom-scrollbar">
+                          {urgentNeeds.slice(0, 1).map((need) => (
+                            <div key={need.id} className={`relative group/item rounded-[2.5rem] border p-6 transition-all duration-500 ${need.blood_group === user.blood_type ? 'bg-rose-50/50 border-rose-200 shadow-xl shadow-rose-500/5' : 'bg-white border-gray-100 hover:border-rose-100'}`}>
+                              <div className="flex items-center justify-between mb-6">
+                                <div className="flex items-center gap-5">
+                                  <div className={`w-16 h-16 rounded-[1.5rem] flex flex-col items-center justify-center shadow-2xl font-black group-hover/item:scale-110 transition-all duration-500 ${need.blood_group === user.blood_type ? 'bg-rose-600 text-white shadow-rose-300' : 'bg-gray-900 text-white shadow-gray-200'}`}>
+                                    <span className="text-2xl leading-none">{need.blood_group}</span>
+                                    <span className="text-[8px] uppercase tracking-tighter opacity-70 mt-1">GROUP</span>
                                   </div>
                                   <div>
-                                    <h4 className="font-bold text-gray-900">{m.org_name}</h4>
-                                    <div className="flex items-center gap-2 text-xs text-gray-500 font-medium mt-1">
-                                      <span>{m.org_type}</span>
-                                      <span className="w-1 h-1 bg-gray-300 rounded-full"></span>
-                                      <span>{m.org_city}</span>
+                                    <h4 className="font-black text-gray-800 text-lg tracking-tight mb-1 flex items-center gap-2">
+                                      {need.org_name}
+                                      {need.is_member > 0 && (
+                                        <span className="px-2.5 py-1 bg-blue-100 text-blue-600 text-[8px] font-black rounded-lg uppercase tracking-widest">My Org</span>
+                                      )}
+                                    </h4>
+                                    <div className="flex items-center gap-2">
+                                      <div className="px-2 py-0.5 bg-gray-100 rounded-md flex items-center gap-1.5">
+                                        <i className="fas fa-location-dot text-[10px] text-rose-500"></i>
+                                        <span className="text-[10px] font-black text-gray-500 uppercase tracking-widest">{need.org_city}</span>
+                                      </div>
+                                    </div>
+                                  </div>
+                                </div>
+                                {need.blood_group === user.blood_type && (
+                                  <div className="flex flex-col items-center">
+                                    <div className="px-3 py-1.5 bg-rose-600 text-white text-[10px] font-black rounded-xl shadow-lg shadow-rose-200 animate-bounce ring-4 ring-rose-50">
+                                      MATCH!
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+
+                              <div className="bg-white/80 backdrop-blur-sm p-4 rounded-2xl border border-white shadow-sm mb-6">
+                                <p className="text-xs text-gray-600 font-bold leading-relaxed italic line-clamp-3">
+                                  <i className="fas fa-quote-left text-rose-200 mr-2"></i>
+                                  {need.description || 'Critically low on stock. Immediate donation requested to save lives.'}
+                                </p>
+                              </div>
+
+                              <div className="flex items-center justify-between gap-6">
+                                <div className="flex items-end gap-2">
+                                  <span className="text-3xl font-black text-gray-900 leading-none">{need.units_required}</span>
+                                  <span className="text-xs font-black text-gray-400 uppercase tracking-widest pb-0.5">Units Needed</span>
+                                </div>
+                                <a href={`tel:${need.org_phone || '0000000000'}`} className="flex-1 py-4 bg-gray-900 hover:bg-black text-white rounded-2xl font-black text-xs uppercase tracking-[0.1em] shadow-xl shadow-gray-200 flex items-center justify-center gap-3 transition-all transform active:scale-95 group/btn">
+                                  <i className="fas fa-phone-volume group-hover/btn:animate-wiggle text-sm"></i>
+                                  <span className="mt-0.5">{need.org_phone || 'Connect Now'}</span>
+                                </a>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Compatibility Section */}
+                    <div className="modern-card h-full p-8 bg-white border border-gray-100 shadow-sm rounded-[3rem] group">
+                      <div className="flex items-center justify-between mb-8">
+                        <div className="flex items-center gap-4">
+                          <div className="w-14 h-14 bg-red-50 text-red-600 rounded-[1.5rem] flex items-center justify-center shadow-inner group-hover:rotate-6 transition-transform duration-500">
+                            <i className="fas fa-heartbeat text-2xl"></i>
+                          </div>
+                          <div>
+                            <h3 className="text-xl font-black text-gray-900 tracking-tight">Blood Synergy</h3>
+                            <p className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] mt-1">Network Compatibility</p>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <span className="text-3xl font-black text-red-600 leading-none">{user.blood_type || '??'}</span>
+                          <p className="text-[8px] font-black text-gray-300 uppercase tracking-widest mt-1">Your Registry</p>
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div className="bg-emerald-50/30 border border-emerald-100/50 p-5 rounded-[2rem] hover:bg-emerald-50/50 transition-colors">
+                          <div className="flex items-center gap-3 mb-4">
+                            <div className="w-8 h-8 bg-emerald-100 text-emerald-600 rounded-xl flex items-center justify-center text-sm">
+                              <i className="fas fa-hand-holding-heart"></i>
+                            </div>
+                            <span className="text-[10px] font-black text-emerald-700 uppercase tracking-widest">Ideal Recipient</span>
+                          </div>
+                          <div className="flex flex-wrap gap-2">
+                            {(() => {
+                              const map = {
+                                'O-': ['O-', 'O+', 'A-', 'A+', 'B-', 'B+', 'AB-', 'AB+', 'A1-', 'A1+', 'A1B-', 'A1B+', 'A2-', 'A2+', 'A2B-', 'A2B+'],
+                                'O+': ['O+', 'A+', 'B+', 'AB+', 'A1+', 'A1B+', 'A2+', 'A2B+'],
+                                'A-': ['A-', 'A+', 'AB-', 'AB+', 'A1-', 'A1+', 'A1B-', 'A1B+', 'A2-', 'A2+', 'A2B-', 'A2B+'],
+                                'A+': ['A+', 'AB+', 'A1+', 'A1B+', 'A2+', 'A2B+'],
+                                'B-': ['B-', 'B+', 'AB-', 'AB+', 'A1B-', 'A1B+', 'A2B-', 'A2B+'],
+                                'B+': ['B+', 'AB+', 'A1B+', 'A2B+'],
+                                'AB-': ['AB-', 'AB+', 'A1B-', 'A1B+', 'A2B-', 'A2B+'],
+                                'AB+': ['AB+', 'A1B+', 'A2B+'],
+                                'A1-': ['A1-', 'A1+', 'A1B-', 'A1B+', 'AB-', 'AB+'],
+                                'A1+': ['A1+', 'A1B+', 'AB+'],
+                                'A1B-': ['A1B-', 'A1B+', 'AB-', 'AB+'],
+                                'A1B+': ['A1B+', 'AB+'],
+                                'A2-': ['A1-', 'A1+', 'A2-', 'A2+', 'A1B-', 'A1B+', 'A2B-', 'A2B+', 'AB-', 'AB+'],
+                                'A2+': ['A1+', 'A2+', 'A1B+', 'A2B+', 'AB+'],
+                                'A2B-': ['A2B-', 'A2B+', 'AB-', 'AB+'],
+                                'A2B+': ['A2B+', 'AB+'],
+                                'Bombay Blood Group': ['All Groups'],
+                                'INRA': ['All Groups']
+                              };
+                              return map[user.blood_type]?.map(t => (
+                                <span key={t} className="px-3 py-1.5 bg-white border border-emerald-100 text-emerald-600 rounded-xl text-[10px] font-black shadow-sm">{t}</span>
+                              )) || <span className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">Scanning Type...</span>;
+                            })()}
+                          </div>
+                        </div>
+
+                        <div className="bg-blue-50/30 border border-blue-100/50 p-5 rounded-[2rem] hover:bg-blue-50/50 transition-colors">
+                          <div className="flex items-center gap-3 mb-4">
+                            <div className="w-8 h-8 bg-blue-100 text-blue-600 rounded-xl flex items-center justify-center text-sm">
+                              <i className="fas fa-shield-alt"></i>
+                            </div>
+                            <span className="text-[10px] font-black text-blue-700 uppercase tracking-widest">Safe Source</span>
+                          </div>
+                          <div className="flex flex-wrap gap-2">
+                            {(() => {
+                              const map = {
+                                'O-': ['O-'],
+                                'O+': ['O+', 'O-'],
+                                'A-': ['A-', 'O-'],
+                                'A+': ['A+', 'A-', 'O+', 'O-'],
+                                'B-': ['B-', 'O-'],
+                                'B+': ['B+', 'B-', 'O+', 'O-'],
+                                'AB-': ['AB-', 'A-', 'B-', 'O-'],
+                                'AB+': ['O-', 'O+', 'A-', 'A+', 'B-', 'B+', 'AB-', 'AB+'],
+                                'A1-': ['A1-', 'O-'],
+                                'A1+': ['A1+', 'A1-', 'O+', 'O-'],
+                                'A1B-': ['A1B-', 'A1-', 'B-', 'O-'],
+                                'A1B+': ['A1B+', 'A1B-', 'A1+', 'A1-', 'B+', 'B-', 'O+', 'O-'],
+                                'A2-': ['A2-', 'O-'],
+                                'A2+': ['A2+', 'A2-', 'O+', 'O-'],
+                                'A2B-': ['A2B-', 'A2-', 'B-', 'O-'],
+                                'A2B+': ['A2B+', 'A2B-', 'A2+', 'A2-', 'B+', 'B-', 'O+', 'O-'],
+                                'Bombay Blood Group': ['Bombay Blood Group'],
+                                'INRA': ['INRA']
+                              };
+                              return map[user.blood_type]?.map(t => (
+                                <span key={t} className="px-3 py-1.5 bg-white border border-blue-100 text-blue-600 rounded-xl text-[10px] font-black shadow-sm">{t}</span>
+                              )) || <span className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">Scanning Type...</span>;
+                            })()}
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="mt-8 p-5 bg-gray-50 rounded-[2rem] flex items-center gap-5 border border-gray-100">
+                        <div className="w-12 h-12 rounded-full bg-white flex items-center justify-center shadow-sm flex-shrink-0">
+                          <i className="fas fa-lightbulb text-amber-400 text-xl"></i>
+                        </div>
+                        <p className="text-[11px] text-gray-500 font-bold italic leading-relaxed">
+                          {user.blood_type === 'O-' ? 'Universal Donor: Your blood can be used in almost any emergency situation. You are a true lifesaver!' :
+                            user.blood_type === 'AB+' ? 'Universal Recipient: You can safely receive blood from almost any donor. Your donations are still vital for AB+ patients!' :
+                              'Did you know? Every donation you make can be separated into components to save up to three distinct lives.'}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Row 2: Donation History & My Organizations */}
+                  <div className="grid lg:grid-cols-2 gap-8 items-stretch">
+                    {/* Donation History Card */}
+                    <div className="modern-card h-full p-8 bg-white border border-gray-100 shadow-sm rounded-[2.5rem]">
+                      <div className="flex items-center justify-between mb-6">
+                        <h2 className="text-xl font-black text-gray-800 flex items-center gap-3">
+                          <div className="w-10 h-10 bg-red-50 text-red-600 rounded-xl flex items-center justify-center">
+                            <i className="fas fa-history"></i>
+                          </div>
+                          Donation History
+                        </h2>
+                        {donations.length > 0 && (
+                          <button onClick={() => openInfo('donation-history')} className="text-[10px] font-black uppercase tracking-widest bg-gray-50 hover:bg-red-50 text-gray-400 hover:text-red-500 px-4 py-2 rounded-xl transition-all">
+                            See All
+                          </button>
+                        )}
+                      </div>
+
+                      {donations.length === 0 ? (
+                        <div className="text-center py-12 bg-gray-50/50 rounded-3xl border-2 border-dashed border-gray-100">
+                          <i className="fas fa-heart text-gray-200 text-4xl mb-4"></i>
+                          <p className="text-gray-400 font-bold">No donations yet.</p>
+                          <p className="text-[10px] text-gray-300 mt-1 uppercase tracking-widest font-black text-center">Your legacy starts here</p>
+                        </div>
+                      ) : (
+                        <div className="space-y-4 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
+                          {donations.slice(0, 1).map((h) => (
+                            <div key={h.id} className="group bg-white border border-gray-100 rounded-[2rem] p-5 hover:border-red-100 hover:shadow-xl hover:shadow-red-500/5 transition-all duration-300 border-l-4 border-l-red-500">
+                              <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-5">
+                                  <div className="w-12 h-12 bg-red-50 text-red-600 rounded-2xl flex items-center justify-center text-lg shadow-inner group-hover:scale-110 transition-transform">
+                                    <i className="fas fa-tint"></i>
+                                  </div>
+                                  <div>
+                                    <p className="font-black text-gray-900 text-lg leading-none mb-1">{formatDateHyphen(h.date)}</p>
+                                    <div className="flex items-center gap-2">
+                                      <i className="fas fa-building text-[10px] text-gray-300"></i>
+                                      <p className="text-xs text-gray-400 font-bold uppercase tracking-wider">
+                                        {h.org_name || 'Self-Reported'}
+                                      </p>
                                     </div>
                                   </div>
                                 </div>
                                 <div className="text-right">
-                                  <div className="text-[10px] font-black uppercase text-gray-400 tracking-widest mb-1">Joined On</div>
-                                  <div className="text-sm font-bold text-gray-700 bg-gray-50 px-3 py-1 rounded-lg">
-                                    {formatDateHyphen(m.joined_at)}
-                                  </div>
+                                  <span className="bg-emerald-50 text-emerald-600 text-xs font-black px-3 py-1.5 rounded-xl border border-emerald-100">
+                                    {h.units} {h.units > 1 ? 'UNITS' : 'UNIT'}
+                                  </span>
                                 </div>
                               </div>
                             </div>
@@ -1635,156 +1990,53 @@ const Dashboard = () => {
                         </div>
                       )}
                     </div>
-                  </div>
 
-                  {/* Urgent Needs & Digital ID Section */}
-                  <div className="space-y-6">
-
-                    {/* NEW: Blood Compatibility Section */}
-                    <div className="space-y-6">
-                      <div className="modern-card p-6 bg-white border border-gray-100 shadow-sm rounded-3xl group hover:shadow-lg transition-all duration-300">
-                        <div className="flex items-center justify-between mb-6">
-                          <div className="flex items-center gap-3">
-                            <div className="w-12 h-12 bg-red-50 text-red-600 rounded-2xl flex items-center justify-center shadow-inner group-hover:scale-110 transition-transform duration-500">
-                              <i className="fas fa-project-diagram text-xl"></i>
-                            </div>
-                            <div>
-                              <h3 className="font-black text-gray-800 tracking-tight">Compatibility</h3>
-                              <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mt-0.5">Your Impact Network</p>
-                            </div>
+                    {/* Joined Organizations Card */}
+                    <div className="modern-card h-full p-8 bg-white border border-gray-100 shadow-sm rounded-[3rem]">
+                      <div className="flex items-center justify-between mb-8">
+                        <h2 className="text-xl font-black text-gray-800 flex items-center gap-3">
+                          <div className="w-10 h-10 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center">
+                            <i className="fas fa-hospital"></i>
                           </div>
-                          <div className="flex flex-col items-end">
-                            <span className="text-2xl font-black text-red-600 leading-none">{user.blood_type || '??'}</span>
-                            <span className="text-[8px] font-black text-gray-300 uppercase mt-1">Your Type</span>
-                          </div>
-                        </div>
-
-                        <div className="grid grid-cols-2 gap-4">
-                          {/* Can Give To */}
-                          <div className="bg-emerald-50/50 border border-emerald-100 p-4 rounded-2xl">
-                            <div className="flex items-center gap-2 mb-3">
-                              <i className="fas fa-hand-holding-heart text-emerald-600 text-xs"></i>
-                              <span className="text-[9px] font-black text-emerald-700 uppercase tracking-widest">Can Give To</span>
-                            </div>
-                            <div className="flex flex-wrap gap-1.5">
-                              {(() => {
-                                const map = {
-                                  'O-': ['O-', 'O+', 'A-', 'A+', 'B-', 'B+', 'AB-', 'AB+'],
-                                  'O+': ['O+', 'A+', 'B+', 'AB+'],
-                                  'A-': ['A-', 'A+', 'AB-', 'AB+'],
-                                  'A+': ['A+', 'AB+'],
-                                  'B-': ['B-', 'B+', 'AB-', 'AB+'],
-                                  'B+': ['B+', 'AB+'],
-                                  'AB-': ['AB-', 'AB+'],
-                                  'AB+': ['AB+']
-                                };
-                                return map[user.blood_type]?.map(t => (
-                                  <span key={t} className="px-2 py-1 bg-white border border-emerald-100 text-emerald-600 rounded-lg text-[10px] font-black shadow-sm">{t}</span>
-                                )) || <span className="text-[10px] text-gray-400 font-bold uppercase">Pending Analysis</span>;
-                              })()}
-                            </div>
-                          </div>
-
-                          {/* Can Receive From */}
-                          <div className="bg-blue-50/50 border border-blue-100 p-4 rounded-2xl">
-                            <div className="flex items-center gap-2 mb-3">
-                              <i className="fas fa-shield-alt text-blue-600 text-xs"></i>
-                              <span className="text-[9px] font-black text-blue-700 uppercase tracking-widest">Can Receive</span>
-                            </div>
-                            <div className="flex flex-wrap gap-1.5">
-                              {(() => {
-                                const map = {
-                                  'O-': ['O-'],
-                                  'O+': ['O+', 'O-'],
-                                  'A-': ['A-', 'O-'],
-                                  'A+': ['A+', 'A-', 'O+', 'O-'],
-                                  'B-': ['B-', 'O-'],
-                                  'B+': ['B+', 'B-', 'O+', 'O-'],
-                                  'AB-': ['AB-', 'A-', 'B-', 'O-'],
-                                  'AB+': ['O-', 'O+', 'A-', 'A+', 'B-', 'B+', 'AB-', 'AB+']
-                                };
-                                return map[user.blood_type]?.map(t => (
-                                  <span key={t} className="px-2 py-1 bg-white border border-blue-100 text-blue-600 rounded-lg text-[10px] font-black shadow-sm">{t}</span>
-                                )) || <span className="text-[10px] text-gray-400 font-bold uppercase">Pending Analysis</span>;
-                              })()}
-                            </div>
-                          </div>
-                        </div>
-
-                        <div className="mt-4 pt-4 border-t border-gray-50 flex items-center gap-3">
-                          <div className="w-8 h-8 rounded-full bg-gray-50 flex items-center justify-center flex-shrink-0">
-                            <i className="fas fa-info-circle text-gray-300 text-xs"></i>
-                          </div>
-                          <p className="text-[9px] text-gray-400 font-medium italic leading-snug">
-                            {user.blood_type === 'O-' ? 'You are a Universal Donor! Your blood can save anyone in an emergency.' :
-                              user.blood_type === 'AB+' ? 'You are a Universal Recipient! You can safely receive blood from any type.' :
-                                'Your blood type plays a critical role in our targeted life-saving network.'}
-                          </p>
-                        </div>
+                          My Organizations
+                        </h2>
+                        {memberships?.length > 0 && (
+                          <button onClick={() => openInfo('my-organizations')} className="text-[10px] font-black uppercase tracking-widest bg-gray-50 hover:bg-blue-50 text-gray-400 hover:text-blue-500 px-4 py-2 rounded-xl transition-all">
+                            Manage
+                          </button>
+                        )}
                       </div>
-                    </div>
 
-                    {/* Urgent Needs Feed */}
-                    <div className="modern-card p-6 bg-white border border-rose-100 shadow-xl shadow-rose-500/5 rounded-3xl group">
-                      <h3 className="text-xl font-black text-gray-800 mb-6 flex items-center justify-between">
-                        <span className="flex items-center gap-3">
-                          <div className="w-10 h-10 bg-rose-50 text-rose-500 rounded-xl flex items-center justify-center">
-                            <i className="fas fa-fire-alt text-lg"></i>
+                      {memberships?.length === 0 ? (
+                        <div className="bg-gray-50 rounded-[2.5rem] p-12 text-center border-2 border-dashed border-gray-100">
+                          <div className="w-20 h-20 bg-white rounded-full flex items-center justify-center mx-auto mb-6 shadow-xl shadow-gray-200/50">
+                            <i className="fas fa-hospital-user text-gray-200 text-4xl"></i>
                           </div>
-                          <div className="flex flex-col">
-                            <span className="tracking-tight">Urgent Needs</span>
-                            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest leading-none">In {user.city}</span>
-                          </div>
-                        </span>
-                        <span className="text-[10px] font-black bg-rose-500 text-white px-3 py-1 rounded-full animate-pulse shadow-lg shadow-rose-200 uppercase tracking-widest">Live</span>
-                      </h3>
-
-                      {urgentNeeds.length === 0 ? (
-                        <div className="py-12 text-center bg-gray-50/50 rounded-3xl border-2 border-dashed border-gray-100">
-                          <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center mx-auto mb-4 border shadow-sm">
-                            <i className="fas fa-check text-emerald-500 text-xl"></i>
-                          </div>
-                          <p className="text-sm font-black text-gray-400 uppercase tracking-widest">"All Safe Today"</p>
-                          <p className="text-[10px] text-gray-300 mt-1">No urgent requirements in your city.</p>
+                          <p className="text-gray-400 font-black uppercase text-xs tracking-widest">No Memberships</p>
+                          <p className="text-[10px] text-gray-300 mt-2 font-bold uppercase tracking-tighter text-center">Visit a hospital to get verified</p>
                         </div>
                       ) : (
-                        <div className="space-y-4 max-h-[420px] overflow-y-auto pr-2 custom-scrollbar">
-                          {urgentNeeds.map((need) => (
-                            <div key={need.id} className="relative group/item rounded-[2.5rem] border border-gray-100 p-5 hover:bg-rose-50/30 transition-all duration-300">
-                              <div className="flex items-center justify-between mb-4">
-                                <div className="flex items-center gap-4">
-                                  <div className="w-16 h-16 bg-gray-900 text-white rounded-[1.5rem] flex flex-col items-center justify-center shadow-xl shadow-gray-200 font-black group-hover/item:bg-rose-600 group-hover/item:scale-105 transition-all duration-500">
-                                    <span className="text-2xl leading-none">{need.blood_group}</span>
-                                    <span className="text-[8px] uppercase tracking-tighter opacity-70 mt-1">{need.urgency_level}</span>
+                        <div className="grid gap-4">
+                          {memberships.slice(0, 1).map((m, idx) => (
+                            <div key={idx} className="bg-gray-50/50 border border-gray-100 rounded-[2rem] p-5 hover:bg-white hover:shadow-xl hover:shadow-blue-500/5 transition-all duration-300 group/org">
+                              <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-5">
+                                  <div className="w-14 h-14 bg-white text-blue-600 rounded-2xl flex items-center justify-center text-xl shadow-inner group-hover/org:scale-110 transition-transform">
+                                    <i className={m.org_type === 'Hospital' ? 'fas fa-hospital' : 'fas fa-clinic-medical'}></i>
                                   </div>
                                   <div>
-                                    <h4 className="font-black text-gray-800 leading-tight tracking-tight">{need.org_name}</h4>
-                                    <div className="flex items-center gap-1.5 mt-1">
-                                      <i className="fas fa-map-marker-alt text-rose-500 text-[10px]"></i>
-                                      <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">{need.org_city}</span>
+                                    <h4 className="font-black text-gray-900 tracking-tight">{m.org_name}</h4>
+                                    <div className="flex items-center gap-2 mt-1">
+                                      <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest bg-gray-100 px-2 py-0.5 rounded-md">{m.org_type}</span>
+                                      <span className="text-[9px] font-black text-blue-400 uppercase tracking-widest">{m.org_city}</span>
                                     </div>
                                   </div>
                                 </div>
                                 <div className="text-right">
-                                  <p className="text-[8px] font-black text-gray-400 uppercase tracking-widest mb-1">Target</p>
-                                  <div className="flex items-baseline justify-end gap-1">
-                                    <span className="text-2xl font-black text-gray-900 leading-none">{need.units_required}</span>
-                                    <span className="text-[10px] font-bold text-gray-400 uppercase">Units</span>
-                                  </div>
+                                  <p className="text-[8px] font-black text-gray-300 uppercase tracking-widest mb-1">Status</p>
+                                  <span className="px-3 py-1 bg-emerald-500 text-white text-[9px] font-black rounded-lg shadow-lg shadow-emerald-200">VERIFIED</span>
                                 </div>
                               </div>
-
-                              <div className="bg-white/60 p-3 rounded-2xl border border-white/80 mb-4">
-                                <p className="text-[11px] text-gray-500 font-bold leading-relaxed italic line-clamp-2">
-                                  <i className="fas fa-quote-left text-[8px] text-rose-300 mr-1.5 opacity-50"></i>
-                                  {need.description}
-                                </p>
-                              </div>
-
-                              <a href={`tel:${need.org_phone}`} className="w-full py-3.5 bg-rose-600 hover:bg-rose-700 text-white rounded-2xl font-black text-[11px] uppercase tracking-widest shadow-xl shadow-rose-200 flex items-center justify-center gap-3 transition-all transform active:scale-95">
-                                <i className="fas fa-phone-alt animate-pulse"></i>
-                                Connect with Center
-                              </a>
                             </div>
                           ))}
                         </div>
@@ -1964,8 +2216,18 @@ const Dashboard = () => {
           </div>
         </div>
       </div>
-    </div>
+      <ModernModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        onConfirm={modalConfig.onConfirm}
+        title={modalConfig.title}
+        message={modalConfig.message}
+        confirmText={modalConfig.confirmText}
+        type={modalConfig.type}
+      />
+    </div >
   );
 };
 
 export default Dashboard;
+

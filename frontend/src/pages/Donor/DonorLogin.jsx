@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import { useGoogleLogin } from '@react-oauth/google';
 import CompleteProfileModal from "../../components/modals/CompleteProfileModal";
 import "../../assets/css/auth-base.css";
@@ -536,9 +537,9 @@ export default function DonorLogin() {
         </section>
       </main>
 
-      <a
+      <Link
         className="back-chip"
-        href="/"
+        to="/#action-cards"
         aria-label="Back to homepage"
       >
         <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
@@ -551,7 +552,7 @@ export default function DonorLogin() {
             strokeLinejoin="round"
           />
         </svg>
-      </a>
+      </Link>
 
       {/* Forgot Password Modal */}
       <div

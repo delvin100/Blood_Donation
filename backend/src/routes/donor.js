@@ -18,5 +18,6 @@ router.get('/urgent-needs', authMiddleware, donorController.getUrgentNeeds);
 router.put('/profile', authMiddleware, donorController.updateProfile);
 router.post('/profile-picture', authMiddleware, upload.single('profile_picture'), donorController.uploadProfilePicture);
 router.get('/notifications', authMiddleware, donorController.getNotifications);
+router.post('/chat', authMiddleware, donorController.chat);
 
 module.exports = router;

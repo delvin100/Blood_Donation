@@ -5,6 +5,7 @@ import axios from 'axios';
 import { jsPDF } from 'jspdf';
 import MedicalReports from './MedicalReports';
 import BackToTop from '../../components/common/BackToTop';
+import ModernModal from '../../components/common/ModernModal';
 import {
     LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area,
     BarChart, Bar, Cell
@@ -223,6 +224,18 @@ export default function OrgDashboard() {
     const [verificationFormErrors, setVerificationFormErrors] = useState({});
     const [verificationHistory, setVerificationHistory] = useState([]);
     const [verificationHistoryLoading, setVerificationHistoryLoading] = useState(false);
+
+    // Modern Modal State
+    const [isModalOpen, setIsModalOpen] = useState(false);
+    const [modalInput, setModalInput] = useState('');
+    const [modalConfig, setModalConfig] = useState({
+        title: '',
+        message: '',
+        confirmText: 'Confirm',
+        onConfirm: () => { },
+        type: 'info',
+        placeholder: ''
+    });
 
     useEffect(() => {
         const storedUser = localStorage.getItem('user') || sessionStorage.getItem('user');
@@ -554,19 +567,28 @@ export default function OrgDashboard() {
     };
 
     const handleCloseRequest = async (id) => {
-        if (!confirm('Are you sure you want to close this request?')) return;
-        try {
-            const token = getAuthToken();
-            await axios.put(`/api/organization/request/${id}/status`,
-                { status: 'Cancelled' },
-                { headers: { Authorization: `Bearer ${token}` } }
-            );
-            toast.success("Request closed");
-            fetchRequests();
-            fetchStats();
-        } catch (err) {
-            toast.error("Failed to close request");
-        }
+        setModalConfig({
+            title: 'Close Request?',
+            message: 'Are you sure you want to close this emergency request? This will stop notifications to donors.',
+            confirmText: 'Close Request',
+            type: 'warning',
+            onConfirm: async () => {
+                setIsModalOpen(false);
+                try {
+                    const token = getAuthToken();
+                    await axios.put(`/api/organization/request/${id}/status`,
+                        { status: 'Cancelled' },
+                        { headers: { Authorization: `Bearer ${token}` } }
+                    );
+                    toast.success("Request closed");
+                    fetchRequests();
+                    fetchStats();
+                } catch (err) {
+                    toast.error("Failed to close request");
+                }
+            }
+        });
+        setIsModalOpen(true);
     };
 
     const handleSearchDonor = async (q) => {
@@ -710,17 +732,26 @@ export default function OrgDashboard() {
     };
 
     const handleRemoveMember = async (donorId) => {
-        if (!confirm('Are you sure you want to remove this member?')) return;
-        try {
-            const token = getAuthToken();
-            await axios.delete(`/api/organization/members/${donorId}`, {
-                headers: { Authorization: `Bearer ${token}` }
-            });
-            toast.success("Member removed");
-            fetchMembers();
-        } catch (err) {
-            toast.error("Failed to remove member");
-        }
+        setModalConfig({
+            title: 'Remove Member?',
+            message: 'Are you sure you want to remove this donor from your organization? They will no longer appear in your member list.',
+            confirmText: 'Remove',
+            type: 'danger',
+            onConfirm: async () => {
+                setIsModalOpen(false);
+                try {
+                    const token = getAuthToken();
+                    await axios.delete(`/api/organization/members/${donorId}`, {
+                        headers: { Authorization: `Bearer ${token}` }
+                    });
+                    toast.success("Member removed");
+                    fetchMembers();
+                } catch (err) {
+                    toast.error("Failed to remove member");
+                }
+            }
+        });
+        setIsModalOpen(true);
     };
 
     const fetchDonorReports = async (donor) => {
@@ -1371,10 +1402,24 @@ export default function OrgDashboard() {
 
                                                     <button
                                                         onClick={() => {
-                                                            const newThreshold = prompt(`Threshold for ${type}:`, threshold);
-                                                            if (newThreshold !== null && !isNaN(newThreshold)) {
-                                                                handleUpdateInventory(type, units, parseInt(newThreshold));
-                                                            }
+                                                            setModalInput(threshold.toString());
+                                                            setModalConfig({
+                                                                title: `Update Threshold for ${type}`,
+                                                                message: `Set the minimum stock alert level for ${type}.`,
+                                                                confirmText: 'Update Threshold',
+                                                                type: 'prompt',
+                                                                placeholder: 'Enter threshold (e.g. 5)',
+                                                                onConfirm: () => {
+                                                                    const newVal = document.querySelector('.modal-input')?.value;
+                                                                    if (newVal !== null && !isNaN(newVal)) {
+                                                                        handleUpdateInventory(type, units, parseInt(newVal));
+                                                                        setIsModalOpen(false);
+                                                                    } else {
+                                                                        toast.error("Please enter a valid number");
+                                                                    }
+                                                                }
+                                                            });
+                                                            setIsModalOpen(true);
                                                         }}
                                                         className="w-8 h-8 rounded-lg flex items-center justify-center text-gray-300 hover:text-gray-900 hover:bg-gray-100 transition-all"
                                                         title="Inventory Settings"
@@ -1424,8 +1469,25 @@ export default function OrgDashboard() {
 
                                                 <button
                                                     onClick={() => {
-                                                        const newVal = prompt(`Units for ${type}:`, units);
-                                                        if (newVal !== null && !isNaN(newVal)) handleUpdateInventory(type, parseInt(newVal), threshold);
+                                                        setModalInput(units.toString());
+                                                        setModalConfig({
+                                                            title: `Update Units for ${type}`,
+                                                            message: `Set the current available units for ${type} blood type.`,
+                                                            confirmText: 'Update Units',
+                                                            type: 'prompt',
+                                                            placeholder: 'Enter units (e.g. 10)',
+                                                            onConfirm: () => {
+                                                                // Validated confirm logic
+                                                                const newVal = document.querySelector('.modal-input')?.value;
+                                                                if (newVal !== null && !isNaN(newVal)) {
+                                                                    handleUpdateInventory(type, parseInt(newVal), threshold);
+                                                                    setIsModalOpen(false);
+                                                                } else {
+                                                                    toast.error("Please enter a valid number");
+                                                                }
+                                                            }
+                                                        });
+                                                        setIsModalOpen(true);
                                                     }}
                                                     className="w-full py-3 bg-white text-gray-400 hover:text-gray-900 font-bold rounded-xl transition-all text-[9px] uppercase tracking-widest border border-gray-50 flex items-center justify-center gap-2"
                                                 >
@@ -1438,6 +1500,7 @@ export default function OrgDashboard() {
                             )}
                         </div>
                     )}
+
 
                     {activeTab === 'emergency' && (
                         <div className="max-w-6xl mx-auto space-y-12 animate-in fade-in zoom-in-95 duration-500">
@@ -1452,7 +1515,7 @@ export default function OrgDashboard() {
                                         </div>
                                         <h2 className="text-5xl font-black leading-tight tracking-tighter">Broadcast Life-Saving <span className="text-red-500 underline decoration-red-500/30 underline-offset-8">Alerts</span></h2>
                                         <p className="text-red-100/60 font-medium leading-relaxed text-lg max-w-2xl">
-                                            Instantly notify all available donors in your network. Targeted alerts will be sent via Email and In-App notifications to exactly the right blood group donors.
+                                            Instantly notify all available donors in your network. Targeted alerts will be sent via notifications to exactly the right blood group donors.
                                         </p>
                                     </div>
                                     <div className="w-40 h-40 rounded-[2.5rem] bg-red-600/10 backdrop-blur-3xl border border-red-500/20 flex flex-col items-center justify-center shadow-2xl shadow-red-500/20 group hover:scale-105 transition-transform">
@@ -1470,8 +1533,8 @@ export default function OrgDashboard() {
 
                                         <div className="relative z-10 space-y-12">
                                             <div className="space-y-2">
-                                                <h3 className="text-3xl font-black text-gray-900 tracking-tight">Compose Alert</h3>
-                                                <p className="text-gray-400 font-bold text-sm">Define the urgency and requirements for your broadcast.</p>
+                                                <h3 className="text-3xl font-black text-gray-900 tracking-tight">Compose Emergency</h3>
+                                                <p className="text-gray-400 font-bold text-sm">Define the requirements for your emergency broadcast.</p>
                                             </div>
 
                                             <form onSubmit={handleCreateRequest} className="space-y-10">
@@ -1514,29 +1577,6 @@ export default function OrgDashboard() {
                                                     </div>
                                                 </div>
 
-                                                <div className="space-y-4">
-                                                    <label className="text-[11px] font-black text-gray-400 uppercase tracking-widest ml-6">Set Urgency Level</label>
-                                                    <div className="grid grid-cols-3 gap-4">
-                                                        {[
-                                                            { id: 'Critical', color: 'red', icon: 'fa-radiation' },
-                                                            { id: 'High', color: 'orange', icon: 'fa-bolt' },
-                                                            { id: 'Medium', color: 'blue', icon: 'fa-clock' }
-                                                        ].map(level => (
-                                                            <button
-                                                                key={level.id}
-                                                                type="button"
-                                                                onClick={() => setRequestForm({ ...requestForm, urgency_level: level.id })}
-                                                                className={`flex flex-col items-center justify-center py-6 rounded-[2rem] border-2 transition-all gap-2 ${requestForm.urgency_level === level.id
-                                                                    ? `bg-${level.color}-600 border-${level.color}-600 text-white shadow-xl shadow-${level.color}-500/30 ring-4 ring-${level.color}-50`
-                                                                    : 'bg-white border-gray-100 text-gray-400 hover:border-gray-200'
-                                                                    }`}
-                                                            >
-                                                                <i className={`fas ${level.icon} text-xl ${requestForm.urgency_level === level.id ? 'animate-pulse' : ''}`}></i>
-                                                                <span className="text-[10px] font-black uppercase tracking-widest">{level.id}</span>
-                                                            </button>
-                                                        ))}
-                                                    </div>
-                                                </div>
 
                                                 <div className="space-y-4">
                                                     <label className="text-[11px] font-black text-gray-400 uppercase tracking-widest ml-6">Situation Briefing</label>
@@ -1584,13 +1624,6 @@ export default function OrgDashboard() {
                                             requests.filter(r => r.status === 'Active').map(req => (
                                                 <div key={req.id} className="group bg-white p-8 rounded-[3rem] border border-gray-100 shadow-xl shadow-gray-200/20 transition-all hover:shadow-2xl hover:border-red-100 animate-in slide-in-from-right-4 duration-500">
                                                     <div className="flex justify-between items-start mb-8">
-                                                        <div className={`px-4 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest flex items-center gap-2 ${req.urgency_level === 'Critical' ? 'bg-red-600 text-white shadow-lg shadow-red-500/40' :
-                                                            req.urgency_level === 'High' ? 'bg-orange-500 text-white shadow-lg shadow-orange-500/40' :
-                                                                'bg-blue-500 text-white shadow-lg shadow-blue-500/40'
-                                                            }`}>
-                                                            <i className={`fas ${req.urgency_level === 'Critical' ? 'fa-fire' : 'fa-bolt'} text-[10px]`}></i>
-                                                            {req.urgency_level}
-                                                        </div>
                                                         <span className="text-[10px] font-black text-gray-300 uppercase tracking-widest bg-gray-50 px-3 py-1.5 rounded-lg">
                                                             {new Date(req.created_at).toLocaleDateString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
                                                         </span>
@@ -2695,6 +2728,18 @@ export default function OrgDashboard() {
                         </div>
                     </div>
                 </div>
+                <ModernModal
+                    isOpen={isModalOpen}
+                    onClose={() => setIsModalOpen(false)}
+                    onConfirm={modalConfig.onConfirm}
+                    title={modalConfig.title}
+                    message={modalConfig.message}
+                    confirmText={modalConfig.confirmText}
+                    type={modalConfig.type}
+                    inputValue={modalInput}
+                    onInputChange={setModalInput}
+                    placeholder={modalConfig.placeholder}
+                />
             </div>
         </div>
     );

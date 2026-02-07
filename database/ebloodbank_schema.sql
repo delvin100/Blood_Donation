@@ -185,7 +185,7 @@ CREATE TABLE medical_reports (
   temperature DECIMAL(4,1),
   weight DECIMAL(5,2),
   units_donated DECIMAL(5,2) DEFAULT 1.00,
-  blood_group VARCHAR(10),
+  blood_group VARCHAR(50),
   rh_factor ENUM('Positive', 'Negative'),
   hiv_status ENUM('Negative', 'Positive') DEFAULT 'Negative',
   hepatitis_b ENUM('Negative', 'Positive') DEFAULT 'Negative',

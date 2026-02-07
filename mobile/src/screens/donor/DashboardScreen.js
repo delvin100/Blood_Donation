@@ -9,6 +9,7 @@ import {
     ActivityIndicator,
     Image,
     Dimensions,
+    Linking,
     Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -39,6 +40,8 @@ const DashboardScreen = ({ navigation }) => {
     const [showDonationHistory, setShowDonationHistory] = useState(false);
     const [showAnalysis, setShowAnalysis] = useState(false);
     const [notifications, setNotifications] = useState([]);
+    const [urgentNeeds, setUrgentNeeds] = useState([]);
+    const [urgentNeedsCount, setUrgentNeedsCount] = useState(0);
     const [timeLeft, setTimeLeft] = useState({ days: 0, hours: 0, minutes: 0, seconds: 0 });
 
     const user = data?.user;
@@ -52,6 +55,16 @@ const DashboardScreen = ({ navigation }) => {
         ? new Date(donations[0].date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
         : 'N/A';
     const latestHb = reports.length > 0 ? `${reports[0].hb_level}` : '--';
+
+    // Rank Calculation
+    const getRankInfo = (count) => {
+        if (count >= 11) return { current: 'Platinum', next: 'Max Level', progress: 100, icon: 'trophy', color: '#8b5cf6', nextCount: 11 };
+        if (count >= 6) return { current: 'Gold', next: 'Platinum', progress: ((count - 5) / 5) * 100, icon: 'medal', color: '#eab308', nextCount: 11 };
+        if (count >= 3) return { current: 'Silver', next: 'Gold', progress: ((count - 2) / 3) * 100, icon: 'medal', color: '#94a3b8', nextCount: 6 };
+        return { current: 'Bronze', next: 'Silver', progress: (count / 3) * 100, icon: 'medal', color: '#cd7f32', nextCount: 3 };
+    };
+    const rankInfo = getRankInfo(donations.length);
+    const totalAlerts = (stats.unreadNotifications || 0) + urgentNeedsCount;
 
     useEffect(() => {
         fetchDashboardData();
@@ -122,8 +135,13 @@ const DashboardScreen = ({ navigation }) => {
 
     const fetchNotifications = async () => {
         try {
-            const res = await apiService.get('/donor/notifications');
-            setNotifications(res.data);
+            const [notifRes, urgentRes] = await Promise.all([
+                apiService.get('/donor/notifications'),
+                apiService.get('/donor/urgent-needs')
+            ]);
+            setNotifications(notifRes.data);
+            setUrgentNeeds(urgentRes.data);
+            setUrgentNeedsCount(urgentRes.data.length);
         } catch (error) {
             console.error('Error fetching notifications:', error);
         }
@@ -211,9 +229,9 @@ const DashboardScreen = ({ navigation }) => {
                     activeOpacity={0.7}
                 >
                     <Ionicons name="notifications-outline" size={24} color="#dc2626" />
-                    {stats.unreadNotifications > 0 && (
+                    {totalAlerts > 0 && (
                         <View style={styles.badge}>
-                            <Text style={styles.badgeText}>{stats.unreadNotifications}</Text>
+                            <Text style={styles.badgeText}>{totalAlerts}</Text>
                         </View>
                     )}
                 </TouchableOpacity>
@@ -292,6 +310,74 @@ const DashboardScreen = ({ navigation }) => {
                     />
                 </View>
 
+                {/* Urgent Needs Section */}
+                <View style={styles.sectionHeader}>
+                    <Text style={styles.sectionTitle}>Urgent Requirements</Text>
+                    <TouchableOpacity onPress={() => setShowUrgentNeeds(true)}>
+                        <Text style={styles.viewAll}>View All</Text>
+                    </TouchableOpacity>
+                </View>
+
+                {urgentNeeds.length === 0 ? (
+                    <LinearGradient
+                        colors={['#ecfdf5', '#d1fae5']}
+                        style={[styles.statusCard, { backgroundColor: '#ecfdf5', marginBottom: 20 }]}
+                    >
+                        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                            <View style={{ width: 50, height: 50, borderRadius: 25, backgroundColor: '#10b981', alignItems: 'center', justifyContent: 'center', marginRight: 15, elevation: 5 }}>
+                                <Ionicons name="shield-checkmark" size={28} color="white" />
+                            </View>
+                            <View style={{ flex: 1 }}>
+                                <Text style={{ fontSize: 18, fontWeight: 'bold', color: '#065f46' }}>All Clear!</Text>
+                                <Text style={{ fontSize: 12, color: '#047857', marginTop: 2 }}>Community is safe. No urgent requests.</Text>
+                            </View>
+                        </View>
+                    </LinearGradient>
+                ) : (
+                    urgentNeeds.slice(0, 1).map((item) => {
+                        const isMatch = user?.blood_type === item.blood_group;
+                        return (
+                            <View key={item.id} style={[styles.card, isMatch && styles.matchCard, { marginBottom: 20 }]}>
+                                {isMatch && (
+                                    <LinearGradient colors={['#e11d48', '#be123c']} style={styles.matchBadge}>
+                                        <Text style={styles.matchText}>MATCH!</Text>
+                                    </LinearGradient>
+                                )}
+                                <View style={styles.cardHeader}>
+                                    <View style={[styles.bloodBadge, isMatch && styles.matchBloodBadge]}>
+                                        <Text style={[styles.bloodText, isMatch && styles.matchBloodText]}>{item.blood_group}</Text>
+                                        <Text style={[styles.bloodLabel, isMatch && styles.matchBloodLabel]}>GROUP</Text>
+                                    </View>
+                                    <View style={styles.headerContent}>
+                                        <Text style={styles.orgName}>{item.org_name}</Text>
+                                        <View style={styles.locationContainer}>
+                                            <Ionicons name="location" size={12} color="#9ca3af" />
+                                            <Text style={styles.locationText}>{item.org_city}</Text>
+                                        </View>
+                                    </View>
+                                </View>
+                                <View style={styles.unitsContainer}>
+                                    <Text style={styles.unitsValue}>{item.units_required}</Text>
+                                    <Text style={styles.unitsLabel}>Units Needed</Text>
+                                </View>
+                                <View style={styles.notesContainer}>
+                                    <Text style={styles.notes} numberOfLines={2}>"{item.notes || 'Immediate donation requested.'}"</Text>
+                                </View>
+                                <TouchableOpacity
+                                    style={styles.callBtn}
+                                    onPress={() => Linking.openURL(`tel:${item.org_phone}`)}
+                                    activeOpacity={0.8}
+                                >
+                                    <LinearGradient colors={['#111827', '#000000']} style={styles.callBtnGradient}>
+                                        <Ionicons name="call" size={18} color="white" style={{ marginRight: 8 }} />
+                                        <Text style={styles.callBtnText}>Connect Now</Text>
+                                    </LinearGradient>
+                                </TouchableOpacity>
+                            </View>
+                        );
+                    })
+                )}
+
                 {/* Secondary Stats Scroller */}
                 <ScrollView
                     horizontal
@@ -312,13 +398,24 @@ const DashboardScreen = ({ navigation }) => {
                         color="#8b5cf6"
                         isSmall
                     />
-                    <StatCard
-                        icon="trophy"
-                        label="Donor Level"
-                        value={stats.milestone || 'Bronze'}
-                        color="#f59e0b"
-                        isSmall
-                    />
+
+                    {/* Dynamic Rank Card */}
+                    <View style={[styles.statCard, styles.smallStatCard]}>
+                        <LinearGradient
+                            colors={[`${rankInfo.color}20`, `${rankInfo.color}05`]}
+                            style={[styles.statIconContainer, styles.smallStatIconContainer]}
+                        >
+                            <FontAwesome5 name={rankInfo.icon} size={14} color={rankInfo.color} />
+                        </LinearGradient>
+                        <Text style={[styles.statValue, styles.smallStatValue, { color: rankInfo.color, fontSize: 14 }]}>{rankInfo.current}</Text>
+                        <Text style={[styles.statLabel, styles.smallStatLabel, { fontSize: 9 }]}>
+                            {donations.length} / {rankInfo.nextCount} Don
+                        </Text>
+                        <View style={{ width: '100%', height: 3, backgroundColor: '#f3f4f6', marginTop: 6, borderRadius: 2, overflow: 'hidden' }}>
+                            <View style={{ width: `${Math.min(rankInfo.progress, 100)}%`, height: '100%', backgroundColor: rankInfo.color, borderRadius: 2 }} />
+                        </View>
+                    </View>
+
                     <StatCard
                         icon="fitness"
                         label="Latest Hb"
@@ -384,8 +481,44 @@ const DashboardScreen = ({ navigation }) => {
                         <Text style={styles.emptyText}>No donations recorded yet.</Text>
                     </View>
                 ) : (
-                    donations.slice(0, 4).map((donation) => (
+                    donations.slice(0, 1).map((donation) => (
                         <DonationItem key={donation.id} donation={donation} />
+                    ))
+                )}
+
+                {/* Latest Organization */}
+                <View style={[styles.sectionHeader, { marginTop: 10 }]}>
+                    <Text style={styles.sectionTitle}>My Organizations</Text>
+                    {data?.memberships?.length > 0 && (
+                        <TouchableOpacity onPress={() => setShowMyOrganizations(true)}>
+                            <Text style={styles.viewAll}>Manage</Text>
+                        </TouchableOpacity>
+                    )}
+                </View>
+
+                {!data?.memberships || data.memberships.length === 0 ? (
+                    <View style={styles.emptyState}>
+                        <FontAwesome5 name="hospital-user" size={32} color="#d1d5db" />
+                        <Text style={[styles.emptyText, { marginTop: 10 }]}>No memberships yet.</Text>
+                    </View>
+                ) : (
+                    data.memberships.slice(0, 1).map((m, idx) => (
+                        <View key={idx} style={[styles.donationItem, { borderLeftColor: '#3b82f6' }]}>
+                            <View style={[styles.donationIconContainer, { backgroundColor: '#eff6ff' }]}>
+                                <FontAwesome5 name={m.org_type === 'Hospital' ? 'hospital' : 'clinic-medical'} size={18} color="#3b82f6" />
+                            </View>
+                            <View style={styles.donationInfo}>
+                                <Text style={styles.donationDate}>{m.org_name}</Text>
+                                <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 2 }}>
+                                    <Text style={[styles.donationNotes, { color: '#3b82f6' }]}>{m.org_city} • {m.org_type}</Text>
+                                </View>
+                            </View>
+                            <View style={styles.donationUnits}>
+                                <View style={{ backgroundColor: '#10b981', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6 }}>
+                                    <Text style={{ color: 'white', fontSize: 10, fontWeight: 'bold' }}>VERIFIED</Text>
+                                </View>
+                            </View>
+                        </View>
                     ))
                 )}
             </ScrollView>
@@ -399,6 +532,7 @@ const DashboardScreen = ({ navigation }) => {
             <UrgentNeedsModal
                 visible={showUrgentNeeds}
                 onClose={() => setShowUrgentNeeds(false)}
+                user={user}
             />
 
             <MedicalReportsModal
@@ -718,6 +852,172 @@ const styles = StyleSheet.create({
         elevation: 2,
         alignItems: 'center',
     },
+
+    // New Card Styles
+    card: {
+        backgroundColor: 'white',
+        borderRadius: 24,
+        padding: 20,
+        marginBottom: 16,
+        elevation: 3,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
+        borderWidth: 1,
+        borderColor: '#f3f4f6',
+        position: 'relative',
+        overflow: 'hidden',
+    },
+    matchCard: {
+        borderColor: '#fda4af',
+        backgroundColor: '#fff1f2',
+    },
+    matchBadge: {
+        position: 'absolute',
+        top: 0,
+        right: 0,
+        paddingHorizontal: 12,
+        paddingVertical: 6,
+        borderBottomLeftRadius: 16,
+    },
+    matchText: {
+        color: 'white',
+        fontSize: 10,
+        fontWeight: 'bold',
+    },
+    cardHeader: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginBottom: 16,
+    },
+    bloodBadge: {
+        width: 56,
+        height: 56,
+        borderRadius: 18,
+        backgroundColor: '#f3f4f6',
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginRight: 16,
+    },
+    matchBloodBadge: {
+        backgroundColor: '#e11d48',
+        elevation: 4,
+        shadowColor: '#e11d48',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.3,
+        shadowRadius: 8,
+    },
+    bloodText: {
+        fontSize: 20,
+        fontWeight: '900',
+        color: '#111827',
+    },
+    matchBloodText: {
+        color: 'white',
+    },
+    bloodLabel: {
+        fontSize: 8,
+        fontWeight: 'bold',
+        color: '#9ca3af',
+        textTransform: 'uppercase',
+    },
+    matchBloodLabel: {
+        color: 'rgba(255, 255, 255, 0.8)',
+    },
+    headerContent: {
+        flex: 1,
+    },
+    orgName: {
+        fontSize: 16,
+        fontWeight: 'bold',
+        color: '#111827',
+        marginBottom: 4,
+    },
+    locationContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+    },
+    locationText: {
+        fontSize: 12,
+        fontWeight: 'bold',
+        color: '#9ca3af',
+        marginLeft: 4,
+        textTransform: 'uppercase',
+    },
+    unitsContainer: {
+        flexDirection: 'row',
+        alignItems: 'baseline',
+        marginBottom: 16,
+    },
+    unitsValue: {
+        fontSize: 32,
+        fontWeight: '900',
+        color: '#111827',
+        marginRight: 6,
+    },
+    unitsLabel: {
+        fontSize: 12,
+        fontWeight: 'bold',
+        color: '#9ca3af',
+        textTransform: 'uppercase',
+    },
+    notesContainer: {
+        backgroundColor: 'rgba(255, 255, 255, 0.6)',
+        padding: 12,
+        borderRadius: 12,
+        borderWidth: 1,
+        borderColor: 'white',
+        marginBottom: 16,
+    },
+    notes: {
+        fontSize: 13,
+        color: '#4b5563',
+        fontStyle: 'italic',
+        lineHeight: 20,
+    },
+    callBtn: {
+        borderRadius: 16,
+        overflow: 'hidden',
+        elevation: 4,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.2,
+        shadowRadius: 8,
+    },
+    callBtnGradient: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        paddingVertical: 14,
+    },
+    callBtnText: {
+        color: 'white',
+        fontSize: 14,
+        fontWeight: 'bold',
+        textTransform: 'uppercase',
+        letterSpacing: 1,
+    },
+    viewAll: {
+        fontSize: 12,
+        fontWeight: 'bold',
+        color: '#dc2626',
+    },
+    emptyState: {
+        padding: 24,
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: 'white',
+        borderRadius: 24,
+        borderStyle: 'dashed',
+        borderWidth: 2,
+        borderColor: '#e5e7eb',
+    },
+    emptyText: {
+        color: '#9ca3af',
+        fontWeight: 'bold',
+        fontSize: 14,
+    },
     smallStatIconContainer: {
         width: 36,
         height: 36,
@@ -838,7 +1138,6 @@ const styles = StyleSheet.create({
         color: '#dc2626',
         textTransform: 'uppercase',
     },
-
     emptyState: {
         alignItems: 'center',
         justifyContent: 'center',
@@ -862,7 +1161,6 @@ const styles = StyleSheet.create({
         width: 56,
         height: 56,
         borderRadius: 28,
-
         backgroundColor: '#dc2626',
         alignItems: 'center',
         justifyContent: 'center',

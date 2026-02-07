@@ -9,11 +9,15 @@ import {
     ActivityIndicator,
     Linking,
     Platform,
+    Dimensions
 } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons, FontAwesome5 } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import apiService from '../../api/apiService';
 
-const UrgentNeedsModal = ({ visible, onClose }) => {
+const { width } = Dimensions.get('window');
+
+const UrgentNeedsModal = ({ visible, onClose, user }) => {
     const [needs, setNeeds] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
@@ -42,36 +46,61 @@ const UrgentNeedsModal = ({ visible, onClose }) => {
         Linking.openURL(`tel:${phone}`);
     };
 
-    const renderItem = ({ item }) => (
-        <View style={styles.card}>
-            <View style={styles.cardHeader}>
-                <View style={styles.bloodBadge}>
-                    <Text style={styles.bloodText}>{item.blood_group}</Text>
+    const renderItem = ({ item }) => {
+        const isMatch = user?.blood_type === item.blood_group;
+
+        return (
+            <View style={[styles.card, isMatch && styles.matchCard]}>
+                {isMatch && (
+                    <LinearGradient
+                        colors={['#e11d48', '#be123c']}
+                        style={styles.matchBadge}
+                    >
+                        <Text style={styles.matchText}>MATCH!</Text>
+                    </LinearGradient>
+                )}
+
+                <View style={styles.cardHeader}>
+                    <View style={[styles.bloodBadge, isMatch && styles.matchBloodBadge]}>
+                        <Text style={[styles.bloodText, isMatch && styles.matchBloodText]}>{item.blood_group}</Text>
+                        <Text style={[styles.bloodLabel, isMatch && styles.matchBloodLabel]}>GROUP</Text>
+                    </View>
+                    <View style={styles.headerContent}>
+                        <Text style={styles.orgName}>{item.org_name}</Text>
+                        <View style={styles.locationContainer}>
+                            <Ionicons name="location" size={12} color="#9ca3af" />
+                            <Text style={styles.locationText}>{item.org_city}</Text>
+                        </View>
+                    </View>
                 </View>
-                <Text style={styles.orgName}>{item.org_name}</Text>
-            </View>
-            <View style={styles.cardBody}>
-                <View style={styles.infoRow}>
-                    <Ionicons name="location-outline" size={16} color="#6b7280" />
-                    <Text style={styles.infoText}>{item.org_city}</Text>
+
+                <View style={styles.unitsContainer}>
+                    <Text style={styles.unitsValue}>{item.units_required}</Text>
+                    <Text style={styles.unitsLabel}>Units Needed</Text>
                 </View>
-                <View style={styles.infoRow}>
-                    <Ionicons name="alert-circle-outline" size={16} color="#ef4444" />
-                    <Text style={[styles.infoText, { color: '#ef4444', fontWeight: '700' }]}>
-                        Urgency: {item.urgency_level}
+
+                <View style={styles.notesContainer}>
+                    <Text style={styles.notes} numberOfLines={3}>
+                        "{item.notes || 'Immediate donation requested.'}"
                     </Text>
                 </View>
-                <Text style={styles.notes}>{item.notes}</Text>
+
+                <TouchableOpacity
+                    style={styles.callBtn}
+                    onPress={() => handleCall(item.org_phone)}
+                    activeOpacity={0.8}
+                >
+                    <LinearGradient
+                        colors={['#111827', '#000000']}
+                        style={styles.callBtnGradient}
+                    >
+                        <Ionicons name="call" size={18} color="white" style={{ marginRight: 8 }} />
+                        <Text style={styles.callBtnText}>Connect Now</Text>
+                    </LinearGradient>
+                </TouchableOpacity>
             </View>
-            <TouchableOpacity
-                style={styles.callBtn}
-                onPress={() => handleCall(item.org_phone)}
-            >
-                <Ionicons name="call" size={20} color="white" />
-                <Text style={styles.callBtnText}>Contact Hospital</Text>
-            </TouchableOpacity>
-        </View>
-    );
+        );
+    };
 
     return (
         <Modal
@@ -83,9 +112,12 @@ const UrgentNeedsModal = ({ visible, onClose }) => {
             <View style={styles.overlay}>
                 <View style={styles.content}>
                     <View style={styles.header}>
-                        <Text style={styles.title}>Urgent Needs</Text>
-                        <TouchableOpacity onPress={onClose}>
-                            <Ionicons name="close" size={28} color="#111827" />
+                        <View>
+                            <Text style={styles.title}>Urgent Needs</Text>
+                            <Text style={styles.subtitle}>Active Broadcasts</Text>
+                        </View>
+                        <TouchableOpacity onPress={onClose} style={styles.closeBtn}>
+                            <Ionicons name="close" size={24} color="#1f2937" />
                         </TouchableOpacity>
                     </View>
 
@@ -99,9 +131,20 @@ const UrgentNeedsModal = ({ visible, onClose }) => {
                             </TouchableOpacity>
                         </View>
                     ) : needs.length === 0 ? (
-                        <View style={styles.center}>
-                            <Ionicons name="heart-outline" size={64} color="#d1d5db" />
-                            <Text style={styles.emptyText}>No urgent requests in your area right now.</Text>
+                        <View style={styles.emptyContainer}>
+                            <LinearGradient
+                                colors={['#ecfdf5', '#f0fdfa', '#ecfdf5']}
+                                style={styles.emptyCard}
+                            >
+                                <View style={styles.emptyIconContainer}>
+                                    <FontAwesome5 name="shield-alt" size={48} color="#10b981" />
+                                </View>
+                                <Text style={styles.emptyTitle}>All Clear!</Text>
+                                <Text style={styles.emptySubtitle}>Community is Safe</Text>
+                                <Text style={styles.emptyDesc}>
+                                    There are no urgent blood requirements in your network at the moment.
+                                </Text>
+                            </LinearGradient>
                         </View>
                     ) : (
                         <FlatList
@@ -109,6 +152,7 @@ const UrgentNeedsModal = ({ visible, onClose }) => {
                             renderItem={renderItem}
                             keyExtractor={(item) => item.id.toString()}
                             contentContainerStyle={styles.list}
+                            showsVerticalScrollIndicator={false}
                         />
                     )}
                 </View>
@@ -125,22 +169,38 @@ const styles = StyleSheet.create({
     },
     content: {
         backgroundColor: '#f9fafb',
-        flex: 1,
+        borderTopLeftRadius: 32,
+        borderTopRightRadius: 32,
+        height: '85%',
+        overflow: 'hidden',
     },
     header: {
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
         padding: 24,
-        paddingTop: Platform.OS === 'ios' ? 60 : 40,
         backgroundColor: 'white',
         borderBottomWidth: 1,
         borderBottomColor: '#f3f4f6',
     },
     title: {
-        fontSize: 22,
-        fontWeight: 'bold',
+        fontSize: 24,
+        fontWeight: '900',
         color: '#111827',
+        letterSpacing: -0.5,
+    },
+    subtitle: {
+        fontSize: 12,
+        fontWeight: 'bold',
+        color: '#ef4444',
+        textTransform: 'uppercase',
+        letterSpacing: 1,
+        marginTop: 4,
+    },
+    closeBtn: {
+        padding: 8,
+        backgroundColor: '#f3f4f6',
+        borderRadius: 12,
     },
     loader: {
         flex: 1,
@@ -151,105 +211,211 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
         padding: 40,
     },
-    emptyText: {
-        fontSize: 16,
-        color: '#6b7280',
-        textAlign: 'center',
-        fontWeight: 'normal',
-        marginTop: 16,
-    },
-    errorText: {
-        color: '#ef4444',
-        textAlign: 'center',
-        marginBottom: 16,
-    },
-    retryBtn: {
-        paddingHorizontal: 20,
-        paddingVertical: 10,
-        backgroundColor: '#dc2626',
-        borderRadius: 10,
-    },
-    retryText: {
-        color: 'white',
-        fontWeight: 'bold',
-    },
     list: {
-        padding: 24,
+        padding: 20,
     },
     card: {
         backgroundColor: 'white',
         borderRadius: 24,
         padding: 20,
         marginBottom: 20,
-        elevation: 4,
+        borderWidth: 1,
+        borderColor: '#f3f4f6',
         shadowColor: '#000',
         shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.1,
-        shadowRadius: 8,
+        shadowOpacity: 0.05,
+        shadowRadius: 10,
+        elevation: 2,
+    },
+    matchCard: {
+        backgroundColor: '#fff1f2',
+        borderColor: '#fecdd3',
+        borderWidth: 2,
+    },
+    matchBadge: {
+        position: 'absolute',
+        top: -12,
+        right: 20,
+        paddingHorizontal: 12,
+        paddingVertical: 6,
+        borderRadius: 12,
+        zIndex: 10,
+    },
+    matchText: {
+        color: 'white',
+        fontSize: 10,
+        fontWeight: '900',
+        letterSpacing: 1,
     },
     cardHeader: {
         flexDirection: 'row',
         alignItems: 'center',
-        marginBottom: 12,
+        marginBottom: 16,
     },
     bloodBadge: {
-        backgroundColor: '#fee2e2',
-        width: 44,
-        height: 44,
-        borderRadius: 12,
+        width: 56,
+        height: 56,
+        borderRadius: 16,
+        backgroundColor: '#111827',
         alignItems: 'center',
         justifyContent: 'center',
-        marginRight: 12,
+        marginRight: 16,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.2,
+        shadowRadius: 8,
+        elevation: 4,
+    },
+    matchBloodBadge: {
+        backgroundColor: '#e11d48',
+        shadowColor: '#e11d48',
     },
     bloodText: {
-        color: '#dc2626',
-        fontSize: 16,
+        color: 'white',
+        fontSize: 20,
+        fontWeight: '900',
+    },
+    matchBloodText: {
+        color: 'white',
+    },
+    bloodLabel: {
+        color: 'rgba(255,255,255,0.6)',
+        fontSize: 8,
         fontWeight: 'bold',
+        textTransform: 'uppercase',
+    },
+    matchBloodLabel: {
+        color: 'rgba(255,255,255,0.8)',
+    },
+    headerContent: {
+        flex: 1,
     },
     orgName: {
         fontSize: 18,
         fontWeight: 'bold',
         color: '#111827',
-        flex: 1,
-    },
-    cardBody: {
-        marginBottom: 16,
-    },
-    infoRow: {
-        flexDirection: 'row',
-        alignItems: 'center',
         marginBottom: 4,
     },
-    infoText: {
-        fontSize: 14,
-        color: '#6b7280',
+    locationContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: '#f3f4f6',
+        alignSelf: 'flex-start',
+        paddingHorizontal: 8,
+        paddingVertical: 4,
+        borderRadius: 8,
+    },
+    locationText: {
+        fontSize: 10,
         fontWeight: 'bold',
-        marginLeft: 8,
+        color: '#4b5563',
+        textTransform: 'uppercase',
+        marginLeft: 4,
+        letterSpacing: 0.5,
+    },
+    unitsContainer: {
+        position: 'absolute',
+        top: 20,
+        right: 20,
+        alignItems: 'flex-end',
+    },
+    unitsValue: {
+        fontSize: 24,
+        fontWeight: '900',
+        color: '#111827',
+        lineHeight: 24,
+    },
+    unitsLabel: {
+        fontSize: 10,
+        fontWeight: 'bold',
+        color: '#9ca3af',
+        textTransform: 'uppercase',
+        letterSpacing: 0.5,
+    },
+    notesContainer: {
+        backgroundColor: 'rgba(255,255,255,0.6)',
+        padding: 16,
+        borderRadius: 16,
+        borderWidth: 1,
+        borderColor: 'white',
+        marginBottom: 16,
     },
     notes: {
-        fontSize: 14,
+        fontSize: 13,
         color: '#4b5563',
+        fontStyle: 'italic',
         lineHeight: 20,
-        marginTop: 8,
+        fontWeight: '500',
     },
     callBtn: {
-        flexDirection: 'row',
-        height: 52,
-        backgroundColor: '#dc2626',
         borderRadius: 16,
+        overflow: 'hidden',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.2,
+        shadowRadius: 8,
+        elevation: 4,
+    },
+    callBtnGradient: {
+        flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center',
-        shadowColor: '#dc2626',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.3,
-        shadowRadius: 8,
-        elevation: 2,
+        paddingVertical: 16,
     },
     callBtnText: {
         color: 'white',
-        fontSize: 16,
+        fontSize: 14,
+        fontWeight: '900',
+        textTransform: 'uppercase',
+        letterSpacing: 1,
+    },
+    emptyContainer: {
+        flex: 1,
+        padding: 20,
+        justifyContent: 'center',
+    },
+    emptyCard: {
+        padding: 40,
+        borderRadius: 32,
+        alignItems: 'center',
+        borderWidth: 1,
+        borderColor: '#d1fae5',
+    },
+    emptyIconContainer: {
+        width: 80,
+        height: 80,
+        backgroundColor: 'white',
+        borderRadius: 24,
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginBottom: 24,
+        shadowColor: '#10b981',
+        shadowOffset: { width: 0, height: 10 },
+        shadowOpacity: 0.1,
+        shadowRadius: 20,
+        elevation: 10,
+    },
+    emptyTitle: {
+        fontSize: 28,
+        fontWeight: '900',
+        color: '#064e3b',
+        marginBottom: 8,
+    },
+    emptySubtitle: {
+        fontSize: 14,
         fontWeight: 'bold',
-        marginLeft: 10,
+        color: '#059669',
+        textTransform: 'uppercase',
+        letterSpacing: 2,
+        marginBottom: 16,
+    },
+    emptyDesc: {
+        fontSize: 14,
+        color: '#047857',
+        textAlign: 'center',
+        lineHeight: 22,
+        opacity: 0.8,
+        fontWeight: '500',
     },
 });
 
