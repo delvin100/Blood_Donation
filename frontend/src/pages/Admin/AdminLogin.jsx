@@ -21,6 +21,7 @@ export default function AdminLogin() {
             });
 
             localStorage.setItem('adminToken', response.data.token);
+            localStorage.setItem('adminUser', JSON.stringify({ username: response.data.username }));
             toast.success('Access Granted');
             navigate('/admin/dashboard');
 

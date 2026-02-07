@@ -49,8 +49,15 @@ exports.getStats = async (req, res) => {
         const [inventory] = await pool.query('SELECT SUM(units) as total_units FROM blood_inventory WHERE org_id = ?', [orgId]);
         const [requests] = await pool.query('SELECT COUNT(*) as active_requests FROM emergency_requests WHERE org_id = ? AND status = ?', [orgId, 'Active']);
         const [verifications] = await pool.query('SELECT COUNT(*) as verified_count FROM donor_verifications WHERE org_id = ? AND status = ?', [orgId, 'Verified']);
+        const [donations] = await pool.query('SELECT COUNT(*) as total_donations FROM donations WHERE org_id = ?', [orgId]);
         const [breakdown] = await pool.query('SELECT blood_group, units, min_threshold FROM blood_inventory WHERE org_id = ?', [orgId]);
-        res.json({ total_units: inventory[0].total_units || 0, active_requests: requests[0].active_requests || 0, verified_count: verifications[0].verified_count || 0, inventory_breakdown: breakdown });
+        res.json({
+            total_units: inventory[0].total_units || 0,
+            active_requests: requests[0].active_requests || 0,
+            verified_count: verifications[0].verified_count || 0,
+            total_donations: donations[0].total_donations || 0,
+            inventory_breakdown: breakdown
+        });
     } catch (err) {
         res.status(500).json({ error: 'Server error' });
     }
@@ -82,7 +89,7 @@ exports.updateInventory = async (req, res) => {
 
 exports.getProfile = async (req, res) => {
     try {
-        const [rows] = await pool.query('SELECT name, email, phone, license_number, type, state, district, city, address, created_at FROM organizations WHERE id = ?', [req.user.id]);
+        const [rows] = await pool.query('SELECT name, email, phone, license_number, type, state, district, city, address, verified, created_at FROM organizations WHERE id = ?', [req.user.id]);
         if (rows.length === 0) return res.status(404).json({ error: 'Organization not found' });
         res.json(rows[0]);
     } catch (err) {
@@ -119,17 +126,12 @@ exports.searchDonor = async (req, res) => {
 exports.getAnalytics = async (req, res) => {
     try {
         const orgId = req.user.id;
-        const [verifications] = await pool.query(
-            `SELECT DATE_FORMAT(verification_date, '%Y-%m-%d') as date, COUNT(*) as count 
-             FROM donor_verifications WHERE org_id = ? AND verification_date >= DATE_SUB(NOW(), INTERVAL 7 DAY)
+        const [donations] = await pool.query(
+            `SELECT DATE_FORMAT(date, '%Y-%m-%d') as date, COUNT(*) as count 
+             FROM donations WHERE org_id = ? AND date >= DATE_SUB(NOW(), INTERVAL 7 DAY)
              GROUP BY date ORDER BY date`, [orgId]
         );
-        const [requests] = await pool.query(
-            `SELECT DATE_FORMAT(created_at, '%Y-%m-%d') as date, COUNT(*) as count 
-             FROM emergency_requests WHERE org_id = ? AND created_at >= DATE_SUB(NOW(), INTERVAL 7 DAY)
-             GROUP BY date ORDER BY date`, [orgId]
-        );
-        res.json({ verifications, requests });
+        res.json({ donations });
     } catch (err) {
         res.status(500).json({ error: 'Server error' });
     }
@@ -206,12 +208,8 @@ exports.getRecentActivity = async (req, res) => {
     try {
         const orgId = req.user.id;
         const [rows] = await pool.query(
-            `(SELECT 'Verification' as type, d.full_name as title, dv.verification_date as timestamp 
-              FROM donor_verifications dv JOIN donors d ON dv.donor_id = d.id WHERE dv.org_id = ?)
-             UNION ALL
-             (SELECT 'Emergency' as type, blood_group as title, created_at as timestamp 
-              FROM emergency_requests WHERE org_id = ?)
-             ORDER BY timestamp DESC LIMIT 10`, [orgId, orgId]
+            'SELECT action_type, description, created_at FROM org_logs WHERE org_id = ? ORDER BY created_at DESC LIMIT 6',
+            [orgId]
         );
         res.json(rows);
     } catch (err) {

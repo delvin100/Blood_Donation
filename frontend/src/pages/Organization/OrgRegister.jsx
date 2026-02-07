@@ -517,9 +517,9 @@ export default function OrgRegister() {
 
             {/* Back to Home Button */}
             <Link
-                to="/"
+                to="/#action-cards"
                 className="back-chip"
-                aria-label="Back to homepage"
+                aria-label="Back to Get Started section"
             >
                 <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
                     <path

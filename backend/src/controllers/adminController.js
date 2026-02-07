@@ -9,11 +9,15 @@ exports.login = async (req, res) => {
         const { username, password } = req.body;
         const [rows] = await pool.query('SELECT * FROM admins WHERE username = ?', [username]);
         if (rows.length === 0) return res.status(401).json({ error: 'Invalid credentials.' });
+
         const admin = rows[0];
+        if (admin.status === 'Disabled') {
+            return res.status(403).json({ error: 'Currently disabled. Contact admin' });
+        }
         const match = (admin.password_hash.startsWith('$2')) ? await bcrypt.compare(password, admin.password_hash) : (password === admin.password_hash);
         if (!match) return res.status(401).json({ error: 'Invalid credentials.' });
         const token = jwt.sign({ id: admin.id, username: admin.username, role: 'admin' }, JWT_SECRET, { expiresIn: '1d' });
-        res.json({ token, message: 'Login successful' });
+        res.json({ token, username: admin.username, message: 'Login successful' });
     } catch (err) {
         res.status(500).json({ error: 'Server error' });
     }
@@ -32,7 +36,7 @@ exports.getStats = async (req, res) => {
 
 exports.getDonors = async (req, res) => {
     try {
-        const [rows] = await pool.query('SELECT id, full_name, email, blood_type, phone, gender, state, city, dob, availability, created_at FROM donors ORDER BY created_at DESC');
+        const [rows] = await pool.query('SELECT id, full_name, email, blood_type, phone, gender, state, district, city, dob, availability, created_at FROM donors ORDER BY created_at DESC');
         res.json(rows);
     } catch (err) {
         res.status(500).json({ error: 'Server error' });
@@ -41,7 +45,7 @@ exports.getDonors = async (req, res) => {
 
 exports.getOrganizations = async (req, res) => {
     try {
-        const [rows] = await pool.query('SELECT id, name, email, phone, type, state, city, verified, created_at FROM organizations ORDER BY created_at DESC');
+        const [rows] = await pool.query('SELECT id, name, email, phone, type, state, district, city, verified, created_at FROM organizations ORDER BY created_at DESC');
         res.json(rows);
     } catch (err) {
         res.status(500).json({ error: 'Server error' });
@@ -50,10 +54,14 @@ exports.getOrganizations = async (req, res) => {
 
 exports.verifyOrganization = async (req, res) => {
     try {
-        await pool.query('UPDATE organizations SET verified = NOT verified WHERE id = ?', [req.params.id]);
+        const [result] = await pool.query('UPDATE organizations SET verified = NOT verified WHERE id = ?', [req.params.id]);
+        if (result.affectedRows === 0) {
+            return res.status(404).json({ error: 'Organization not found.' });
+        }
         res.json({ message: 'Organization verification status updated.' });
     } catch (err) {
-        res.status(500).json({ error: 'Server error' });
+        console.error('Update verification failed:', err);
+        res.status(500).json({ error: err.message || 'Server error' });
     }
 };
 
@@ -102,7 +110,7 @@ exports.getReports = async (req, res) => {
 
 exports.getAdmins = async (req, res) => {
     try {
-        const [rows] = await pool.query('SELECT id, username, created_at FROM admins ORDER BY created_at DESC');
+        const [rows] = await pool.query('SELECT id, username, status, created_at FROM admins ORDER BY created_at DESC');
         res.json(rows);
     } catch (err) {
         res.status(500).json({ error: 'Server error' });
@@ -111,6 +119,12 @@ exports.getAdmins = async (req, res) => {
 
 exports.addAdmin = async (req, res) => {
     try {
+        // Super admin check
+        const [currentAdmin] = await pool.query('SELECT username FROM admins WHERE id = ?', [req.adminId]);
+        if (!currentAdmin.length || currentAdmin[0].username !== 'admin') {
+            return res.status(403).json({ error: 'Only the super admin can create new admin accounts.' });
+        }
+
         const { username, password } = req.body;
         const password_hash = await bcrypt.hash(password, 10);
         await pool.query('INSERT INTO admins (username, password_hash) VALUES (?, ?)', [username, password_hash]);
@@ -124,6 +138,26 @@ exports.deleteAdmin = async (req, res) => {
     try {
         await pool.query('DELETE FROM admins WHERE id = ?', [req.params.id]);
         res.json({ message: 'Admin deleted successfully' });
+    } catch (err) {
+        res.status(500).json({ error: 'Server error' });
+    }
+};
+
+exports.toggleAdminStatus = async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        // Prevent disabling the main 'admin' account
+        const [admin] = await pool.query('SELECT username, status FROM admins WHERE id = ?', [id]);
+        if (!admin.length) return res.status(404).json({ error: 'Admin not found' });
+        if (admin[0].username === 'admin') {
+            return res.status(400).json({ error: 'Super admin account cannot be disabled' });
+        }
+
+        const newStatus = admin[0].status === 'Active' ? 'Disabled' : 'Active';
+        await pool.query('UPDATE admins SET status = ? WHERE id = ?', [newStatus, id]);
+
+        res.json({ message: `Admin status updated to ${newStatus}`, status: newStatus });
     } catch (err) {
         res.status(500).json({ error: 'Server error' });
     }
@@ -157,10 +191,11 @@ exports.getOrgDetails = async (req, res) => {
 
         const [inventoryRows] = await pool.query('SELECT * FROM blood_inventory WHERE org_id = ?', [req.params.id]);
         const [memberRows] = await pool.query(`
-            SELECT om.*, d.full_name, d.phone 
+            SELECT om.*, d.full_name, d.phone, d.email, d.blood_type, d.city 
             FROM org_members om 
             JOIN donors d ON om.donor_id = d.id 
             WHERE om.org_id = ?
+            ORDER BY om.joined_at DESC
         `, [req.params.id]);
         const [requestRows] = await pool.query('SELECT * FROM emergency_requests WHERE org_id = ? ORDER BY created_at DESC', [req.params.id]);
 

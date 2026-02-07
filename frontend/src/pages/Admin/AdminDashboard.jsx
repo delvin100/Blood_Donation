@@ -34,6 +34,8 @@ export default function AdminDashboard() {
     const [selectedReport, setSelectedReport] = useState(null);
     const [selectedOrg, setSelectedOrg] = useState(null); // For Detail View
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false); // Mobile Menu State
+    const [isSubmittingAdmin, setIsSubmittingAdmin] = useState(false); // New state for Add Admin
+    const [user, setUser] = useState(null); // Added user state
 
     // Modern Modal State
     const [isModalOpen, setIsModalOpen] = useState(false);
@@ -87,18 +89,24 @@ export default function AdminDashboard() {
                 toast.error('Session expired');
                 navigate('/admin/login');
             } else {
-                toast.error('Failed to update dashboard');
+                const msg = err.response?.data?.error || err.message || 'Failed to update dashboard';
+                toast.error(msg);
             }
             setLoading(false);
         }
     };
 
     useEffect(() => {
+        const storedAdmin = localStorage.getItem('adminUser');
+        if (storedAdmin) {
+            setUser(JSON.parse(storedAdmin));
+        }
         fetchAllData();
     }, [navigate]);
 
     const handleLogout = () => {
         localStorage.removeItem('adminToken');
+        localStorage.removeItem('adminUser');
         navigate('/');
     };
 
@@ -116,7 +124,9 @@ export default function AdminDashboard() {
                     await axios.delete(`/api/admin/donors/${id}`, getAuthConfig());
                     toast.success('Donor deleted');
                     fetchAllData();
-                } catch (error) { toast.error('Failed to delete'); }
+                } catch (error) {
+                    toast.error('Failed to delete');
+                }
             }
         });
         setIsModalOpen(true);
@@ -151,7 +161,10 @@ export default function AdminDashboard() {
                 setSelectedOrg(updated);
             }
             fetchAllData();
-        } catch (error) { toast.error('Failed to update'); }
+        } catch (error) {
+            const msg = error.response?.data?.error || 'Failed to update';
+            toast.error(msg);
+        }
     };
 
     const handleViewOrg = async (id) => {
@@ -208,6 +221,7 @@ export default function AdminDashboard() {
 
     const handleAddAdmin = async (e) => {
         e.preventDefault();
+        setIsSubmittingAdmin(true);
         try {
             await axios.post('/api/admin/admins', newAdmin, getAuthConfig());
             toast.success('Admin added successfully');
@@ -216,10 +230,18 @@ export default function AdminDashboard() {
             fetchAllData();
         } catch (error) {
             toast.error(error.response?.data?.error || 'Failed to add admin');
+        } finally {
+            setIsSubmittingAdmin(false);
         }
     };
 
     const handleDeleteAdmin = async (id) => {
+        // Prevent deleting self or super admin
+        const adminToDelete = data.admins.find(a => a.id === id);
+        if (adminToDelete?.username === 'admin') {
+            return toast.error("Super admin account cannot be deleted");
+        }
+
         setModalConfig({
             title: 'Delete Admin?',
             message: 'Are you sure you want to revoke admin privileges for this user?',
@@ -237,6 +259,21 @@ export default function AdminDashboard() {
             }
         });
         setIsModalOpen(true);
+    };
+
+    const handleToggleAdminStatus = async (id) => {
+        const adminToToggle = data.admins.find(a => a.id === id);
+        if (adminToToggle?.username === 'admin') {
+            return toast.error("Super admin account cannot be disabled");
+        }
+
+        try {
+            await axios.put(`/api/admin/admins/${id}/status`, {}, getAuthConfig());
+            toast.success('Admin status updated');
+            fetchAllData();
+        } catch (error) {
+            toast.error(error.response?.data?.error || 'Failed to update status');
+        }
     };
 
     const handleBroadcast = async (e) => {
@@ -259,16 +296,29 @@ export default function AdminDashboard() {
         if (!term) return data;
 
         const filters = {
-            donors: (item) => item.full_name.toLowerCase().includes(term) || item.email.toLowerCase().includes(term),
-            organizations: (item) => item.name.toLowerCase().includes(term) || item.email.toLowerCase().includes(term),
-            admins: (item) => item.username.toLowerCase().includes(term),
-            inventory: (item) => item.blood_group.toLowerCase().includes(term) || item.org_name.toLowerCase().includes(term),
-            requests: (item) => item.blood_group.toLowerCase().includes(term) || item.org_name.toLowerCase().includes(term),
-            reports: (item) => item.donor_name.toLowerCase().includes(term) || item.org_name.toLowerCase().includes(term),
+            donors: (item) =>
+                item.full_name?.toLowerCase().includes(term) ||
+                item.email?.toLowerCase().includes(term) ||
+                item.phone?.toLowerCase().includes(term),
+            organizations: (item) =>
+                item.name?.toLowerCase().includes(term) ||
+                item.email?.toLowerCase().includes(term) ||
+                item.phone?.toLowerCase().includes(term),
+            admins: (item) => item.username?.toLowerCase().includes(term),
+            inventory: (item) => item.blood_group?.toLowerCase().includes(term) || item.org_name?.toLowerCase().includes(term),
+            requests: (item) => item.blood_group?.toLowerCase().includes(term) || item.org_name?.toLowerCase().includes(term),
+            reports: (item) => item.donor_name?.toLowerCase().includes(term) || item.org_name?.toLowerCase().includes(term),
         };
 
-        if (filters[activeTab]) {
-            return { ...data, [activeTab]: data[activeTab].filter(filters[activeTab]) };
+        // Determine which data key to filter
+        let dataKey = activeTab;
+        if (activeTab === 'orgs') dataKey = 'organizations';
+
+        if (filters[dataKey] && data[dataKey]) {
+            return {
+                ...data,
+                [dataKey]: data[dataKey].filter(filters[dataKey])
+            };
         }
         return data;
     }, [data, searchTerm, activeTab]);
@@ -295,7 +345,7 @@ export default function AdminDashboard() {
                 fixed md:static inset-y-0 left-0 z-50 h-screen p-4 w-72 md:w-80 transition-transform duration-300 ease-in-out
                 ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
             `}>
-                <Sidebar activeTab={activeTab} setActiveTab={(tab) => { setActiveTab(tab); setSelectedOrg(null); setSelectedDonor(null); setSelectedReport(null); setIsMobileMenuOpen(false); }} handleLogout={handleLogout} />
+                <Sidebar activeTab={activeTab} setActiveTab={(tab) => { setActiveTab(tab); setSearchTerm(''); setSelectedOrg(null); setSelectedDonor(null); setSelectedReport(null); setIsMobileMenuOpen(false); }} handleLogout={handleLogout} />
             </div>
 
             {/* Main Content */}
@@ -328,7 +378,7 @@ export default function AdminDashboard() {
                                 <p className="text-gray-500 font-medium mt-1">Dashboard / {activeTab.charAt(0).toUpperCase() + activeTab.slice(1)}</p>
                             </div>
 
-                            {activeTab !== 'dashboard' && activeTab !== 'broadcast' && (
+                            {activeTab !== 'dashboard' && activeTab !== 'broadcast' && activeTab !== 'inventory' && activeTab !== 'requests' && activeTab !== 'reports' && activeTab !== 'admins' && (
                                 <div className="relative w-full md:w-96 group">
                                     <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
                                         <i className="fas fa-search text-gray-400 group-focus-within:text-red-500 transition-colors"></i>
@@ -348,7 +398,7 @@ export default function AdminDashboard() {
                     {/* CONTENT VIEWS */}
                     <div className="animate-fade-in-up">
                         {activeTab === 'dashboard' && (
-                            <DashboardHome stats={stats} data={data} />
+                            <DashboardHome stats={stats} data={data} setActiveTab={setActiveTab} />
                         )}
 
                         {activeTab === 'donors' && (
@@ -364,16 +414,16 @@ export default function AdminDashboard() {
                                     renderRow={(donor) => (
                                         <tr key={donor.id} onClick={() => handleViewDonor(donor.id)} className="cursor-pointer hover:bg-red-50/30 transition-all border-b border-gray-100 last:border-0 group">
                                             <td className="px-6 py-4">
-                                                <div className="flex items-center gap-4">
+                                                <div className="flex items-center justify-center gap-4">
                                                     <Avatar name={donor.full_name} className="shadow-md" />
-                                                    <div>
+                                                    <div className="text-left">
                                                         <div className="font-bold text-gray-900 group-hover:text-red-600 transition-colors">{donor.full_name}</div>
                                                         <div className="text-xs text-gray-500 font-medium">{donor.email}</div>
                                                     </div>
                                                 </div>
                                             </td>
                                             <td className="px-6 py-4 text-center"><Badge type="blood">{donor.blood_type}</Badge></td>
-                                            <td className="px-6 py-4 text-center text-sm font-medium text-gray-600">{donor.city}, {donor.state}</td>
+                                            <td className="px-6 py-4 text-center text-sm font-medium text-gray-600">{donor.city}, {donor.district}, {donor.state}</td>
                                             <td className="px-6 py-4 text-center"><Badge status={donor.availability === 'Available' ? 'success' : 'warning'}>{donor.availability}</Badge></td>
                                             <td className="px-6 py-4 text-center" onClick={(e) => e.stopPropagation()}>
                                                 <div className="flex justify-center items-center gap-2">
@@ -408,18 +458,18 @@ export default function AdminDashboard() {
                                     renderRow={(org) => (
                                         <tr key={org.id} onClick={() => handleViewOrg(org.id)} className="cursor-pointer hover:bg-blue-50/30 transition-all border-b border-gray-100 last:border-0 group">
                                             <td className="px-6 py-4">
-                                                <div className="flex items-center gap-4">
+                                                <div className="flex items-center justify-center gap-4">
                                                     <div className="w-12 h-12 rounded-2xl bg-white shadow-sm border border-gray-100 flex items-center justify-center text-blue-500 text-xl group-hover:scale-110 transition-transform duration-300">
                                                         <i className="fas fa-hospital-alt"></i>
                                                     </div>
-                                                    <div>
+                                                    <div className="text-left">
                                                         <div className="font-bold text-gray-900 group-hover:text-blue-600 transition-colors">{org.name}</div>
                                                         <div className="text-xs text-gray-500 font-medium">{org.email}</div>
                                                     </div>
                                                 </div>
                                             </td>
                                             <td className="px-6 py-4 text-center text-sm font-medium text-gray-600">{org.type}</td>
-                                            <td className="px-6 py-4 text-center text-sm font-medium text-gray-600">{org.city}, {org.state}</td>
+                                            <td className="px-6 py-4 text-center text-sm font-medium text-gray-600">{org.city}, {org.district}, {org.state}</td>
                                             <td className="px-6 py-4 text-center">
                                                 <Badge status={org.verified ? 'success' : 'pending'}>{org.verified ? 'Verified' : 'Pending'}</Badge>
                                             </td>
@@ -429,7 +479,7 @@ export default function AdminDashboard() {
                                                         onClick={(e) => { e.stopPropagation(); handleVerifyOrg(org.id); }}
                                                         className={`text-xs font-bold px-3 py-1.5 rounded-lg transition-colors border ${org.verified ? 'bg-white border-red-200 text-red-600 hover:bg-red-50' : 'bg-green-500 text-white border-transparent hover:bg-green-600 shadow-md shadow-green-200'}`}
                                                     >
-                                                        {org.verified ? 'Revoke' : 'Approve'}
+                                                        {org.verified ? 'Disable' : 'Enable'}
                                                     </button>
                                                     <DeleteButton onClick={(e) => { e.stopPropagation(); handleDeleteOrg(org.id); }} />
                                                 </div>
@@ -442,21 +492,23 @@ export default function AdminDashboard() {
 
                         {activeTab === 'admins' && (
                             <>
-                                <div className="mb-6 flex justify-end">
-                                    <button
-                                        onClick={() => setShowAddAdminModal(true)}
-                                        className="bg-gray-900 text-white px-5 py-2.5 rounded-xl font-bold hover:bg-gray-800 transition-all hover:shadow-lg shadow-gray-900/20 flex items-center gap-2 transform hover:-translate-y-0.5"
-                                    >
-                                        <i className="fas fa-plus"></i> <span className="ml-1">Add New Admin</span>
-                                    </button>
-                                </div>
+                                {user?.username === 'admin' && (
+                                    <div className="mb-6 flex justify-end">
+                                        <button
+                                            onClick={() => setShowAddAdminModal(true)}
+                                            className="bg-gray-900 text-white px-5 py-2.5 rounded-xl font-bold hover:bg-gray-800 transition-all hover:shadow-lg shadow-gray-900/20 flex items-center gap-2 transform hover:-translate-y-0.5"
+                                        >
+                                            <i className="fas fa-plus"></i> <span className="ml-1">Add New Admin</span>
+                                        </button>
+                                    </div>
+                                )}
                                 <DataTable
-                                    columns={['Admin User', 'Created At', 'Actions']}
+                                    columns={['Admin User', 'Created At', 'Status', 'Actions']}
                                     data={filteredData.admins}
                                     renderRow={(admin) => (
                                         <tr key={admin.id} className="hover:bg-gray-50/50 transition-colors border-b border-gray-100 last:border-0">
                                             <td className="px-6 py-4">
-                                                <div className="flex items-center gap-4">
+                                                <div className="flex items-center justify-center gap-4">
                                                     <Avatar name={admin.username} bg="bg-gray-900" text="text-white" />
                                                     <span className="font-bold text-gray-900">{admin.username}</span>
                                                 </div>
@@ -465,9 +517,33 @@ export default function AdminDashboard() {
                                                 {new Date(admin.created_at).toLocaleDateString()}
                                             </td>
                                             <td className="px-6 py-4 text-center">
-                                                <div className="flex justify-center">
-                                                    <DeleteButton onClick={() => handleDeleteAdmin(admin.id)} />
-                                                </div>
+                                                <Badge status={admin.status === 'Active' ? 'success' : 'pending'}>
+                                                    {admin.status}
+                                                </Badge>
+                                            </td>
+                                            <td className="px-6 py-4 text-center">
+                                                {user?.username === 'admin' && (
+                                                    <div className="flex justify-center items-center gap-3">
+                                                        <button
+                                                            onClick={() => handleToggleAdminStatus(admin.id)}
+                                                            disabled={admin.username === 'admin'}
+                                                            className={`text-xs font-bold px-3 py-1.5 rounded-lg transition-colors border ${admin.username === 'admin' ? 'opacity-20 cursor-not-allowed hidden' : ''} ${admin.status === 'Active' ? 'bg-white border-red-200 text-red-600 hover:bg-red-50' : 'bg-green-500 text-white border-transparent hover:bg-green-600 shadow-md shadow-green-200'}`}
+                                                        >
+                                                            {admin.status === 'Active' ? 'Disable' : 'Enable'}
+                                                        </button>
+                                                        {admin.username !== 'admin' && (
+                                                            <button
+                                                                onClick={() => handleDeleteAdmin(admin.id)}
+                                                                className="text-xs font-bold px-3 py-1.5 rounded-lg transition-colors border bg-white border-gray-200 text-gray-600 hover:bg-gray-50"
+                                                            >
+                                                                Delete
+                                                            </button>
+                                                        )}
+                                                    </div>
+                                                )}
+                                                {user?.username !== 'admin' && (
+                                                    <span className="text-gray-400 text-xs italic font-medium">No Actions</span>
+                                                )}
                                             </td>
                                         </tr>
                                     )}
@@ -555,21 +631,20 @@ export default function AdminDashboard() {
 
                         {/* Other tabs like Inventory and Requests can reuse DataTable or custom views */}
                         {activeTab === 'inventory' && (
-                            <InventoryMatrixView inventory={filteredData.inventory} />
+                            <InventoryMatrixView inventory={data.inventory} allOrganizations={data.organizations} allData={data} />
                         )}
 
                         {activeTab === 'requests' && (
                             <DataTable
-                                columns={['Org', 'Blood Group', 'Units', 'Urgency', 'Status', 'Date']}
+                                columns={['Org', 'Blood Group', 'Units', 'Status', 'Date']}
                                 data={filteredData.requests}
                                 renderRow={(req) => (
                                     <tr key={req.id} className="hover:bg-gray-50/50 transition-colors border-b border-gray-100 last:border-0">
-                                        <td className="px-6 py-4 font-bold text-gray-900">{req.org_name}</td>
+                                        <td className="px-6 py-4 font-bold text-gray-900 text-center">{req.org_name}</td>
                                         <td className="px-6 py-4 text-center"><span className="text-red-600 font-black">{req.blood_group}</span></td>
                                         <td className="px-6 py-4 text-center text-gray-700 font-bold">{req.units_required}</td>
-                                        <td className="px-6 py-4 text-center"><Badge status={req.urgency_level === 'Critical' ? 'danger' : req.urgency_level === 'High' ? 'warning' : 'info'}>{req.urgency_level}</Badge></td>
                                         <td className="px-6 py-4 text-center"><Badge status={req.status === 'Active' ? 'warning' : 'success'}>{req.status}</Badge></td>
-                                        <td className="px-6 py-4 text-right text-sm font-medium text-gray-500">{new Date(req.created_at).toLocaleDateString()}</td>
+                                        <td className="px-6 py-4 text-center text-sm font-medium text-gray-500">{new Date(req.created_at).toLocaleDateString()}</td>
                                     </tr>
                                 )}
                             />
@@ -587,7 +662,7 @@ export default function AdminDashboard() {
                                     data={filteredData.reports}
                                     renderRow={(report) => (
                                         <tr key={report.id} onClick={() => handleViewReport(report.id)} className="cursor-pointer hover:bg-gray-50 transition-all border-b border-gray-100 last:border-0">
-                                            <td className="px-6 py-4 text-sm font-medium text-gray-500">{new Date(report.test_date).toLocaleDateString()}</td>
+                                            <td className="px-6 py-4 text-center text-sm font-medium text-gray-500">{new Date(report.test_date).toLocaleDateString()}</td>
                                             <td className="px-6 py-4 text-center">
                                                 <div className="font-bold text-gray-900">{report.donor_name}</div>
                                                 <div className="text-xs text-gray-400 font-medium">{report.donor_email}</div>
@@ -654,15 +729,33 @@ export default function AdminDashboard() {
                             <div className="pt-4">
                                 <button
                                     type="submit"
-                                    className="w-full py-3.5 bg-gray-900 text-white font-bold rounded-xl hover:bg-black shadow-lg shadow-gray-900/20 transition-all transform hover:-translate-y-0.5"
+                                    disabled={isSubmittingAdmin}
+                                    className={`w-full py-3.5 bg-gray-900 text-white font-bold rounded-xl hover:bg-black shadow-lg shadow-gray-200 transition-all transform hover:-translate-y-0.5 flex items-center justify-center gap-2 ${isSubmittingAdmin ? 'opacity-70 cursor-not-allowed' : ''}`}
                                 >
-                                    Create Admin Account
+                                    {isSubmittingAdmin ? (
+                                        <>
+                                            <i className="fas fa-circle-notch fa-spin"></i>
+                                            Creating Account...
+                                        </>
+                                    ) : (
+                                        'Create Admin Account'
+                                    )}
                                 </button>
                             </div>
                         </form>
                     </div>
                 </div>
             )}
+
+            <ModernModal
+                isOpen={isModalOpen}
+                onClose={() => setIsModalOpen(false)}
+                onConfirm={modalConfig.onConfirm}
+                title={modalConfig.title}
+                message={modalConfig.message}
+                confirmText={modalConfig.confirmText}
+                type={modalConfig.type}
+            />
         </div>
     );
 }
@@ -670,18 +763,29 @@ export default function AdminDashboard() {
 // --- SUB-COMPONENTS ---
 
 function OrgDetailView({ org, onBack, onVerify, onDelete }) {
+    const [showAllMembers, setShowAllMembers] = useState(false);
+    const [showAllInventory, setShowAllInventory] = useState(false);
+    const [showAllRequests, setShowAllRequests] = useState(false);
+
     if (!org) return null;
+
+    const displayedMembers = showAllMembers ? org.members : org.members?.slice(0, 5);
+    const displayedInventory = showAllInventory ? org.inventory : org.inventory?.slice(0, 5);
+    const displayedRequests = showAllRequests ? org.requests : org.requests?.slice(0, 5);
 
     return (
         <div className="space-y-6 animate-fade-in-up">
             {/* Header / Actions */}
             <div className="flex justify-between items-center mb-2">
-                <button
-                    onClick={onBack}
-                    className="flex items-center gap-2 text-gray-500 hover:text-gray-900 font-bold bg-white px-5 py-2.5 rounded-xl shadow-sm border border-gray-200 hover:shadow-md transition-all"
-                >
-                    <i className="fas fa-arrow-left"></i> Back
-                </button>
+                <div className="flex items-center gap-4">
+                    <button
+                        onClick={onBack}
+                        className="flex items-center gap-2 text-gray-500 hover:text-gray-900 font-bold bg-white px-5 py-2.5 rounded-xl shadow-sm border border-gray-200 hover:shadow-md transition-all"
+                    >
+                        <i className="fas fa-arrow-left"></i> Back
+                    </button>
+                    <h2 className="text-xl font-black text-gray-900 uppercase tracking-tight">Organization Details</h2>
+                </div>
                 <div className="flex gap-3">
                     <button
                         onClick={onVerify}
@@ -689,7 +793,7 @@ function OrgDetailView({ org, onBack, onVerify, onDelete }) {
                              ${org.verified ? 'bg-amber-100 text-amber-800 hover:bg-amber-200' : 'bg-green-500 text-white hover:bg-green-600 shadow-green-200'}`}
                     >
                         <i className={`fas ${org.verified ? 'fa-ban' : 'fa-check'}`}></i>
-                        {org.verified ? 'Revoke Verification' : 'Verify Organization'}
+                        {org.verified ? 'Disable Access' : 'Enable Access'}
                     </button>
                     <button
                         onClick={onDelete}
@@ -701,198 +805,250 @@ function OrgDetailView({ org, onBack, onVerify, onDelete }) {
             </div>
 
             {/* Profile Header */}
-            <div className="bg-white rounded-3xl shadow-xl shadow-gray-200/50 overflow-hidden border border-white relative group">
-                {/* Enhanced Header Banner */}
-                <div className="h-52 bg-gradient-to-r from-blue-600 via-indigo-600 to-violet-600 relative overflow-hidden">
+            <div className="bg-white rounded-[2rem] shadow-xl shadow-gray-200/50 overflow-hidden border border-white relative group">
+                {/* Header Banner */}
+                <div className="h-44 bg-gradient-to-r from-blue-600 via-indigo-600 to-violet-600 relative overflow-hidden">
                     <div className="absolute inset-0 bg-pattern opacity-10 mix-blend-overlay"></div>
-                    <div className="absolute -top-10 -left-10 w-64 h-64 bg-white/5 rounded-full blur-3xl opacity-20"></div>
                 </div>
 
-                {/* Profile Info Wrapper - Optimized overlap and vertical alignment */}
-                <div className="px-10 pb-10 flex flex-col md:flex-row items-center -mt-10 gap-8 relative z-10">
-                    <div className="w-40 h-40 bg-white rounded-[2.5rem] p-3 shadow-2xl shadow-blue-900/10 transform transition-transform duration-500 hover:scale-105 border border-gray-50 flex-shrink-0">
+                {/* Profile Info */}
+                <div className="px-10 pb-8 flex flex-col md:flex-row items-end -mt-12 gap-8 relative z-10">
+                    <div className="w-40 h-40 bg-white rounded-[2.5rem] p-3 shadow-2xl shadow-blue-900/10 border border-gray-50 flex-shrink-0">
                         <div className="w-full h-full bg-blue-50 rounded-[2rem] flex items-center justify-center text-6xl text-blue-600 shadow-inner">
                             <i className="fas fa-hospital-alt"></i>
                         </div>
                     </div>
-                    <div className="flex-1 pt-12 md:pt-10">
-                        <div className="flex flex-wrap items-center gap-4 mb-4">
-                            <h2 className="text-4xl md:text-5xl font-black text-gray-900 tracking-tight drop-shadow-sm">{org.name}</h2>
+                    <div className="flex-1 pb-2">
+                        <div className="flex flex-wrap items-center gap-4 mb-3">
+                            <h2 className="text-4xl font-black text-gray-900 tracking-tight">{org.name}</h2>
                             {org.verified && (
-                                <div className="bg-blue-500 text-white w-8 h-8 rounded-full flex items-center justify-center shadow-lg shadow-blue-500/30" title="Verified Organization">
-                                    <i className="fas fa-check text-sm font-black"></i>
+                                <div className="bg-blue-500 text-white w-7 h-7 rounded-full flex items-center justify-center shadow-lg shadow-blue-500/30" title="Verified Organization">
+                                    <i className="fas fa-check text-xs font-black"></i>
                                 </div>
                             )}
                         </div>
                         <div className="flex flex-wrap items-center gap-3 text-gray-500 font-bold text-sm">
-                            <span className="flex items-center gap-2.5 bg-gray-50 px-4 py-2 rounded-xl border border-gray-100/50 hover:bg-white transition-colors"><i className="fas fa-map-marker-alt text-red-500"></i> {org.city}, {org.state}</span>
-                            <span className="flex items-center gap-2.5 bg-gray-50 px-4 py-2 rounded-xl border border-gray-100/50 hover:bg-white transition-colors"><i className="fas fa-envelope text-blue-500"></i> {org.email}</span>
-                            <span className="flex items-center gap-2.5 bg-gray-50 px-4 py-2 rounded-xl border border-gray-100/50 hover:bg-white transition-colors"><i className="fas fa-phone text-green-500"></i> {org.phone}</span>
+                            <span className="flex items-center gap-2 bg-gray-50 px-4 py-2 rounded-xl border border-gray-100/50">
+                                <i className="fas fa-map-marker-alt text-red-500"></i> {org.city}, {org.district}, {org.state}
+                            </span>
+                            <span className="flex items-center gap-2 bg-gray-50 px-4 py-2 rounded-xl border border-gray-100/50">
+                                <i className="fas fa-envelope text-blue-500"></i> {org.email}
+                            </span>
+                            <span className="flex items-center gap-2 bg-gray-50 px-4 py-2 rounded-xl border border-gray-100/50">
+                                <i className="fas fa-phone text-green-500"></i> {org.phone}
+                            </span>
                         </div>
                     </div>
                 </div>
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                {/* Left Column: Info & Stats */}
-                <div className="space-y-6">
-                    <div className="bg-white rounded-3xl p-8 shadow-xl shadow-gray-200/50 border border-white">
-                        <h3 className="font-bold text-gray-900 mb-6 pb-4 border-b border-gray-100 flex items-center gap-2">
-                            <i className="fas fa-info-circle text-gray-400"></i> Organization Details
-                        </h3>
-                        <div className="space-y-5">
-                            <div>
-                                <label className="text-gray-400 block text-xs font-bold uppercase tracking-widest mb-1">License Number</label>
-                                <p className="font-mono text-gray-700 bg-gray-50 p-2 rounded-lg border border-gray-100 inline-block">{org.license_number || 'N/A'}</p>
-                            </div>
-                            <div>
-                                <label className="text-gray-400 block text-xs font-bold uppercase tracking-widest mb-1">Address</label>
-                                <p className="text-gray-800 font-medium leading-relaxed">{org.address || 'No address provided'}</p>
-                            </div>
-                            <div>
-                                <label className="text-gray-400 block text-xs font-bold uppercase tracking-widest mb-1">Joined On</label>
-                                <p className="text-gray-800 font-medium">{new Date(org.created_at).toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' })}</p>
-                            </div>
+            {/* Basic Info Row */}
+            <div className="bg-white rounded-3xl p-8 shadow-xl shadow-gray-200/50 border border-white grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+                <div>
+                    <label className="text-gray-400 block text-[10px] font-bold uppercase tracking-widest mb-1">License Number</label>
+                    <p className="font-mono text-gray-700 bg-gray-50 px-3 py-1.5 rounded-lg border border-gray-100 font-bold truncate">{org.license_number || 'N/A'}</p>
+                </div>
+                <div>
+                    <label className="text-gray-400 block text-[10px] font-bold uppercase tracking-widest mb-1">Detailed Address</label>
+                    <p className="text-gray-800 font-semibold line-clamp-2">{org.address || 'No address provided'}</p>
+                </div>
+                <div>
+                    <label className="text-gray-400 block text-[10px] font-bold uppercase tracking-widest mb-1">Organization Type</label>
+                    <div className="mt-1">
+                        <Badge status="info">{org.type}</Badge>
+                    </div>
+                </div>
+                <div>
+                    <label className="text-gray-400 block text-[10px] font-bold uppercase tracking-widest mb-1">Registration Date</label>
+                    <p className="text-gray-800 font-bold mt-1 text-sm">{new Date(org.created_at).toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' })}</p>
+                </div>
+            </div>
+
+            {/* Associated Members (Full Width) */}
+            <div className="bg-white rounded-3xl shadow-xl shadow-gray-200/50 border border-white overflow-hidden">
+                <div className="p-8 border-b border-gray-100 flex justify-between items-center">
+                    <h3 className="font-black text-gray-900 uppercase tracking-tight">Associated Members (Latest)</h3>
+                    <Badge status="pending">{org.members?.length || 0} Total</Badge>
+                </div>
+                <div className="overflow-x-auto">
+                    <table className="min-w-full text-sm">
+                        <thead className="bg-gray-50/50 text-gray-400 font-bold uppercase tracking-wider text-[10px]">
+                            <tr>
+                                <th className="px-8 py-4 text-left">Donor Profile</th>
+                                <th className="px-8 py-4 text-center">Contact Info</th>
+                                <th className="px-8 py-4 text-center">Blood Type</th>
+                                <th className="px-8 py-4 text-center">Location</th>
+                                <th className="px-8 py-4 text-center">Role</th>
+                                <th className="px-8 py-4 text-right">Joined Date</th>
+                            </tr>
+                        </thead>
+                        <tbody className="divide-y divide-gray-50">
+                            {displayedMembers && displayedMembers.length > 0 ? (
+                                displayedMembers.map(member => (
+                                    <tr key={member.id} className="hover:bg-blue-50/30 transition-colors group">
+                                        <td className="px-8 py-5">
+                                            <div className="flex items-center gap-4">
+                                                <Avatar name={member.full_name} color="red" />
+                                                <div className="font-bold text-gray-800 group-hover:text-blue-600 transition-colors">{member.full_name}</div>
+                                            </div>
+                                        </td>
+                                        <td className="px-8 py-5">
+                                            <div className="text-center">
+                                                <div className="text-xs font-bold text-gray-800">{member.phone || 'No Phone'}</div>
+                                                <div className="text-[10px] text-gray-400 font-medium">{member.email}</div>
+                                            </div>
+                                        </td>
+                                        <td className="px-8 py-5 text-center">
+                                            <Badge type="blood">{member.blood_type}</Badge>
+                                        </td>
+                                        <td className="px-8 py-5 text-center">
+                                            <span className="text-xs font-bold text-gray-600"><i className="fas fa-map-marker-alt text-gray-300 mr-1"></i>{member.city}</span>
+                                        </td>
+                                        <td className="px-8 py-5 text-center">
+                                            <span className="px-3 py-1 bg-gray-100 text-gray-600 rounded-lg text-xs font-bold border border-gray-200 truncate inline-block max-w-[100px]">{member.role}</span>
+                                        </td>
+                                        <td className="px-8 py-5 text-right font-bold text-gray-500">
+                                            {new Date(member.joined_at).toLocaleDateString()}
+                                        </td>
+                                    </tr>
+                                ))
+                            ) : (
+                                <tr>
+                                    <td colSpan="6" className="px-8 py-16 text-center text-gray-400">
+                                        <div className="bg-gray-50 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
+                                            <i className="fas fa-users text-2xl opacity-20"></i>
+                                        </div>
+                                        <p className="font-bold">No members attached to this organization</p>
+                                    </td>
+                                </tr>
+                            )}
+                        </tbody>
+                    </table>
+                </div>
+                {org.members?.length > 5 && (
+                    <div className="p-4 bg-gray-50/50 border-t border-gray-100 text-center">
+                        <button
+                            onClick={() => setShowAllMembers(!showAllMembers)}
+                            className="text-xs font-black text-blue-600 hover:text-blue-700 uppercase tracking-widest flex items-center gap-2 mx-auto"
+                        >
+                            {showAllMembers ? 'Show Less' : `Show All ${org.members.length} Members`}
+                            <i className={`fas fa-chevron-${showAllMembers ? 'up' : 'down'}`}></i>
+                        </button>
+                    </div>
+                )}
+            </div>
+
+            {/* Inventory & Requests Grid */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {/* Live Inventory */}
+                <div className="bg-white rounded-3xl shadow-xl shadow-gray-200/50 border border-white overflow-hidden flex flex-col">
+                    <div className="p-8 border-b border-gray-100 flex justify-between items-center">
+                        <h3 className="font-black text-gray-900 uppercase tracking-tight">Live Inventory</h3>
+                        <div className="w-8 h-8 rounded-lg bg-red-50 text-red-500 flex items-center justify-center">
+                            <i className="fas fa-tint"></i>
                         </div>
                     </div>
-
-                    <div className="bg-white rounded-3xl p-8 shadow-xl shadow-gray-200/50 border border-white">
-                        <h3 className="font-bold text-gray-900 mb-6 flex justify-between items-center">
-                            <span>Live Inventory</span>
-                            <span className="text-xs font-bold bg-blue-50 text-blue-600 px-3 py-1 rounded-full">Total Units</span>
-                        </h3>
-                        <div className="space-y-3">
-                            {org.inventory && org.inventory.length > 0 ? (
-                                org.inventory.map(item => (
-                                    <div key={item.id} className="flex justify-between items-center p-3 hover:bg-gray-50 rounded-xl transition-colors cursor-default">
-                                        <div className="flex items-center gap-3">
-                                            <Badge type="blood">{item.blood_group}</Badge>
+                    <div className="flex-1 overflow-auto">
+                        <div className="p-6 space-y-3">
+                            {displayedInventory && displayedInventory.length > 0 ? (
+                                displayedInventory.map(item => (
+                                    <div key={item.id} className="flex justify-between items-center p-4 bg-gray-50/50 hover:bg-white rounded-2xl transition-all border border-transparent hover:border-gray-100 group">
+                                        <div className="flex items-center gap-4">
+                                            <div className="w-12 h-12 rounded-xl bg-white shadow-sm border border-gray-100 flex items-center justify-center text-red-600 font-black text-xl group-hover:scale-110 transition-transform">
+                                                {item.blood_group}
+                                            </div>
+                                            <span className="text-xs font-bold text-gray-400 uppercase tracking-widest">Available Stock</span>
                                         </div>
                                         <div className="flex items-baseline gap-1">
-                                            <span className={`font-black text-xl ${item.units < 5 ? 'text-red-500' : 'text-gray-800'}`}>{item.units}</span>
-                                            <span className="text-xs font-bold text-gray-400 uppercase">units</span>
+                                            <span className={`font-black text-3xl ${item.units < 5 ? 'text-red-500' : 'text-gray-900'}`}>{item.units}</span>
+                                            <span className="text-[10px] font-black text-gray-400 uppercase">units</span>
                                         </div>
                                     </div>
                                 ))
                             ) : (
-                                <div className="text-center py-8">
+                                <div className="text-center py-12">
                                     <div className="w-12 h-12 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-2 text-gray-300"><i className="fas fa-box-open"></i></div>
-                                    <p className="text-gray-400 text-sm font-medium">No inventory records</p>
+                                    <p className="text-gray-400 text-sm font-bold uppercase tracking-widest">Out of Stock</p>
                                 </div>
                             )}
                         </div>
                     </div>
+                    {org.inventory?.length > 5 && (
+                        <div className="p-4 bg-gray-50/50 border-t border-gray-100 text-center">
+                            <button
+                                onClick={() => setShowAllInventory(!showAllInventory)}
+                                className="text-xs font-black text-blue-600 hover:text-blue-700 uppercase tracking-widest flex items-center gap-2 mx-auto"
+                            >
+                                {showAllInventory ? 'Show Less' : 'Show More Data'}
+                                <i className={`fas fa-chevron-${showAllInventory ? 'up' : 'down'}`}></i>
+                            </button>
+                        </div>
+                    )}
                 </div>
 
-                {/* Right Column: Members & History */}
-                <div className="lg:col-span-2 space-y-6">
-                    {/* Members Table */}
-                    <div className="bg-white rounded-3xl shadow-xl shadow-gray-200/50 border border-white overflow-hidden">
-                        <div className="p-8 border-b border-gray-100 bg-white">
-                            <h3 className="font-bold text-gray-900">Associated Members</h3>
-                        </div>
-                        <div className="overflow-x-auto">
-                            <table className="min-w-full text-sm">
-                                <thead className="bg-gray-50/50 text-gray-400 font-bold uppercase tracking-wider text-xs">
-                                    <tr>
-                                        <th className="px-8 py-4 text-left">Member Profile</th>
-                                        <th className="px-8 py-4 text-center">Role</th>
-                                        <th className="px-8 py-4 text-right">Joined Date</th>
-                                    </tr>
-                                </thead>
-                                <tbody className="divide-y divide-gray-50">
-                                    {org.members && org.members.length > 0 ? (
-                                        org.members.map(member => (
-                                            <tr key={member.id} className="hover:bg-gray-50/50 transition-colors">
-                                                <td className="px-8 py-5">
-                                                    <div className="flex items-center gap-4">
-                                                        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center text-sm text-gray-500 font-bold border-2 border-white shadow-sm">
-                                                            {member.full_name[0]}
-                                                        </div>
-                                                        <div>
-                                                            <div className="font-bold text-gray-800">{member.full_name}</div>
-                                                            <div className="text-xs text-gray-400 font-medium">{member.phone || 'No Phone'}</div>
-                                                        </div>
-                                                    </div>
-                                                </td>
-                                                <td className="px-8 py-5 text-center">
-                                                    <span className="px-3 py-1 bg-blue-50 text-blue-600 rounded-lg text-xs font-bold border border-blue-100">{member.role}</span>
-                                                </td>
-                                                <td className="px-8 py-5 text-right text-gray-500 font-medium">
-                                                    {new Date(member.joined_at).toLocaleDateString()}
-                                                </td>
-                                            </tr>
-                                        ))
-                                    ) : (
-                                        <tr>
-                                            <td colSpan="3" className="px-8 py-12 text-center text-gray-400">
-                                                <i className="fas fa-users mb-2 text-2xl opacity-20 block"></i>
-                                                No members attached to this organization
-                                            </td>
-                                        </tr>
-                                    )}
-                                </tbody>
-                            </table>
+                {/* Request History */}
+                <div className="bg-white rounded-3xl shadow-xl shadow-gray-200/50 border border-white overflow-hidden flex flex-col">
+                    <div className="p-8 border-b border-gray-100 flex justify-between items-center">
+                        <h3 className="font-black text-gray-900 uppercase tracking-tight">Request History</h3>
+                        <div className="w-8 h-8 rounded-lg bg-blue-50 text-blue-500 flex items-center justify-center">
+                            <i className="fas fa-history"></i>
                         </div>
                     </div>
-
-                    {/* Recent Requests */}
-                    <div className="bg-white rounded-3xl shadow-xl shadow-gray-200/50 border border-white overflow-hidden">
-                        <div className="p-8 border-b border-gray-100 bg-white">
-                            <h3 className="font-bold text-gray-900">Request History</h3>
-                        </div>
-                        <div className="overflow-x-auto">
-                            <table className="min-w-full text-sm">
-                                <thead className="bg-gray-50/50 text-gray-400 font-bold uppercase tracking-wider text-xs">
-                                    <tr>
-                                        <th className="px-8 py-4 text-left">Blood Info</th>
-                                        <th className="px-8 py-4 text-center">Urgency</th>
-                                        <th className="px-8 py-4 text-center">Status</th>
-                                        <th className="px-8 py-4 text-right">Date Created</th>
-                                    </tr>
-                                </thead>
-                                <tbody className="divide-y divide-gray-50">
-                                    {org.requests && org.requests.length > 0 ? (
-                                        org.requests.map(req => (
-                                            <tr key={req.id} className="hover:bg-gray-50/50 transition-colors">
-                                                <td className="px-8 py-5">
-                                                    <div className="flex items-center gap-3">
-                                                        <span className="text-xl font-black text-red-500">{req.blood_group}</span>
-                                                        <div className="h-4 w-px bg-gray-200"></div>
-                                                        <span className="text-gray-600 font-bold">{req.units_required} Units</span>
-                                                    </div>
-                                                </td>
-                                                <td className="px-8 py-5 text-center">
-                                                    <Badge status={req.urgency_level === 'Critical' ? 'danger' : 'warning'}>{req.urgency_level}</Badge>
-                                                </td>
-                                                <td className="px-8 py-5 text-center">
-                                                    <Badge status={req.status === 'Active' ? 'warning' : 'success'}>{req.status}</Badge>
-                                                </td>
-                                                <td className="px-8 py-5 text-right text-gray-500 font-medium">
-                                                    {new Date(req.created_at).toLocaleDateString()}
-                                                </td>
-                                            </tr>
-                                        ))
-                                    ) : (
-                                        <tr>
-                                            <td colSpan="4" className="px-8 py-12 text-center text-gray-400">
-                                                <i className="fas fa-clipboard-list mb-2 text-2xl opacity-20 block"></i>
-                                                No service requests found
-                                            </td>
-                                        </tr>
-                                    )}
-                                </tbody>
-                            </table>
+                    <div className="flex-1 overflow-auto">
+                        <div className="p-6 space-y-3">
+                            {displayedRequests && displayedRequests.length > 0 ? (
+                                displayedRequests.map(req => (
+                                    <div key={req.id} className="flex justify-between items-center p-4 bg-gray-50/50 hover:bg-white rounded-2xl transition-all border border-transparent hover:border-gray-100 group">
+                                        <div className="flex items-center gap-4">
+                                            <div className="w-10 h-10 rounded-full bg-white shadow-sm border border-gray-100 flex items-center justify-center text-gray-900 font-black text-sm">
+                                                {req.blood_group}
+                                            </div>
+                                            <div>
+                                                <div className="text-sm font-bold text-gray-800">{req.units_required} units</div>
+                                                <div className="text-[10px] text-gray-400 font-bold uppercase">{new Date(req.created_at).toLocaleDateString()}</div>
+                                            </div>
+                                        </div>
+                                        <div className="flex items-center gap-3">
+                                            <Badge status={req.urgency_level === 'Critical' ? 'danger' : 'warning'}>{req.urgency_level}</Badge>
+                                            <Badge status={req.status === 'Active' ? 'warning' : 'success'}>{req.status}</Badge>
+                                        </div>
+                                    </div>
+                                ))
+                            ) : (
+                                <div className="text-center py-12 text-gray-400">
+                                    <i className="fas fa-clipboard-list mb-2 text-2xl opacity-20 block"></i>
+                                    <p className="font-bold uppercase tracking-widest text-[10px]">No History found</p>
+                                </div>
+                            )}
                         </div>
                     </div>
+                    {org.requests?.length > 5 && (
+                        <div className="p-4 bg-gray-50/50 border-t border-gray-100 text-center">
+                            <button
+                                onClick={() => setShowAllRequests(!showAllRequests)}
+                                className="text-xs font-black text-blue-600 hover:text-blue-700 uppercase tracking-widest flex items-center gap-2 mx-auto"
+                            >
+                                {showAllRequests ? 'Show Less' : 'Show More History'}
+                                <i className={`fas fa-chevron-${showAllRequests ? 'up' : 'down'}`}></i>
+                            </button>
+                        </div>
+                    )}
                 </div>
             </div>
         </div>
     );
 }
 
-function DashboardHome({ stats, data }) {
+function DashboardHome({ stats, data, setActiveTab }) {
     // Process Data for Charts
+    const recentRegistrations = useMemo(() => {
+        const allUsers = [
+            ...data.donors.map(d => ({ ...d, type: 'Donor', name: d.full_name, city: d.city, state: d.state, created_at: d.created_at })),
+            ...data.organizations.map(o => ({ ...o, type: 'Organization', name: o.name, city: o.city, state: o.state, created_at: o.created_at }))
+        ];
+        return allUsers.sort((a, b) => new Date(b.created_at) - new Date(a.created_at)).slice(0, 5);
+    }, [data.donors, data.organizations]);
+
     const inventoryData = useMemo(() => {
         // Group by Blood Type
         const grouped = {};
@@ -977,10 +1133,15 @@ function DashboardHome({ stats, data }) {
             {/* Recent Activity (Requests & Low Stock) */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 <div className="bg-white rounded-3xl p-8 shadow-xl shadow-gray-200/50 border border-white">
-                    <h3 className="text-lg font-bold text-gray-900 mb-6 flex items-center gap-2">
-                        <span className="w-8 h-8 rounded-lg bg-red-50 text-red-500 flex items-center justify-center"><i className="fas fa-clock"></i></span>
-                        Recent Emergency Requests
-                    </h3>
+                    <div className="flex justify-between items-center mb-6">
+                        <h3 className="text-lg font-bold text-gray-900 flex items-center gap-2">
+                            <span className="w-8 h-8 rounded-lg bg-red-50 text-red-500 flex items-center justify-center"><i className="fas fa-clock"></i></span>
+                            Recent Emergency Requests
+                        </h3>
+                        <button onClick={() => setActiveTab('requests')} className="text-xs font-bold text-gray-400 hover:text-red-600 transition-colors uppercase tracking-wider flex items-center gap-1 group/btn">
+                            See All <i className="fas fa-arrow-right group-hover/btn:translate-x-1 transition-transform"></i>
+                        </button>
+                    </div>
                     <div className="space-y-4">
                         {data.requests.slice(0, 5).map(req => (
                             <div key={req.id} className="flex justify-between items-center p-4 hover:bg-gray-50 rounded-2xl transition-all border border-transparent hover:border-gray-100 group">
@@ -1002,28 +1163,33 @@ function DashboardHome({ stats, data }) {
 
                 <div className="bg-white rounded-3xl p-8 shadow-xl shadow-gray-200/50 border border-white">
                     <h3 className="text-lg font-bold text-gray-900 mb-6 flex items-center gap-2">
-                        <span className="w-8 h-8 rounded-lg bg-amber-50 text-amber-500 flex items-center justify-center"><i className="fas fa-exclamation-triangle"></i></span>
-                        Low Stock Alerts
+                        <span className="w-8 h-8 rounded-lg bg-blue-50 text-blue-500 flex items-center justify-center"><i className="fas fa-user-plus"></i></span>
+                        Recent Registrations
                     </h3>
                     <div className="space-y-3">
-                        {data.inventory.filter(i => i.units < 5).slice(0, 5).map(item => (
-                            <div key={item.id} className="flex items-center justify-between p-4 bg-red-50/50 rounded-2xl border border-red-100/50">
+                        {recentRegistrations.map((user, idx) => (
+                            <div key={idx} className="flex items-center justify-between p-4 hover:bg-gray-50 rounded-2xl transition-all border border-transparent hover:border-gray-100 group">
                                 <div className="flex items-center gap-4">
-                                    <div className="w-10 h-10 rounded-xl bg-white flex items-center justify-center text-red-500 font-black shadow-sm">
-                                        {item.blood_group}
+                                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-white font-black shadow-md ${user.type === 'Donor' ? 'bg-gradient-to-br from-red-400 to-red-500' : 'bg-gradient-to-br from-blue-400 to-blue-500'}`}>
+                                        <i className={`fas fa-${user.type === 'Donor' ? 'user' : 'hospital'}`}></i>
                                     </div>
                                     <div>
-                                        <p className="text-sm font-bold text-gray-800">{item.org_name}</p>
-                                        <p className="text-xs text-red-600 font-bold bg-red-100 px-2 py-0.5 rounded-full inline-block mt-1">Critical Level</p>
+                                        <p className="font-bold text-gray-800 group-hover:text-blue-600 transition-colors">{user.name}</p>
+                                        <p className="text-xs text-gray-500 font-medium capitalize flex items-center gap-1">
+                                            {user.type} <span className="w-1 h-1 rounded-full bg-gray-300"></span> {user.city}, {user.district}, {user.state}
+                                        </p>
                                     </div>
                                 </div>
-                                <div className="text-2xl font-black text-red-500">{item.units} <span className="text-xs font-bold text-gray-400">units</span></div>
+                                <div className="text-right">
+                                    <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block mb-0.5">Joined</span>
+                                    <span className="text-xs font-bold text-gray-700 bg-gray-100 px-2 py-1 rounded-md">{new Date(user.created_at).toLocaleDateString()}</span>
+                                </div>
                             </div>
                         ))}
-                        {data.inventory.filter(i => i.units < 5).length === 0 && (
+                        {recentRegistrations.length === 0 && (
                             <div className="flex flex-col items-center justify-center h-48 text-gray-400">
-                                <i className="fas fa-check-circle text-4xl text-green-200 mb-3"></i>
-                                <p className="font-medium">Inventory levels are healthy</p>
+                                <i className="fas fa-users-slash text-4xl text-gray-200 mb-3"></i>
+                                <p className="font-medium">No recent registrations found</p>
                             </div>
                         )}
                     </div>
@@ -1078,10 +1244,13 @@ function Sidebar({ activeTab, setActiveTab, handleLogout }) {
                 </div>
             </div>
 
-            <div className="p-4 bg-gray-50/80 border-t border-gray-100">
-                <button onClick={handleLogout} className="w-full group flex items-center justify-center gap-3 text-sm font-bold text-gray-600 hover:text-red-600 py-3.5 px-4 rounded-xl transition-all hover:bg-white hover:shadow-lg hover:shadow-gray-200/50 border border-transparent hover:border-gray-100">
-                    <i className="fas fa-sign-out-alt group-hover:translate-x-1 transition-transform"></i>
-                    <span>Sign Out</span>
+            <div className="p-4 border-t border-gray-50">
+                <button
+                    onClick={handleLogout}
+                    className="w-full flex items-center p-4 rounded-2xl text-gray-400 hover:bg-red-50 hover:text-red-600 transition-all duration-200 group"
+                >
+                    <i className="fas fa-sign-out-alt text-xl group-hover:rotate-180 transition-transform duration-300"></i>
+                    <span className="ml-4 font-bold">Sign Out</span>
                 </button>
             </div>
         </aside>
@@ -1153,7 +1322,7 @@ function DataTable({ columns, data, renderRow }) {
                     <thead>
                         <tr className="bg-gray-50/50 border-b border-gray-100">
                             {columns.map((col, i) => (
-                                <th key={i} className={`px-6 py-5 text-xs font-bold text-gray-400 uppercase tracking-widest ${i === 0 ? 'text-left' : 'text-center'}`}>{col}</th>
+                                <th key={i} className="px-6 py-5 text-xs font-bold text-gray-400 uppercase tracking-widest text-center">{col}</th>
                             ))}
                         </tr>
                     </thead>
@@ -1206,100 +1375,161 @@ function DeleteButton({ onClick }) {
     );
 }
 
-function InventoryMatrixView({ inventory }) {
-    const bloodGroups = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'];
+function InventoryMatrixView({ inventory = [], allOrganizations = [], allData = {} }) {
+    const bloodGroups = useMemo(() => {
+        // Start with standard groups to ensure they are always first/present
+        const standard = [
+            'O+', 'A+', 'B+', 'AB+', 'O-', 'A-', 'B-', 'AB-',
+            'A1+', 'A1-', 'A1B+', 'A1B-', 'A2+', 'A2-', 'A2B+', 'A2B-',
+            'Bombay Blood Group', 'INRA'
+        ];
+        const discovered = new Set(standard);
+
+        // Scan all data for any other groups
+        inventory.forEach(i => i.blood_group && discovered.add(i.blood_group));
+        allData.donors?.forEach(d => d.blood_type && discovered.add(d.blood_type));
+        allData.requests?.forEach(r => r.blood_group && discovered.add(r.blood_group));
+
+        // Convert to array, maintaining standard order first, then discovered ones
+        const list = Array.from(discovered);
+        return list.sort((a, b) => {
+            const indexA = standard.indexOf(a);
+            const indexB = standard.indexOf(b);
+            if (indexA !== -1 && indexB !== -1) return indexA - indexB;
+            if (indexA !== -1) return -1;
+            if (indexB !== -1) return 1;
+            return a.localeCompare(b);
+        });
+    }, [inventory, allData]);
 
     const groupedData = useMemo(() => {
         const groups = {};
 
+        // Initialize with ALL organizations
+        allOrganizations.forEach(org => {
+            groups[org.name] = {
+                name: org.name,
+                total: 0,
+                last_updated: org.created_at, // Fallback to registration date
+                counts: {}
+            };
+            bloodGroups.forEach(bg => groups[org.name].counts[bg] = 0);
+        });
+
+        // Fill with actual inventory data
         inventory.forEach(item => {
-            if (!groups[item.org_name]) {
-                groups[item.org_name] = {
-                    name: item.org_name,
-                    total: 0,
-                    last_updated: item.last_updated,
-                    counts: {}
-                };
-                bloodGroups.forEach(bg => groups[item.org_name].counts[bg] = 0);
-            }
+            if (groups[item.org_name]) {
+                groups[item.org_name].counts[item.blood_group] = item.units;
+                groups[item.org_name].total += item.units;
 
-            groups[item.org_name].counts[item.blood_group] = item.units;
-            groups[item.org_name].total += item.units;
-
-            if (new Date(item.last_updated) > new Date(groups[item.org_name].last_updated)) {
-                groups[item.org_name].last_updated = item.last_updated;
+                if (new Date(item.last_updated) > new Date(groups[item.org_name].last_updated)) {
+                    groups[item.org_name].last_updated = item.last_updated;
+                }
             }
         });
 
         return Object.values(groups);
-    }, [inventory]);
+    }, [inventory, allOrganizations]);
 
-    if (!inventory || inventory.length === 0) {
+    const totals = useMemo(() => {
+        const counts = {};
+        bloodGroups.forEach(bg => counts[bg] = 0);
+        inventory.forEach(item => {
+            counts[item.blood_group] = (counts[item.blood_group] || 0) + item.units;
+        });
+        return counts;
+    }, [inventory, bloodGroups]);
+
+    if (!allOrganizations || allOrganizations.length === 0) {
         return (
             <div className="bg-white rounded-3xl shadow-xl shadow-gray-200/50 p-16 text-center border border-white">
                 <div className="w-24 h-24 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-6 text-gray-300 text-4xl animate-bounce-slow">
                     <i className="fas fa-box-open"></i>
                 </div>
-                <h3 className="text-xl font-black text-gray-800 mb-2">Inventory Empty</h3>
-                <p className="text-gray-500 font-medium max-w-xs mx-auto">No blood units found in the system at the moment.</p>
+                <h3 className="text-xl font-black text-gray-800 mb-2">No Organizations Found</h3>
+                <p className="text-gray-500 font-medium max-w-xs mx-auto">Add organizations to start tracking blood inventory.</p>
             </div>
         );
     }
 
     return (
-        <div className="bg-white rounded-3xl shadow-xl shadow-gray-200/50 border border-white overflow-hidden animate-fade-in-up">
-            <div className="overflow-x-auto">
-                <table className="min-w-full">
-                    <thead>
-                        <tr className="bg-gray-50/50 border-b border-gray-100">
-                            <th className="px-6 py-5 text-left text-xs font-bold text-gray-400 uppercase tracking-widest sticky left-0 bg-gray-50 z-10 w-64 border-r border-gray-100">Organization</th>
-                            {bloodGroups.map(bg => (
-                                <th key={bg} className="px-4 py-5 text-center text-xs font-bold text-red-500 uppercase tracking-widest">{bg}</th>
-                            ))}
-                            <th className="px-6 py-5 text-center text-xs font-bold text-gray-400 uppercase tracking-widest border-l border-gray-100">Total</th>
-                            <th className="px-6 py-5 text-right text-xs font-bold text-gray-400 uppercase tracking-widest">Last Updated</th>
-                        </tr>
-                    </thead>
-                    <tbody className="divide-y divide-gray-50">
-                        {groupedData.map((org, index) => (
-                            <tr key={index} className="hover:bg-blue-50/30 transition-colors group">
-                                <td className="px-6 py-4 font-bold text-gray-900 sticky left-0 bg-white group-hover:bg-blue-50/30 transition-colors z-10 border-r border-gray-100">
-                                    <div className="flex items-center gap-3">
-                                        <div className="w-8 h-8 rounded-lg bg-blue-50 text-blue-500 flex items-center justify-center text-xs">
-                                            <i className="fas fa-hospital"></i>
+        <div className="space-y-8 animate-fade-in-up">
+            {/* Global Inventory Summary */}
+            <div className="flex flex-wrap gap-4">
+                {bloodGroups.map(bg => (
+                    <div key={bg} className="bg-white p-4 rounded-2xl shadow-sm border border-white hover:shadow-md transition-all group flex-1 min-w-[120px]">
+                        <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-1 group-hover:text-red-500 transition-colors">{bg}</label>
+                        <div className="flex items-baseline gap-1">
+                            <span className="text-2xl font-black text-gray-800">{totals[bg] || 0}</span>
+                            <span className="text-[10px] font-bold text-gray-400 uppercase">Units</span>
+                        </div>
+                    </div>
+                ))}
+            </div>
+
+            <div className="bg-white rounded-3xl shadow-xl shadow-gray-200/50 border border-white overflow-hidden">
+                <div className="p-6 border-b border-gray-100 flex justify-between items-center bg-gray-50/30">
+                    <h3 className="font-bold text-gray-800 flex items-center gap-2">
+                        <i className="fas fa-list-ul text-blue-500"></i>
+                        Inventory Matrix
+                    </h3>
+                    <div className="text-xs font-bold text-gray-400 uppercase tracking-wider">
+                        Total Units: <span className="text-gray-900">{Object.values(totals).reduce((a, b) => a + b, 0)}</span>
+                    </div>
+                </div>
+                <div className="overflow-x-auto">
+                    <table className="min-w-full">
+                        <thead>
+                            <tr className="bg-gray-50/50 border-b border-gray-100">
+                                <th className="px-6 py-5 text-center text-xs font-bold text-gray-400 uppercase tracking-widest sticky left-0 bg-gray-50 z-10 w-64 border-r border-gray-100">Organization</th>
+                                {bloodGroups.map(bg => (
+                                    <th key={bg} className="px-b py-5 text-center text-xs font-bold text-red-500 uppercase tracking-widest">{bg}</th>
+                                ))}
+                                <th className="px-6 py-5 text-center text-xs font-bold text-gray-400 uppercase tracking-widest border-l border-gray-100">Total</th>
+                                <th className="px-6 py-5 text-center text-xs font-bold text-gray-400 uppercase tracking-widest">Last Updated</th>
+                            </tr>
+                        </thead>
+                        <tbody className="divide-y divide-gray-50">
+                            {groupedData.map((org, index) => (
+                                <tr key={index} className="hover:bg-blue-50/30 transition-colors group">
+                                    <td className="px-6 py-4 font-bold text-gray-900 sticky left-0 bg-white group-hover:bg-blue-50/30 transition-colors z-10 border-r border-gray-100 text-center">
+                                        <div className="flex items-center justify-center gap-3">
+                                            <div className="w-8 h-8 rounded-lg bg-blue-50 text-blue-500 flex items-center justify-center text-xs">
+                                                <i className="fas fa-hospital"></i>
+                                            </div>
+                                            {org.name}
                                         </div>
-                                        {org.name}
-                                    </div>
-                                </td>
-                                {bloodGroups.map(bg => {
-                                    const count = org.counts[bg];
-                                    const isLow = count < 5;
-                                    const isZero = count === 0;
-                                    return (
-                                        <td key={bg} className="px-4 py-4 text-center">
-                                            <span className={`
+                                    </td>
+                                    {bloodGroups.map(bg => {
+                                        const count = org.counts[bg];
+                                        const isLow = count < 5;
+                                        const isZero = count === 0;
+                                        return (
+                                            <td key={bg} className="px-4 py-4 text-center">
+                                                <span className={`
                                                 inline-block w-8 h-8 leading-8 rounded-lg text-sm font-bold transition-all
                                                 ${isZero ? 'text-gray-300 bg-gray-50' :
-                                                    isLow ? 'text-red-600 bg-red-100 shadow-sm shadow-red-200 animate-pulse-slow' :
-                                                        'text-gray-800 bg-white border border-gray-100'}
+                                                        isLow ? 'text-red-600 bg-red-100 shadow-sm shadow-red-200 animate-pulse-slow' :
+                                                            'text-gray-800 bg-white border border-gray-100'}
                                             `}>
-                                                {count}
-                                            </span>
-                                        </td>
-                                    );
-                                })}
-                                <td className="px-6 py-4 text-center border-l border-gray-100 bg-gray-50/30">
-                                    <span className="font-black text-gray-900 bg-gray-200/50 px-3 py-1 rounded-full text-sm">
-                                        {org.total}
-                                    </span>
-                                </td>
-                                <td className="px-6 py-4 text-right text-sm font-medium text-gray-500">
-                                    {new Date(org.last_updated).toLocaleDateString()}
-                                </td>
-                            </tr>
-                        ))}
-                    </tbody>
-                </table>
+                                                    {count}
+                                                </span>
+                                            </td>
+                                        );
+                                    })}
+                                    <td className="px-6 py-4 text-center border-l border-gray-100 bg-gray-50/30">
+                                        <span className="font-black text-gray-900 bg-gray-200/50 px-3 py-1 rounded-full text-sm">
+                                            {org.total}
+                                        </span>
+                                    </td>
+                                    <td className="px-6 py-4 text-center text-sm font-medium text-gray-500">
+                                        {new Date(org.last_updated).toLocaleDateString()}
+                                    </td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                </div>
             </div>
         </div>
     );
@@ -1307,6 +1537,9 @@ function InventoryMatrixView({ inventory }) {
 
 function DonorDetailView({ donor, onBack }) {
     if (!donor) return null;
+
+    // Filter actual donations (where units_donated > 0)
+    const actualDonations = donor.donations?.filter(d => d.units_donated > 0) || [];
 
     return (
         <div className="space-y-6 animate-fade-in-up">
@@ -1325,7 +1558,7 @@ function DonorDetailView({ donor, onBack }) {
                     <div className="absolute inset-0 bg-pattern opacity-10 mix-blend-overlay"></div>
                 </div>
 
-                {/* Profile Info Wrapper - Optimized overlap and vertical alignment */}
+                {/* Profile Info Wrapper */}
                 <div className="px-10 pb-10 flex flex-col md:flex-row items-center -mt-10 gap-8 relative z-10">
                     <div className="relative transform transition-transform duration-500 hover:scale-105 flex-shrink-0">
                         <Avatar name={donor.full_name} size="w-40 h-40" className="border-8 border-white shadow-2xl rounded-[2.5rem]" />
@@ -1340,71 +1573,114 @@ function DonorDetailView({ donor, onBack }) {
                                 {donor.availability}
                             </span>
                         </div>
-                        <div className="flex flex-wrap items-center gap-3 text-gray-500 font-bold text-sm">
+
+                        {/* Contact & Location Info */}
+                        <div className="flex flex-wrap items-center gap-3 text-gray-500 font-bold text-sm mb-3">
                             <span className="flex items-center gap-2.5 bg-gray-50 px-4 py-2 rounded-xl border border-gray-100/50 hover:bg-white transition-colors"><i className="fas fa-envelope text-red-500"></i> {donor.email}</span>
                             <span className="flex items-center gap-2.5 bg-gray-50 px-4 py-2 rounded-xl border border-gray-100/50 hover:bg-white transition-colors"><i className="fas fa-phone text-green-500"></i> {donor.phone || 'No phone'}</span>
-                            <span className="flex items-center gap-2.5 bg-gray-50 px-4 py-2 rounded-xl border border-gray-100/50 hover:bg-white transition-colors"><i className="fas fa-map-marker-alt text-blue-500"></i> {donor.city}, {donor.state}</span>
+                            <span className="flex items-center gap-2.5 bg-gray-50 px-4 py-2 rounded-xl border border-gray-100/50 hover:bg-white transition-colors">
+                                <i className="fas fa-map-marker-alt text-blue-500"></i>
+                                {[donor.city, donor.district, donor.state].filter(Boolean).join(', ')}
+                            </span>
+                        </div>
+
+                        {/* DOB & Gender Info */}
+                        <div className="flex flex-wrap items-center gap-3 text-gray-500 font-bold text-sm">
+                            <span className="flex items-center gap-2.5 bg-gray-50 px-4 py-2 rounded-xl border border-gray-100/50 hover:bg-white transition-colors">
+                                <i className="fas fa-birthday-cake text-purple-500"></i>
+                                {donor.dob ? new Date(donor.dob).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) : 'N/A'}
+                            </span>
+                            <span className="flex items-center gap-2.5 bg-gray-50 px-4 py-2 rounded-xl border border-gray-100/50 hover:bg-white transition-colors capitalize">
+                                <i className={`fas fa-${donor.gender === 'male' ? 'mars' : donor.gender === 'female' ? 'venus' : 'genderless'} text-indigo-500`}></i>
+                                {donor.gender || 'Not specified'}
+                            </span>
                         </div>
                     </div>
                 </div>
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                <div className="space-y-6">
-                    <div className="bg-white rounded-3xl p-8 shadow-xl shadow-gray-200/50 border border-white">
-                        <h3 className="font-bold text-gray-900 mb-6 pb-4 border-b border-gray-100 uppercase tracking-widest text-xs">Personal Information</h3>
-                        <div className="space-y-4">
-                            <div>
-                                <label className="text-gray-400 block text-[10px] font-bold uppercase tracking-widest mb-1">Gender</label>
-                                <p className="text-gray-800 font-bold capitalize">{donor.gender || 'Not specified'}</p>
-                            </div>
-                            <div>
-                                <label className="text-gray-400 block text-[10px] font-bold uppercase tracking-widest mb-1">Date of Birth</label>
-                                <p className="text-gray-800 font-bold">{donor.dob ? new Date(donor.dob).toLocaleDateString() : 'N/A'}</p>
-                            </div>
-                            <div>
-                                <label className="text-gray-400 block text-[10px] font-bold uppercase tracking-widest mb-1">Status</label>
-                                <Badge status={donor.availability === 'Available' ? 'success' : 'warning'}>{donor.availability}</Badge>
-                            </div>
-                        </div>
+            <div className="space-y-6">
+                {/* Donations Summary */}
+                <div className="bg-white rounded-3xl shadow-xl shadow-gray-200/50 border border-white overflow-hidden">
+                    <div className="p-8 border-b border-gray-100">
+                        <h3 className="font-bold text-gray-900 flex items-center gap-2">
+                            <i className="fas fa-tint text-red-500"></i>
+                            Donation Summary
+                        </h3>
+                        <p className="text-xs text-gray-500 font-medium mt-1">
+                            {actualDonations.length} total donation{actualDonations.length !== 1 ? 's' : ''} recorded
+                        </p>
+                    </div>
+                    <div className="overflow-x-auto">
+                        <table className="min-w-full">
+                            <thead className="bg-gray-50/50 text-gray-400 font-bold uppercase tracking-wider text-[10px]">
+                                <tr>
+                                    <th className="px-8 py-4 text-center">#</th>
+                                    <th className="px-8 py-4 text-left">Date</th>
+                                    <th className="px-8 py-4 text-center">Organization</th>
+                                    <th className="px-8 py-4 text-center">Units Donated</th>
+                                    <th className="px-8 py-4 text-center">Status</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-gray-50">
+                                {actualDonations.length > 0 ? (
+                                    actualDonations.map((don, idx) => (
+                                        <tr key={don.id} className="hover:bg-gray-50/50 transition-colors">
+                                            <td className="px-8 py-5 text-center">
+                                                <span className="w-8 h-8 rounded-lg bg-gradient-to-br from-red-500 to-pink-500 text-white flex items-center justify-center font-black text-sm mx-auto">
+                                                    {idx + 1}
+                                                </span>
+                                            </td>
+                                            <td className="px-8 py-5 text-sm font-bold text-gray-700">
+                                                {new Date(don.test_date).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })}
+                                            </td>
+                                            <td className="px-8 py-5 text-center text-sm font-bold text-gray-800">{don.org_name}</td>
+                                            <td className="px-8 py-5 text-center">
+                                                <span className="inline-flex items-center gap-1 font-black text-red-600 bg-red-50 px-3 py-1 rounded-lg border border-red-100">
+                                                    <i className="fas fa-tint text-xs"></i>
+                                                    {don.units_donated}
+                                                </span>
+                                            </td>
+                                            <td className="px-8 py-5 text-center">
+                                                <Badge status="success">Completed</Badge>
+                                            </td>
+                                        </tr>
+                                    ))
+                                ) : (
+                                    <tr>
+                                        <td colSpan="5" className="px-8 py-12 text-center text-gray-400">
+                                            <i className="fas fa-inbox text-3xl text-gray-200 mb-2 block"></i>
+                                            No donations found
+                                        </td>
+                                    </tr>
+                                )}
+                            </tbody>
+                        </table>
                     </div>
                 </div>
 
-                <div className="lg:col-span-2 space-y-6">
-                    <div className="bg-white rounded-3xl shadow-xl shadow-gray-200/50 border border-white overflow-hidden">
-                        <div className="p-8 border-b border-gray-100">
-                            <h3 className="font-bold text-gray-900">Donation History</h3>
-                        </div>
-                        <div className="overflow-x-auto">
-                            <table className="min-w-full">
-                                <thead className="bg-gray-50/50 text-gray-400 font-bold uppercase tracking-wider text-[10px]">
-                                    <tr>
-                                        <th className="px-8 py-4 text-left">Date</th>
-                                        <th className="px-8 py-4 text-center">Organization</th>
-                                        <th className="px-8 py-4 text-center">Units</th>
-                                        <th className="px-8 py-4 text-right">Vitals</th>
-                                    </tr>
-                                </thead>
-                                <tbody className="divide-y divide-gray-50">
-                                    {donor.donations && donor.donations.length > 0 ? (
-                                        donor.donations.map(don => (
-                                            <tr key={don.id} className="hover:bg-gray-50/50 transition-colors">
-                                                <td className="px-8 py-5 text-sm font-medium text-gray-600">{new Date(don.test_date).toLocaleDateString()}</td>
-                                                <td className="px-8 py-5 text-center text-sm font-bold text-gray-800">{don.org_name}</td>
-                                                <td className="px-8 py-5 text-center font-black text-red-600">{don.units_donated}</td>
-                                                <td className="px-8 py-5 text-right">
-                                                    <div className="text-[10px] font-bold text-gray-400">HB: {don.hb_level} | BP: {don.blood_pressure}</div>
-                                                </td>
-                                            </tr>
-                                        ))
-                                    ) : (
-                                        <tr>
-                                            <td colSpan="4" className="px-8 py-12 text-center text-gray-400">No donations found</td>
-                                        </tr>
-                                    )}
-                                </tbody>
-                            </table>
-                        </div>
+                {/* Medical Reports */}
+                <div className="bg-white rounded-3xl shadow-xl shadow-gray-200/50 border border-white overflow-hidden">
+                    <div className="p-8 border-b border-gray-100">
+                        <h3 className="font-bold text-gray-900 flex items-center gap-2">
+                            <i className="fas fa-file-medical text-blue-500"></i>
+                            Medical Reports & Test Results
+                        </h3>
+                        <p className="text-xs text-gray-500 font-medium mt-1">
+                            All medical examinations and screening results ({donor.donations?.length || 0} total records)
+                        </p>
+                    </div>
+                    <div className="p-8 space-y-4">
+                        {donor.donations && donor.donations.length > 0 ? (
+                            donor.donations.map((report, idx) => (
+                                <DonationReportCard key={report.id} report={report} index={idx} />
+                            ))
+                        ) : (
+                            <div className="text-center py-12">
+                                <i className="fas fa-clipboard-list text-4xl text-gray-200 mb-3"></i>
+                                <p className="text-gray-400 font-medium">No medical reports found</p>
+                            </div>
+                        )}
                     </div>
                 </div>
             </div>
@@ -1566,15 +1842,116 @@ function ReportDetailView({ report, onBack }) {
                     </div>
                 </div>
             </div>
-            <ModernModal
-                isOpen={isModalOpen}
-                onClose={() => setIsModalOpen(false)}
-                onConfirm={modalConfig.onConfirm}
-                title={modalConfig.title}
-                message={modalConfig.message}
-                confirmText={modalConfig.confirmText}
-                type={modalConfig.type}
-            />
+        </div>
+    );
+}
+
+function DonationReportCard({ report, index }) {
+    const [isExpanded, setIsExpanded] = useState(false);
+
+    return (
+        <div className="border border-gray-100 rounded-2xl overflow-hidden hover:shadow-md transition-all">
+            {/* Collapsed View */}
+            <div
+                onClick={() => setIsExpanded(!isExpanded)}
+                className="p-6 bg-gradient-to-r from-gray-50 to-white cursor-pointer hover:from-gray-100 hover:to-gray-50 transition-all"
+            >
+                <div className="flex justify-between items-center">
+                    <div className="flex items-center gap-4">
+                        <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-red-500 to-pink-500 text-white flex items-center justify-center font-black shadow-lg">
+                            #{index + 1}
+                        </div>
+                        <div>
+                            <div className="flex items-center gap-3 mb-1">
+                                <h4 className="font-black text-gray-900">{report.org_name}</h4>
+                                <span className="text-xs font-bold text-gray-400">•</span>
+                                <span className="text-sm font-bold text-gray-600">{new Date(report.test_date).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}</span>
+                            </div>
+                            <div className="flex items-center gap-4 text-xs font-bold text-gray-500">
+                                <span className="flex items-center gap-1">
+                                    <i className="fas fa-tint text-red-500"></i>
+                                    {report.units_donated} unit{report.units_donated !== 1 ? 's' : ''}
+                                </span>
+                                <span className="flex items-center gap-1">
+                                    <i className="fas fa-heartbeat text-pink-500"></i>
+                                    HB: {report.hb_level}
+                                </span>
+                                <span className="flex items-center gap-1">
+                                    <i className="fas fa-stethoscope text-blue-500"></i>
+                                    BP: {report.blood_pressure}
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                    <button className="w-8 h-8 rounded-lg bg-white border border-gray-200 flex items-center justify-center text-gray-400 hover:text-gray-600 hover:border-gray-300 transition-all">
+                        <i className={`fas fa-chevron-${isExpanded ? 'up' : 'down'} text-sm`}></i>
+                    </button>
+                </div>
+            </div>
+
+            {/* Expanded View */}
+            {isExpanded && (
+                <div className="p-6 bg-white border-t border-gray-100 animate-fade-in-up">
+                    {/* Vitals Grid */}
+                    <div className="mb-6">
+                        <h5 className="text-xs font-black text-gray-400 uppercase tracking-widest mb-4">Medical Vitals</h5>
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                            <div className="bg-gradient-to-br from-red-50 to-pink-50 p-4 rounded-xl border border-red-100">
+                                <label className="text-[10px] font-bold text-red-400 uppercase block mb-1">HB Level</label>
+                                <p className="text-2xl font-black text-red-600">{report.hb_level} <span className="text-xs text-gray-400">g/dL</span></p>
+                            </div>
+                            <div className="bg-gradient-to-br from-blue-50 to-indigo-50 p-4 rounded-xl border border-blue-100">
+                                <label className="text-[10px] font-bold text-blue-400 uppercase block mb-1">Blood Pressure</label>
+                                <p className="text-2xl font-black text-blue-600">{report.blood_pressure} <span className="text-xs text-gray-400">mmHg</span></p>
+                            </div>
+                            <div className="bg-gradient-to-br from-purple-50 to-violet-50 p-4 rounded-xl border border-purple-100">
+                                <label className="text-[10px] font-bold text-purple-400 uppercase block mb-1">Weight</label>
+                                <p className="text-2xl font-black text-purple-600">{report.weight} <span className="text-xs text-gray-400">kg</span></p>
+                            </div>
+                            <div className="bg-gradient-to-br from-amber-50 to-orange-50 p-4 rounded-xl border border-amber-100">
+                                <label className="text-[10px] font-bold text-amber-400 uppercase block mb-1">Pulse Rate</label>
+                                <p className="text-2xl font-black text-amber-600">{report.pulse_rate || '--'} <span className="text-xs text-gray-400">bpm</span></p>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Screening Results */}
+                    <div className="mb-6">
+                        <h5 className="text-xs font-black text-gray-400 uppercase tracking-widest mb-4">Disease Screening</h5>
+                        <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                            {[
+                                { label: 'HIV', value: report.hiv_status },
+                                { label: 'Hepatitis B', value: report.hepatitis_b },
+                                { label: 'Hepatitis C', value: report.hepatitis_c },
+                                { label: 'Syphilis', value: report.syphilis },
+                                { label: 'Malaria', value: report.malaria }
+                            ].map((test, idx) => (
+                                <div key={idx} className="flex justify-between items-center p-3 bg-gray-50 rounded-xl border border-gray-100">
+                                    <span className="text-sm font-bold text-gray-700">{test.label}</span>
+                                    <span className={`text-xs font-black uppercase px-2.5 py-1 rounded-lg ${test.value === 'Negative'
+                                        ? 'bg-green-100 text-green-700'
+                                        : test.value === 'Positive'
+                                            ? 'bg-red-100 text-red-700'
+                                            : 'bg-gray-100 text-gray-500'
+                                        }`}>
+                                        {test.value || 'N/A'}
+                                    </span>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+
+                    {/* Medical Notes */}
+                    {report.notes && (
+                        <div>
+                            <h5 className="text-xs font-black text-gray-400 uppercase tracking-widest mb-3">Medical Notes</h5>
+                            <div className="bg-blue-50/50 border border-blue-100 rounded-xl p-4">
+                                <p className="text-sm text-gray-700 font-medium leading-relaxed">{report.notes}</p>
+                            </div>
+                        </div>
+                    )}
+                </div>
+            )}
         </div>
     );
 }

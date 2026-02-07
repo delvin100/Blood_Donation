@@ -27,6 +27,7 @@ router.get('/requests', verifyAdminToken, adminController.getRequests);
 router.get('/reports', verifyAdminToken, adminController.getReports);
 router.get('/admins', verifyAdminToken, adminController.getAdmins);
 router.post('/admins', verifyAdminToken, adminController.addAdmin);
+router.put('/admins/:id/status', verifyAdminToken, adminController.toggleAdminStatus);
 router.delete('/admins/:id', verifyAdminToken, adminController.deleteAdmin);
 
 router.get('/donors/:id', verifyAdminToken, adminController.getDonorDetails);

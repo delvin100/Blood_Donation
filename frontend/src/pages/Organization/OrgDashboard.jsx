@@ -244,6 +244,7 @@ export default function OrgDashboard() {
         }
         fetchStats();
         fetchActivity();
+        fetchOrgProfile();
     }, []);
 
     useEffect(() => {
@@ -1036,7 +1037,31 @@ export default function OrgDashboard() {
                     </div>
                 </header>
 
-                <main className="flex-1 p-10 overflow-auto">
+                <main className="flex-1 p-10 overflow-auto relative">
+                    {orgDetails && !orgDetails.verified && activeTab !== 'profile' && (
+                        <div className="absolute inset-0 z-[100] bg-gray-50/60 backdrop-blur-md flex items-center justify-center p-6 text-center">
+                            <div className="bg-white p-12 rounded-[3rem] shadow-2xl border border-gray-100 max-w-xl animate-in zoom-in-95 duration-300">
+                                <div className="w-24 h-24 bg-red-50 rounded-full flex items-center justify-center text-red-600 text-4xl mx-auto mb-8 shadow-inner">
+                                    <i className="fas fa-shield-alt"></i>
+                                </div>
+                                <h3 className="text-3xl font-black text-gray-900 mb-4 tracking-tight">Account Pending Verification</h3>
+                                <p className="text-gray-500 font-medium leading-relaxed text-lg">
+                                    Your organization account is currently pending verification by the system administrator.
+                                    All dashboard features are temporarily disabled.
+                                </p>
+                                <div className="mt-10 p-6 bg-red-50 rounded-2xl border border-red-100 text-red-700 font-bold">
+                                    Please contact the administrator for verification.
+                                </div>
+                                <button
+                                    onClick={() => setActiveTab('profile')}
+                                    className="mt-8 px-8 py-4 bg-gray-900 text-white font-black rounded-2xl hover:bg-black transition-all flex items-center justify-center gap-3 mx-auto"
+                                >
+                                    <i className="fas fa-id-card"></i>
+                                    View Your Profile
+                                </button>
+                            </div>
+                        </div>
+                    )}
                     {/* HOME TAB (Revamped with Intelligence) */}
                     {activeTab === 'home' && (
                         <div className="max-w-7xl mx-auto space-y-10">
@@ -1072,7 +1097,7 @@ export default function OrgDashboard() {
 
                                     <div className="grid grid-cols-2 md:grid-cols-4 gap-6 w-full mt-16 max-w-6xl">
                                         {[
-                                            { label: 'Total Impact', val: stats.verified_count, icon: 'fa-heart', color: 'text-red-400' },
+                                            { label: 'Total Donations', val: stats.total_donations, icon: 'fa-hand-holding-heart', color: 'text-red-400' },
                                             { label: 'Active Alerts', val: stats.active_requests, icon: 'fa-ambulance', color: 'text-blue-400' },
                                             { label: 'Units Stock', val: stats.total_units, icon: 'fa-burn', color: 'text-orange-400' },
                                             { label: 'Geo Reach', val: geoReach.length, icon: 'fa-globe', color: 'text-green-400' }
@@ -1093,54 +1118,44 @@ export default function OrgDashboard() {
                                 <div className="lg:col-span-2 bg-white p-8 md:p-10 rounded-[2.5rem] border border-gray-100 shadow-sm space-y-8">
                                     <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                                         <div>
-                                            <h3 className="text-2xl font-black text-gray-900 tracking-tight">Activity Analytics</h3>
-                                            <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mt-1">Donation & Request Trends (Last 7 Days)</p>
+                                            <h3 className="text-2xl font-black text-gray-900 tracking-tight">Donation Trends</h3>
+                                            <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mt-1">Daily Donations (Last 7 Days)</p>
                                         </div>
                                         <div className="flex gap-4">
                                             <div className="flex items-center gap-2">
                                                 <div className="w-3 h-3 rounded-full bg-red-500"></div>
-                                                <span className="text-[10px] font-black uppercase text-gray-500">Verifications</span>
-                                            </div>
-                                            <div className="flex items-center gap-2">
-                                                <div className="w-3 h-3 rounded-full bg-blue-500 shadow-sm shadow-blue-200"></div>
-                                                <span className="text-[10px] font-black uppercase text-gray-500">Reqs</span>
+                                                <span className="text-[10px] font-black uppercase text-gray-500">Donations</span>
                                             </div>
                                         </div>
                                     </div>
 
                                     <div className="h-72 w-full">
                                         <ResponsiveContainer width="100%" height="100%">
-                                            <AreaChart data={analytics.verifications.length > 0 ? analytics.verifications.map(v => ({
-                                                name: new Date(v.date).toLocaleDateString(undefined, { weekday: 'short' }),
-                                                verifications: v.count,
-                                                requests: (analytics.requests.find(r => r.date === v.date) || { count: 0 }).count
+                                            <AreaChart data={analytics.donations?.length > 0 ? analytics.donations.map(d => ({
+                                                name: new Date(d.date).toLocaleDateString(undefined, { weekday: 'short' }),
+                                                count: d.count
                                             })) : [
-                                                { name: 'Mon', verifications: 0, requests: 0 },
-                                                { name: 'Tue', verifications: 0, requests: 0 },
-                                                { name: 'Wed', verifications: 0, requests: 0 },
-                                                { name: 'Thu', verifications: 0, requests: 0 },
-                                                { name: 'Fri', verifications: 0, requests: 0 },
-                                                { name: 'Sat', verifications: 0, requests: 0 },
-                                                { name: 'Sun', verifications: 0, requests: 0 },
+                                                { name: 'Mon', count: 0 },
+                                                { name: 'Tue', count: 0 },
+                                                { name: 'Wed', count: 0 },
+                                                { name: 'Thu', count: 0 },
+                                                { name: 'Fri', count: 0 },
+                                                { name: 'Sat', count: 0 },
+                                                { name: 'Sun', count: 0 },
                                             ]}>
                                                 <defs>
-                                                    <linearGradient id="colorVer" x1="0" y1="0" x2="0" y2="1">
+                                                    <linearGradient id="colorDon" x1="0" y1="0" x2="0" y2="1">
                                                         <stop offset="5%" stopColor="#ef4444" stopOpacity={0.1} />
                                                         <stop offset="95%" stopColor="#ef4444" stopOpacity={0} />
-                                                    </linearGradient>
-                                                    <linearGradient id="colorReq" x1="0" y1="0" x2="0" y2="1">
-                                                        <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.1} />
-                                                        <stop offset="95%" stopColor="#3b82f6" stopOpacity={0} />
                                                     </linearGradient>
                                                 </defs>
                                                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
                                                 <XAxis dataKey="name" stroke="#94a3b8" fontSize={10} fontWeight="black" axisLine={false} tickLine={false} />
-                                                <YAxis stroke="#94a3b8" fontSize={10} fontWeight="black" axisLine={false} tickLine={false} />
+                                                <YAxis stroke="#94a3b8" fontSize={10} fontWeight="black" axisLine={false} tickLine={false} allowDecimals={false} />
                                                 <Tooltip
                                                     contentStyle={{ borderRadius: '20px', border: 'none', boxShadow: '0 20px 25px -5px rgb(0 0 0 / 0.1)', padding: '15px' }}
                                                 />
-                                                <Area type="monotone" dataKey="verifications" stroke="#ef4444" strokeWidth={4} fillOpacity={1} fill="url(#colorVer)" />
-                                                <Area type="monotone" dataKey="requests" stroke="#3b82f6" strokeWidth={4} fillOpacity={1} fill="url(#colorReq)" />
+                                                <Area type="monotone" dataKey="count" stroke="#ef4444" strokeWidth={4} fillOpacity={1} fill="url(#colorDon)" />
                                             </AreaChart>
                                         </ResponsiveContainer>
                                     </div>
@@ -1263,32 +1278,38 @@ export default function OrgDashboard() {
                                             <i className="fas fa-sync-alt"></i>
                                         </button>
                                     </div>
-                                    <div className="space-y-6 flex-1 max-h-[400px] overflow-y-auto pr-4 scrollbar-thin">
-                                        {activity.length > 0 ? activity.map((act, i) => (
-                                            <div key={i} className="flex gap-5 group">
-                                                <div className="relative flex flex-col items-center">
-                                                    <div className={`w-12 h-12 rounded-2xl flex items-center justify-center text-white shadow-lg transition-transform group-hover:scale-110 duration-300 ${act.type === 'Verification' ? 'bg-red-500' :
-                                                        act.type === 'Request' ? 'bg-blue-500' : 'bg-emerald-500'
-                                                        }`}>
-                                                        <i className={`fas ${act.type === 'Verification' ? 'fa-check' :
-                                                            act.type === 'Request' ? 'fa-ambulance' : 'fa-user-plus'
-                                                            } text-sm`}></i>
+                                    <div className="space-y-6 flex-1">
+                                        {activity.length > 0 ? activity.map((act, i) => {
+                                            let icon = 'fa-list-ul';
+                                            let color = 'bg-gray-500';
+                                            if (act.action_type === 'INVENTORY_SYNC') { icon = 'fa-burn'; color = 'bg-orange-500'; }
+                                            else if (act.action_type.includes('REQUEST')) { icon = 'fa-ambulance'; color = 'bg-blue-500'; }
+                                            else if (act.action_type === 'DONATION') { icon = 'fa-hand-holding-heart'; color = 'bg-red-500'; }
+                                            else if (act.action_type === 'VERIFICATION') { icon = 'fa-check-circle'; color = 'bg-emerald-500'; }
+                                            else if (act.action_type.includes('MEMBER')) { icon = 'fa-users'; color = 'bg-indigo-500'; }
+
+                                            return (
+                                                <div key={i} className="flex gap-5 group">
+                                                    <div className="relative flex flex-col items-center">
+                                                        <div className={`w-12 h-12 rounded-2xl flex items-center justify-center text-white shadow-lg transition-transform group-hover:scale-110 duration-300 ${color}`}>
+                                                            <i className={`fas ${icon} text-sm`}></i>
+                                                        </div>
+                                                        {i !== activity.length - 1 && <div className="w-0.5 grow bg-gray-100 my-2"></div>}
                                                     </div>
-                                                    {i !== activity.length - 1 && <div className="w-0.5 grow bg-gray-100 my-2"></div>}
-                                                </div>
-                                                <div className="pb-8 pt-1">
-                                                    <p className="text-sm font-black text-gray-800 leading-tight mb-1 group-hover:text-red-600 transition-colors">
-                                                        {act.details}
-                                                    </p>
-                                                    <div className="flex items-center gap-3">
-                                                        <span className="text-[9px] font-black text-white px-2 py-0.5 bg-gray-900 rounded-md uppercase tracking-widest">{act.type}</span>
-                                                        <span className="text-[10px] font-bold text-gray-300 uppercase tracking-widest">
-                                                            {new Date(act.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                                                        </span>
+                                                    <div className="pb-8 pt-1">
+                                                        <p className="text-sm font-black text-gray-800 leading-tight mb-1 group-hover:text-red-600 transition-colors">
+                                                            {act.description}
+                                                        </p>
+                                                        <div className="flex items-center gap-3">
+                                                            <span className="text-[9px] font-black text-white px-2 py-0.5 bg-gray-900 rounded-md uppercase tracking-widest">{act.action_type.replace(/_/g, ' ')}</span>
+                                                            <span className="text-[10px] font-bold text-gray-300 uppercase tracking-widest">
+                                                                {new Date(act.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                                            </span>
+                                                        </div>
                                                     </div>
                                                 </div>
-                                            </div>
-                                        )) : (
+                                            );
+                                        }) : (
                                             <div className="h-full flex flex-col items-center justify-center text-center opacity-20">
                                                 <i className="fas fa-list-ul text-4xl mb-4"></i>
                                                 <p className="text-xs font-black uppercase tracking-widest">No logs detected yet</p>
@@ -1803,18 +1824,19 @@ export default function OrgDashboard() {
                                         <table className="w-full text-left">
                                             <thead>
                                                 <tr className="bg-gray-50/50 border-b border-gray-100">
-                                                    <th className="p-6 text-xs font-black text-gray-400 uppercase tracking-widest">Member name</th>
-                                                    <th className="p-6 text-xs font-black text-gray-400 uppercase tracking-widest">Contact Info</th>
-                                                    <th className="p-6 text-xs font-black text-gray-400 uppercase tracking-widest">Blood Type</th>
-                                                    <th className="p-6 text-xs font-black text-gray-400 uppercase tracking-widest">Joined Date</th>
-                                                    <th className="p-6 text-xs font-black text-gray-400 uppercase tracking-widest text-right">Actions</th>
+                                                    <th className="p-6 text-xs font-black text-gray-400 uppercase tracking-widest text-center">Member name</th>
+                                                    <th className="p-6 text-xs font-black text-gray-400 uppercase tracking-widest text-center">Contact Info</th>
+                                                    <th className="p-6 text-xs font-black text-gray-400 uppercase tracking-widest text-center">Blood Type</th>
+                                                    <th className="p-6 text-xs font-black text-gray-400 uppercase tracking-widest text-center">Status</th>
+                                                    <th className="p-6 text-xs font-black text-gray-400 uppercase tracking-widest text-center">Joined Date</th>
+                                                    <th className="p-6 text-xs font-black text-gray-400 uppercase tracking-widest text-center">Actions</th>
                                                 </tr>
                                             </thead>
                                             <tbody className="divide-y divide-gray-50">
                                                 {members.map(member => (
                                                     <tr key={member.donor_id} className="hover:bg-gray-50/50 transition-colors">
                                                         <td className="p-6 text-gray-900">
-                                                            <div className="flex items-center gap-3">
+                                                            <div className="flex items-center justify-center gap-3">
                                                                 <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-bold">
                                                                     {member.full_name.charAt(0).toUpperCase()}
                                                                 </div>
@@ -1824,23 +1846,27 @@ export default function OrgDashboard() {
                                                                 </div>
                                                             </div>
                                                         </td>
-                                                        <td className="p-6">
+                                                        <td className="p-6 text-center">
                                                             <div className="text-sm font-medium text-gray-600">{member.email}</div>
                                                             <div className="text-xs text-gray-400">{member.phone}</div>
                                                         </td>
-                                                        <td className="p-6">
+                                                        <td className="p-6 text-center">
                                                             <span className="inline-flex items-center justify-center px-3 py-1 rounded-lg bg-red-50 text-red-700 font-black text-xs border border-red-100">
                                                                 {member.blood_type}
                                                             </span>
                                                         </td>
-                                                        <td className="p-6">
+                                                        <td className="p-6 text-center">
+                                                            <span className={`inline-flex items-center justify-center px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest ${member.availability === 'Available' ? 'bg-green-100 text-green-600 border border-green-200' : 'bg-red-100 text-red-600 border border-red-200'}`}>
+                                                                {member.availability}
+                                                            </span>
+                                                        </td>
+                                                        <td className="p-6 text-center">
                                                             <div className="text-sm font-medium text-gray-500">
                                                                 {new Date(member.joined_at).toLocaleDateString('en-GB')}
-
                                                             </div>
                                                         </td>
-                                                        <td className="p-6 text-right">
-                                                            <div className="flex items-center justify-end gap-2">
+                                                        <td className="p-6 text-center">
+                                                            <div className="flex items-center justify-center gap-2">
                                                                 <button
                                                                     onClick={() => fetchDonorReports(member)}
                                                                     className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 hover:bg-blue-100 flex items-center justify-center transition-all"
