@@ -75,6 +75,8 @@ const Seeker = () => {
     const [searched, setSearched] = useState(false);
     const [isEmergencyModalOpen, setIsEmergencyModalOpen] = useState(false);
     const [isCompatibilityModalOpen, setIsCompatibilityModalOpen] = useState(false);
+    const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
+    const [selectedDonor, setSelectedDonor] = useState(null);
     const [isFetchingLocation, setIsFetchingLocation] = useState(false);
     const [locationError, setLocationError] = useState("");
 
@@ -372,22 +374,8 @@ const Seeker = () => {
                         Find a <span className="text-gradient">Life Saver</span>
                     </h2>
                     <p className="text-xl text-gray-600 max-w-2xl mx-auto mb-10 leading-relaxed">
-                        Search through our verified network of donors or post an emergency request to get immediate help.
+                        Search through our verified network of donors to find immediate help.
                     </p>
-
-                    {/* Floating Quick Stats */}
-                    <div className="flex flex-wrap justify-center gap-4 mb-12">
-                        <div className="bg-white/80 backdrop-blur-md px-6 py-3 rounded-2xl shadow-sm border border-white flex items-center gap-3">
-                            <span className="w-3 h-3 bg-green-500 rounded-full animate-pulse"></span>
-                            <span className="text-sm font-bold text-gray-700">500+ Active Donors Nearby</span>
-                        </div>
-                        <button
-                            onClick={() => setIsEmergencyModalOpen(true)}
-                            className="bg-red-600 hover:bg-red-700 text-white px-8 py-3 rounded-2xl font-bold shadow-xl shadow-red-200 transition-all hover:-translate-y-1 flex items-center gap-2"
-                        >
-                            <i className="fas fa-ambulance"></i> Post Emergency Request
-                        </button>
-                    </div>
                 </div>
             </section>
 
@@ -437,6 +425,7 @@ const Seeker = () => {
                                         <select
                                             value={bloodType}
                                             onChange={(e) => setBloodType(e.target.value)}
+                                            required
                                             className="w-full pl-5 pr-10 py-4 bg-gray-50 border-none rounded-2xl focus:ring-2 focus:ring-red-500 transition-all font-bold text-gray-700 appearance-none shadow-sm h-[60px]"
                                         >
                                             <option value="">Select Group</option>
@@ -456,6 +445,7 @@ const Seeker = () => {
                                         <select
                                             value={state}
                                             onChange={(e) => { setState(e.target.value); setDistrict(""); }}
+                                            required
                                             className="w-full pl-5 pr-10 py-4 bg-gray-50 border-none rounded-2xl focus:ring-2 focus:ring-red-500 transition-all font-bold text-gray-700 appearance-none shadow-sm h-[60px]"
                                         >
                                             <option value="">Select State</option>
@@ -476,6 +466,7 @@ const Seeker = () => {
                                             value={district}
                                             onChange={(e) => setDistrict(e.target.value)}
                                             disabled={!state}
+                                            required
                                             className="w-full pl-5 pr-10 py-4 bg-gray-50 border-none rounded-2xl focus:ring-2 focus:ring-red-500 transition-all font-bold text-gray-700 appearance-none shadow-sm h-[60px] disabled:opacity-50"
                                         >
                                             <option value="">Select District</option>
@@ -497,6 +488,7 @@ const Seeker = () => {
                                             value={city}
                                             onChange={(e) => setCity(e.target.value)}
                                             placeholder="Enter city"
+                                            required
                                             className="w-full pl-5 pr-10 py-4 bg-gray-50 border-none rounded-2xl focus:ring-2 focus:ring-red-500 transition-all font-bold text-gray-700 shadow-sm h-[60px]"
                                         />
                                     </div>
@@ -506,7 +498,7 @@ const Seeker = () => {
                             <div className="flex justify-center pt-12 pb-8">
                                 <button
                                     type="submit"
-                                    disabled={loading}
+                                    disabled={loading || !bloodType || !state || !district || !city}
                                     className="w-full md:w-auto min-w-[280px] gradient-bg text-white font-black py-5 px-12 rounded-2xl hover:opacity-90 transition-all shadow-2xl shadow-red-200 disabled:opacity-50 flex items-center justify-center gap-3 h-[70px] text-lg"
                                 >
                                     {loading ? (
@@ -549,17 +541,13 @@ const Seeker = () => {
                                         <div className="bg-red-50 p-3 rounded-2xl">
                                             <span className="text-2xl font-black text-red-600">{donor.blood_group}</span>
                                         </div>
-                                        <div className="flex -space-x-2">
-                                            <div className="w-8 h-8 rounded-full bg-blue-50 border-2 border-white"></div>
-                                            <div className="w-8 h-8 rounded-full bg-red-50 border-2 border-white flex items-center justify-center text-[10px] font-bold text-red-400">V</div>
-                                        </div>
                                     </div>
                                     <h3 className="text-xl font-black text-gray-800 mb-2 truncate group-hover:text-red-600 transition-colors uppercase tracking-tight">{donor.name}</h3>
                                     <div className="flex items-center gap-2 text-gray-500 mb-8 font-medium">
                                         <div className="w-8 h-8 rounded-lg bg-gray-50 flex items-center justify-center text-xs">
                                             <i className="fas fa-location-dot"></i>
                                         </div>
-                                        <span className="text-sm">{donor.city}</span>
+                                        <span className="text-sm">{donor.city}, {donor.district}</span>
                                     </div>
 
                                     <div className="grid grid-cols-2 gap-3 relative z-10">
@@ -569,14 +557,12 @@ const Seeker = () => {
                                         >
                                             <i className="fas fa-phone"></i> Call
                                         </a>
-                                        <a
-                                            href={`https://wa.me/91${donor.phone}`}
-                                            target="_blank"
-                                            rel="noopener noreferrer"
-                                            className="bg-green-500 text-white py-3 rounded-xl text-xs font-black flex items-center justify-center gap-2 hover:bg-green-600 transition-all uppercase tracking-widest"
+                                        <button
+                                            onClick={() => { setSelectedDonor(donor); setIsDetailsModalOpen(true); }}
+                                            className="bg-red-500 text-white py-3 rounded-xl text-xs font-black flex items-center justify-center gap-2 hover:bg-red-600 transition-all uppercase tracking-widest"
                                         >
-                                            <i className="fab fa-whatsapp text-sm"></i> Text
-                                        </a>
+                                            <i className="fas fa-info-circle"></i> Details
+                                        </button>
                                     </div>
                                 </div>
                             ))}
@@ -625,130 +611,214 @@ const Seeker = () => {
             </main>
 
             {/* Emergency Modal */}
-            {isEmergencyModalOpen && (
-                <div className="fixed inset-0 bg-gray-900/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4 animate-in fade-in duration-300">
-                    <div className="bg-white rounded-[2.5rem] shadow-2xl w-full max-w-2xl overflow-hidden relative animate-in zoom-in-95 duration-300">
+            {
+                isEmergencyModalOpen && (
+                    <div className="fixed inset-0 bg-gray-900/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4 animate-in fade-in duration-300">
+                        <div className="bg-white rounded-[2.5rem] shadow-2xl w-full max-w-2xl overflow-hidden relative animate-in zoom-in-95 duration-300">
+                            <button
+                                onClick={() => setIsEmergencyModalOpen(false)}
+                                className="absolute top-6 right-6 w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center text-gray-400 hover:text-red-500 hover:bg-red-50 transition-all z-10 text-xl"
+                            >
+                                <i className="fas fa-times"></i>
+                            </button>
+
+                            <div className="grid md:grid-cols-[1fr_1.5fr]">
+                                <div className="gradient-bg p-10 text-white flex flex-col justify-between">
+                                    <div>
+                                        <h3 className="text-3xl font-black leading-tight mb-4">Urgent Support</h3>
+                                        <p className="text-red-100 text-sm font-medium">Post your requirement and we'll notify donors in your area immediately.</p>
+                                    </div>
+                                    <div className="space-y-4">
+                                        <div className="flex items-center gap-3">
+                                            <div className="w-8 h-8 bg-white/20 rounded-lg flex items-center justify-center"><i className="fas fa-check"></i></div>
+                                            <span className="text-xs font-bold uppercase tracking-widest">Fast Approval</span>
+                                        </div>
+                                        <div className="flex items-center gap-3">
+                                            <div className="w-8 h-8 bg-white/20 rounded-lg flex items-center justify-center"><i className="fas fa-bell"></i></div>
+                                            <span className="text-xs font-bold uppercase tracking-widest">Global Reach</span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div className="p-10">
+                                    <form onSubmit={handleEmergencySubmit} className="space-y-4">
+                                        <div className="grid grid-cols-2 gap-4">
+                                            <div className="space-y-1">
+                                                <label className="text-[10px] font-black uppercase text-gray-400 ml-1">Full Name</label>
+                                                <input required type="text" className="w-full bg-gray-50 border-none rounded-xl py-3 px-4 font-bold text-sm" placeholder="Patient/Requester" value={emergencyForm.full_name} onChange={e => setEmergencyForm({ ...emergencyForm, full_name: e.target.value })} />
+                                            </div>
+                                            <div className="space-y-1">
+                                                <label className="text-[10px] font-black uppercase text-gray-400 ml-1">Phone</label>
+                                                <input required type="tel" className="w-full bg-gray-50 border-none rounded-xl py-3 px-4 font-bold text-sm" placeholder="Contact number" value={emergencyForm.phone} onChange={e => setEmergencyForm({ ...emergencyForm, phone: e.target.value })} />
+                                            </div>
+                                        </div>
+                                        <div className="space-y-1">
+                                            <label className="text-[10px] font-black uppercase text-gray-400 ml-1">Blood Type Required</label>
+                                            <select required className="w-full bg-gray-50 border-none rounded-xl py-3 px-4 font-bold text-sm appearance-none" value={emergencyForm.blood_type} onChange={e => setEmergencyForm({ ...emergencyForm, blood_type: e.target.value })}>
+                                                <option value="">Select Group</option>
+                                                {bloodGroups.map(bg => <option key={bg} value={bg}>{bg}</option>)}
+                                            </select>
+                                        </div>
+                                        <div className="space-y-1">
+                                            <label className="text-[10px] font-black uppercase text-gray-400 ml-1">Required By (Date)</label>
+                                            <input required type="date" className="w-full bg-gray-50 border-none rounded-xl py-3 px-4 font-bold text-sm uppercase" value={emergencyForm.required_by} onChange={e => setEmergencyForm({ ...emergencyForm, required_by: e.target.value })} />
+                                        </div>
+
+                                        <div className="space-y-1">
+                                            <label className="text-[10px] font-black uppercase text-gray-400 ml-1">State</label>
+                                            <select required className="w-full bg-gray-50 border-none rounded-xl py-3 px-4 font-bold text-sm" value={emergencyForm.state} onChange={e => setEmergencyForm({ ...emergencyForm, state: e.target.value, district: "" })}>
+                                                <option value="">Select State</option>
+                                                {Object.keys(stateDistrictMapping).map(s => <option key={s} value={s}>{s}</option>)}
+                                            </select>
+                                        </div>
+
+                                        <div className="grid grid-cols-2 gap-4">
+                                            <div className="space-y-1">
+                                                <label className="text-[10px] font-black uppercase text-gray-400 ml-1">District</label>
+                                                <select required className="w-full bg-gray-50 border-none rounded-xl py-3 px-4 font-bold text-sm" value={emergencyForm.district} onChange={e => setEmergencyForm({ ...emergencyForm, district: e.target.value })} disabled={!emergencyForm.state}>
+                                                    <option value="">Select District</option>
+                                                    {(stateDistrictMapping[emergencyForm.state] || []).map(d => <option key={d} value={d}>{d}</option>)}
+                                                </select>
+                                            </div>
+                                            <div className="space-y-1">
+                                                <label className="text-[10px] font-black uppercase text-gray-400 ml-1">City/Area</label>
+                                                <input required type="text" placeholder="City" className="w-full bg-gray-50 border-none rounded-xl py-3 px-4 font-bold text-sm" value={emergencyForm.city || ""} onChange={e => setEmergencyForm({ ...emergencyForm, city: e.target.value })} />
+                                                <div className="pt-1">
+                                                    <button
+                                                        type="button"
+                                                        onClick={fetchLocation}
+                                                        disabled={isFetchingLocation}
+                                                        className="w-full py-2 bg-blue-50 text-blue-600 rounded-lg text-[10px] font-black uppercase tracking-widest hover:bg-blue-100 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+                                                    >
+                                                        {isFetchingLocation ? (
+                                                            <><i className="fas fa-spinner fa-spin"></i> Detecting...</>
+                                                        ) : (
+                                                            <><i className="fas fa-location-arrow"></i> Use Current Location</>
+                                                        )}
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <button type="submit" className="w-full gradient-bg text-white font-black py-4 rounded-xl mt-6 shadow-xl shadow-red-100 hover:scale-[1.02] active:scale-95 transition-all text-sm uppercase tracking-widest">Submit Request</button>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                )
+            }
+
+            {/* Compatibility Modal */}
+            {
+                isCompatibilityModalOpen && (
+                    <div className="fixed inset-0 bg-gray-900/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
+                        <div className="bg-white rounded-[2.5rem] shadow-2xl w-full max-w-6xl overflow-hidden relative">
+                            <button onClick={() => setIsCompatibilityModalOpen(false)} className="absolute top-6 right-6 w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center text-gray-400 hover:text-red-500 hover:bg-red-50 transition-all z-10 text-xl">
+                                <i className="fas fa-times"></i>
+                            </button>
+                            <div className="p-10 max-h-[90vh] overflow-y-auto">
+                                <h3 className="text-3xl font-black mb-8 tracking-tight">Blood <span className="text-red-500 italic">Compatibility Guide</span></h3>
+                                <div className="grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                                    {Object.entries(compatibilityData).map(([type, data]) => (
+                                        <div key={type} className="bg-gray-50 p-6 rounded-3xl border border-gray-100 hover:border-red-200 transition-colors">
+                                            <div className="text-2xl font-black text-red-600 mb-4">{type}</div>
+                                            <div className="space-y-3">
+                                                <div>
+                                                    <span className="text-[10px] uppercase font-black text-gray-400 block tracking-widest mb-1">Can Give To</span>
+                                                    <div className="flex flex-wrap gap-1">
+                                                        {data.give.map(t => <span key={t} className="text-[10px] font-bold bg-green-100 text-green-700 px-2 py-0.5 rounded-full">{t}</span>)}
+                                                    </div>
+                                                </div>
+                                                <div>
+                                                    <span className="text-[10px] uppercase font-black text-gray-400 block tracking-widest mb-1">Can Receive From</span>
+                                                    <div className="flex flex-wrap gap-1">
+                                                        {data.receive.map(t => <span key={t} className="text-[10px] font-bold bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full">{t}</span>)}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                )
+            }
+
+            {/* Donor Details Modal */}
+            {selectedDonor && isDetailsModalOpen && (
+                <div className="fixed inset-0 bg-gray-900/60 backdrop-blur-sm z-[110] flex items-center justify-center p-4 animate-in fade-in duration-300">
+                    <div className="bg-white rounded-[2.5rem] shadow-2xl w-full max-w-lg overflow-hidden relative animate-in zoom-in-95 duration-300">
                         <button
-                            onClick={() => setIsEmergencyModalOpen(false)}
-                            className="absolute top-6 right-6 w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center text-gray-400 hover:text-red-500 hover:bg-red-50 transition-all z-10 text-xl"
+                            onClick={() => setIsDetailsModalOpen(false)}
+                            className="absolute top-6 right-6 w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center text-gray-400 hover:text-red-500 hover:bg-red-50 transition-all z-10"
                         >
                             <i className="fas fa-times"></i>
                         </button>
 
-                        <div className="grid md:grid-cols-[1fr_1.5fr]">
-                            <div className="gradient-bg p-10 text-white flex flex-col justify-between">
+                        <div className="p-8">
+                            <div className="flex items-center gap-4 mb-8">
+                                <div className="w-16 h-16 bg-red-50 rounded-2xl flex items-center justify-center">
+                                    <span className="text-3xl font-black text-red-600">{selectedDonor.blood_group}</span>
+                                </div>
                                 <div>
-                                    <h3 className="text-3xl font-black leading-tight mb-4">Urgent Support</h3>
-                                    <p className="text-red-100 text-sm font-medium">Post your requirement and we'll notify donors in your area immediately.</p>
+                                    <h3 className="text-2xl font-black text-gray-800 uppercase tracking-tight">{selectedDonor.name}</h3>
+                                    <p className="text-sm text-gray-500 font-bold uppercase tracking-wider">Verified Donor</p>
                                 </div>
-                                <div className="space-y-4">
-                                    <div className="flex items-center gap-3">
-                                        <div className="w-8 h-8 bg-white/20 rounded-lg flex items-center justify-center"><i className="fas fa-check"></i></div>
-                                        <span className="text-xs font-bold uppercase tracking-widest">Fast Approval</span>
+                            </div>
+
+                            <div className="space-y-6">
+                                <div className="flex items-start gap-4">
+                                    <div className="w-10 h-10 bg-blue-50 rounded-xl flex items-center justify-center text-blue-600 flex-shrink-0">
+                                        <i className="fas fa-location-dot"></i>
                                     </div>
-                                    <div className="flex items-center gap-3">
-                                        <div className="w-8 h-8 bg-white/20 rounded-lg flex items-center justify-center"><i className="fas fa-bell"></i></div>
-                                        <span className="text-xs font-bold uppercase tracking-widest">Global Reach</span>
+                                    <div>
+                                        <span className="text-[10px] font-black uppercase tracking-widest text-gray-400 block mb-1">Location Details</span>
+                                        <p className="font-bold text-gray-700">{selectedDonor.city}, {selectedDonor.district}</p>
+                                        <p className="text-sm text-gray-500 font-medium">{selectedDonor.state}</p>
+                                    </div>
+                                </div>
+
+                                <div className="flex items-start gap-4">
+                                    <div className="w-10 h-10 bg-green-50 rounded-xl flex items-center justify-center text-green-600 flex-shrink-0">
+                                        <i className="fas fa-phone"></i>
+                                    </div>
+                                    <div>
+                                        <span className="text-[10px] font-black uppercase tracking-widest text-gray-400 block mb-1">Contact Number</span>
+                                        <p className="font-bold text-gray-700">{selectedDonor.phone}</p>
+                                    </div>
+                                </div>
+
+                                <div className="bg-gray-50 p-6 rounded-[2rem] border border-gray-100">
+                                    <span className="text-[10px] font-black uppercase tracking-widest text-gray-400 block mb-3">Compatibility Quick View</span>
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div>
+                                            <span className="text-[9px] font-bold text-green-600 uppercase block mb-1">Can Donate To</span>
+                                            <div className="flex flex-wrap gap-1">
+                                                {compatibilityData[selectedDonor.blood_group]?.give.slice(0, 3).map(t => (
+                                                    <span key={t} className="text-[10px] font-bold bg-white text-gray-700 px-2 py-0.5 rounded-lg border border-gray-100">{t}</span>
+                                                ))}
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <span className="text-[9px] font-bold text-blue-600 uppercase block mb-1">Can Receive From</span>
+                                            <div className="flex flex-wrap gap-1">
+                                                {compatibilityData[selectedDonor.blood_group]?.receive.slice(0, 3).map(t => (
+                                                    <span key={t} className="text-[10px] font-bold bg-white text-gray-700 px-2 py-0.5 rounded-lg border border-gray-100">{t}</span>
+                                                ))}
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
 
-                            <div className="p-10">
-                                <form onSubmit={handleEmergencySubmit} className="space-y-4">
-                                    <div className="grid grid-cols-2 gap-4">
-                                        <div className="space-y-1">
-                                            <label className="text-[10px] font-black uppercase text-gray-400 ml-1">Full Name</label>
-                                            <input required type="text" className="w-full bg-gray-50 border-none rounded-xl py-3 px-4 font-bold text-sm" placeholder="Patient/Requester" value={emergencyForm.full_name} onChange={e => setEmergencyForm({ ...emergencyForm, full_name: e.target.value })} />
-                                        </div>
-                                        <div className="space-y-1">
-                                            <label className="text-[10px] font-black uppercase text-gray-400 ml-1">Phone</label>
-                                            <input required type="tel" className="w-full bg-gray-50 border-none rounded-xl py-3 px-4 font-bold text-sm" placeholder="Contact number" value={emergencyForm.phone} onChange={e => setEmergencyForm({ ...emergencyForm, phone: e.target.value })} />
-                                        </div>
-                                    </div>
-                                    <div className="space-y-1">
-                                        <label className="text-[10px] font-black uppercase text-gray-400 ml-1">Blood Type Required</label>
-                                        <select required className="w-full bg-gray-50 border-none rounded-xl py-3 px-4 font-bold text-sm appearance-none" value={emergencyForm.blood_type} onChange={e => setEmergencyForm({ ...emergencyForm, blood_type: e.target.value })}>
-                                            <option value="">Select Group</option>
-                                            {bloodGroups.map(bg => <option key={bg} value={bg}>{bg}</option>)}
-                                        </select>
-                                    </div>
-                                    <div className="space-y-1">
-                                        <label className="text-[10px] font-black uppercase text-gray-400 ml-1">Required By (Date)</label>
-                                        <input required type="date" className="w-full bg-gray-50 border-none rounded-xl py-3 px-4 font-bold text-sm uppercase" value={emergencyForm.required_by} onChange={e => setEmergencyForm({ ...emergencyForm, required_by: e.target.value })} />
-                                    </div>
-
-                                    <div className="space-y-1">
-                                        <label className="text-[10px] font-black uppercase text-gray-400 ml-1">State</label>
-                                        <select required className="w-full bg-gray-50 border-none rounded-xl py-3 px-4 font-bold text-sm" value={emergencyForm.state} onChange={e => setEmergencyForm({ ...emergencyForm, state: e.target.value, district: "" })}>
-                                            <option value="">Select State</option>
-                                            {Object.keys(stateDistrictMapping).map(s => <option key={s} value={s}>{s}</option>)}
-                                        </select>
-                                    </div>
-
-                                    <div className="grid grid-cols-2 gap-4">
-                                        <div className="space-y-1">
-                                            <label className="text-[10px] font-black uppercase text-gray-400 ml-1">District</label>
-                                            <select required className="w-full bg-gray-50 border-none rounded-xl py-3 px-4 font-bold text-sm" value={emergencyForm.district} onChange={e => setEmergencyForm({ ...emergencyForm, district: e.target.value })} disabled={!emergencyForm.state}>
-                                                <option value="">Select District</option>
-                                                {(stateDistrictMapping[emergencyForm.state] || []).map(d => <option key={d} value={d}>{d}</option>)}
-                                            </select>
-                                        </div>
-                                        <div className="space-y-1">
-                                            <label className="text-[10px] font-black uppercase text-gray-400 ml-1">City/Area</label>
-                                            <input required type="text" placeholder="City" className="w-full bg-gray-50 border-none rounded-xl py-3 px-4 font-bold text-sm" value={emergencyForm.city || ""} onChange={e => setEmergencyForm({ ...emergencyForm, city: e.target.value })} />
-                                            <div className="pt-1">
-                                                <button
-                                                    type="button"
-                                                    onClick={fetchLocation}
-                                                    disabled={isFetchingLocation}
-                                                    className="w-full py-2 bg-blue-50 text-blue-600 rounded-lg text-[10px] font-black uppercase tracking-widest hover:bg-blue-100 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
-                                                >
-                                                    {isFetchingLocation ? (
-                                                        <><i className="fas fa-spinner fa-spin"></i> Detecting...</>
-                                                    ) : (
-                                                        <><i className="fas fa-location-arrow"></i> Use Current Location</>
-                                                    )}
-                                                </button>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <button type="submit" className="w-full gradient-bg text-white font-black py-4 rounded-xl mt-6 shadow-xl shadow-red-100 hover:scale-[1.02] active:scale-95 transition-all text-sm uppercase tracking-widest">Submit Request</button>
-                                </form>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            )}
-
-            {/* Compatibility Modal */}
-            {isCompatibilityModalOpen && (
-                <div className="fixed inset-0 bg-gray-900/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
-                    <div className="bg-white rounded-[2.5rem] shadow-2xl w-full max-w-6xl overflow-hidden relative">
-                        <button onClick={() => setIsCompatibilityModalOpen(false)} className="absolute top-6 right-6 w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center text-gray-400 hover:text-red-500 hover:bg-red-50 transition-all z-10 text-xl">
-                            <i className="fas fa-times"></i>
-                        </button>
-                        <div className="p-10 max-h-[90vh] overflow-y-auto">
-                            <h3 className="text-3xl font-black mb-8 tracking-tight">Blood <span className="text-red-500 italic">Compatibility Guide</span></h3>
-                            <div className="grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                                {Object.entries(compatibilityData).map(([type, data]) => (
-                                    <div key={type} className="bg-gray-50 p-6 rounded-3xl border border-gray-100 hover:border-red-200 transition-colors">
-                                        <div className="text-2xl font-black text-red-600 mb-4">{type}</div>
-                                        <div className="space-y-3">
-                                            <div>
-                                                <span className="text-[10px] uppercase font-black text-gray-400 block tracking-widest mb-1">Can Give To</span>
-                                                <div className="flex flex-wrap gap-1">
-                                                    {data.give.map(t => <span key={t} className="text-[10px] font-bold bg-green-100 text-green-700 px-2 py-0.5 rounded-full">{t}</span>)}
-                                                </div>
-                                            </div>
-                                            <div>
-                                                <span className="text-[10px] uppercase font-black text-gray-400 block tracking-widest mb-1">Can Receive From</span>
-                                                <div className="flex flex-wrap gap-1">
-                                                    {data.receive.map(t => <span key={t} className="text-[10px] font-bold bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full">{t}</span>)}
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                ))}
+                            <div className="mt-8 pt-6 border-t border-gray-100">
+                                <a
+                                    href={`tel:${selectedDonor.phone}`}
+                                    className="w-full gradient-bg text-white font-black py-4 rounded-2xl flex items-center justify-center gap-3 shadow-xl shadow-red-100 hover:scale-[1.02] active:scale-95 transition-all uppercase tracking-widest text-sm"
+                                >
+                                    <i className="fas fa-phone"></i> Contact Now
+                                </a>
                             </div>
                         </div>
                     </div>
@@ -769,7 +839,7 @@ const Seeker = () => {
             </footer>
 
             <BackToTop />
-        </div>
+        </div >
     );
 };
 

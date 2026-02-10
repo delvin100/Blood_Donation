@@ -33,7 +33,9 @@ exports.getDonors = async (req, res) => {
             name: r.full_name || r.username,
             phone: r.phone,
             blood_group: r.blood_type,
-            city: r.city || r.district || r.state || 'N/A'
+            city: r.city || 'N/A',
+            district: r.district || 'N/A',
+            state: r.state || 'N/A'
         })));
     } catch (err) {
         console.error("Error in getDonors:", err);
@@ -43,8 +45,15 @@ exports.getDonors = async (req, res) => {
 
 exports.getFeaturedDonors = async (req, res) => {
     try {
-        const [rows] = await pool.query('SELECT id, full_name, username, blood_type, city, district FROM donors WHERE availability = "Available" ORDER BY created_at DESC LIMIT 8');
-        res.json(rows.map(r => ({ id: r.id, name: r.full_name || r.username, blood_group: r.blood_type, city: r.city || r.district || 'N/A' })));
+        const [rows] = await pool.query('SELECT id, full_name, username, blood_type, city, district, state FROM donors WHERE availability = "Available" ORDER BY created_at DESC LIMIT 8');
+        res.json(rows.map(r => ({
+            id: r.id,
+            name: r.full_name || r.username,
+            blood_group: r.blood_type,
+            city: r.city || 'N/A',
+            district: r.district || 'N/A',
+            state: r.state || 'N/A'
+        })));
     } catch (err) {
         console.error("Error in getFeaturedDonors:", err);
         res.status(500).json({ error: 'Server error' });

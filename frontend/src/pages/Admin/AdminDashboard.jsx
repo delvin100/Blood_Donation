@@ -28,7 +28,6 @@ export default function AdminDashboard() {
         organizations: [],
         inventory: [],
         requests: [],
-        reports: [],
         admins: [],
         activityLogs: []
     });
@@ -40,7 +39,6 @@ export default function AdminDashboard() {
     const [broadcast, setBroadcast] = useState({ target: 'all', recipient_type: 'Donor', recipient_ids: [], title: '', message: '' });
     const [sendingBroadcast, setSendingBroadcast] = useState(false);
     const [selectedDonor, setSelectedDonor] = useState(null);
-    const [selectedReport, setSelectedReport] = useState(null);
     const [selectedOrg, setSelectedOrg] = useState(null); // For Detail View
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false); // Mobile Menu State
     const [isSubmittingAdmin, setIsSubmittingAdmin] = useState(false); // New state for Add Admin
@@ -72,13 +70,12 @@ export default function AdminDashboard() {
             const config = { headers: { Authorization: `Bearer ${token}` } };
             const baseUrl = '/api/admin';
 
-            const [statsRes, donorsRes, orgsRes, invRes, reqRes, repRes, adminsRes, logsRes] = await Promise.all([
+            const [statsRes, donorsRes, orgsRes, invRes, reqRes, adminsRes, logsRes] = await Promise.all([
                 axios.get(`${baseUrl}/stats`, config),
                 axios.get(`${baseUrl}/donors`, config),
                 axios.get(`${baseUrl}/organizations`, config),
                 axios.get(`${baseUrl}/inventory`, config),
                 axios.get(`${baseUrl}/requests`, config),
-                axios.get(`${baseUrl}/reports`, config),
                 axios.get(`${baseUrl}/admins`, config),
                 axios.get(`${baseUrl}/activity-logs`, config)
             ]);
@@ -89,7 +86,6 @@ export default function AdminDashboard() {
                 organizations: orgsRes.data,
                 inventory: invRes.data,
                 requests: reqRes.data,
-                reports: repRes.data,
                 admins: adminsRes.data,
                 activityLogs: logsRes.data
             });
@@ -212,22 +208,8 @@ export default function AdminDashboard() {
         setSelectedDonor(null);
     };
 
-    const handleViewReport = async (id) => {
-        setLoading(true);
-        try {
-            const res = await axios.get(`/api/admin/reports/${id}`, getAuthConfig());
-            setSelectedReport(res.data);
-            setActiveTab('reports');
-        } catch (error) {
-            toast.error('Failed to fetch report details');
-        } finally {
-            setLoading(false);
-        }
-    };
 
-    const handleBackToReportList = () => {
-        setSelectedReport(null);
-    };
+
 
 
     const handleAddAdmin = async (e) => {
@@ -318,7 +300,7 @@ export default function AdminDashboard() {
             admins: (item) => item.username?.toLowerCase().includes(term),
             inventory: (item) => item.blood_group?.toLowerCase().includes(term) || item.org_name?.toLowerCase().includes(term),
             requests: (item) => item.blood_group?.toLowerCase().includes(term) || item.org_name?.toLowerCase().includes(term),
-            reports: (item) => item.donor_name?.toLowerCase().includes(term) || item.org_name?.toLowerCase().includes(term),
+
             activityLogs: (item) =>
                 item.origin_name?.toLowerCase().includes(term) ||
                 item.action_type?.toLowerCase().includes(term) ||
@@ -361,7 +343,7 @@ export default function AdminDashboard() {
                 fixed md:static inset-y-0 left-0 z-50 h-screen p-4 w-72 md:w-80 transition-transform duration-300 ease-in-out
                 ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
             `}>
-                <Sidebar activeTab={activeTab} setActiveTab={(tab) => { setActiveTab(tab); setSearchTerm(''); setSelectedOrg(null); setSelectedDonor(null); setSelectedReport(null); setIsMobileMenuOpen(false); }} handleLogout={handleLogout} />
+                <Sidebar activeTab={activeTab} setActiveTab={(tab) => { setActiveTab(tab); setSearchTerm(''); setSelectedOrg(null); setSelectedDonor(null); setIsMobileMenuOpen(false); }} handleLogout={handleLogout} />
             </div>
 
             {/* Main Content */}
@@ -378,7 +360,7 @@ export default function AdminDashboard() {
                 <div className="w-full max-w-[1600px] mx-auto p-4 md:p-8">
 
                     {/* Header with Search */}
-                    {!selectedOrg && !selectedDonor && !selectedReport && (
+                    {!selectedOrg && !selectedDonor && (
                         <header className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4 animate-fade-in-down">
                             <div>
                                 <h1 className="text-3xl font-black text-gray-800 tracking-tight">
@@ -387,7 +369,7 @@ export default function AdminDashboard() {
                                     {activeTab === 'orgs' && 'Partners & Organizations'}
                                     {activeTab === 'inventory' && 'Blood Inventory'}
                                     {activeTab === 'requests' && 'Emergencies'}
-                                    {activeTab === 'reports' && 'Reports History'}
+
                                     {activeTab === 'admins' && 'System Admins'}
                                     {activeTab === 'broadcast' && 'Broadcasts'}
                                     {activeTab === 'logs' && 'Platform Activity Logs'}
@@ -395,7 +377,7 @@ export default function AdminDashboard() {
                                 <p className="text-gray-500 font-medium mt-1">Dashboard / {activeTab.charAt(0).toUpperCase() + activeTab.slice(1)}</p>
                             </div>
 
-                            {activeTab !== 'dashboard' && activeTab !== 'broadcast' && activeTab !== 'inventory' && activeTab !== 'requests' && activeTab !== 'reports' && activeTab !== 'admins' && activeTab !== 'logs' && (
+                            {activeTab !== 'dashboard' && activeTab !== 'broadcast' && activeTab !== 'inventory' && activeTab !== 'requests' && activeTab !== 'admins' && activeTab !== 'logs' && (
                                 <div className="relative w-full md:w-96 group">
                                     <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
                                         <i className="fas fa-search text-gray-400 group-focus-within:text-red-500 transition-colors"></i>
@@ -734,44 +716,7 @@ export default function AdminDashboard() {
                             />
                         )}
 
-                        {activeTab === 'reports' && (
-                            selectedReport ? (
-                                <ReportDetailView
-                                    report={selectedReport}
-                                    onBack={handleBackToReportList}
-                                />
-                            ) : (
-                                <DataTable
-                                    columns={['Date', 'Donor', 'Blood Group', 'Org', 'Vitals', 'Actions']}
-                                    data={filteredData.reports}
-                                    renderRow={(report) => (
-                                        <tr key={report.id} onClick={() => handleViewReport(report.id)} className="cursor-pointer hover:bg-gray-50 transition-all border-b border-gray-100 last:border-0">
-                                            <td className="px-6 py-4 text-center text-sm font-medium text-gray-500">{new Date(report.test_date).toLocaleDateString()}</td>
-                                            <td className="px-6 py-4 text-center">
-                                                <div className="font-bold text-gray-900">{report.donor_name}</div>
-                                                <div className="text-xs text-gray-400 font-medium">{report.donor_email}</div>
-                                            </td>
-                                            <td className="px-6 py-4 text-center font-black text-red-600">{report.blood_type}</td>
-                                            <td className="px-6 py-4 text-center text-sm font-medium text-gray-700">{report.org_name}</td>
-                                            <td className="px-6 py-4 text-center text-xs font-semibold text-gray-500 space-y-1">
-                                                <div className="flex justify-center gap-2"><span className="text-gray-400">BP:</span> {report.blood_pressure}</div>
-                                                <div className="flex justify-center gap-2"><span className="text-gray-400">HB:</span> {report.hb_level}</div>
-                                            </td>
-                                            <td className="px-6 py-4 text-center" onClick={(e) => e.stopPropagation()}>
-                                                <div className="flex justify-center gap-2">
-                                                    <button
-                                                        onClick={() => handleViewReport(report.id)}
-                                                        className="p-2 text-blue-500 hover:bg-blue-50 rounded-lg transition-colors"
-                                                        title="View Report"
-                                                    >
-                                                        <i className="fas fa-file-medical"></i>
-                                                    </button>
-                                                </div>
-                                            </td>
-                                        </tr>
-                                    )}
-                                />
-                            ))}
+
 
                         {activeTab === 'logs' && (
                             <ActivityLogsView logs={data.activityLogs} />
@@ -1323,7 +1268,6 @@ function Sidebar({ activeTab, setActiveTab, handleLogout }) {
                         <div className="px-4 py-2">
                             <p className="text-xs font-bold text-gray-400/80 uppercase tracking-widest mb-3">Management</p>
                             <SidebarItem label="Emergencies" icon="ambulance" active={activeTab === 'requests'} onClick={() => setActiveTab('requests')} />
-                            <SidebarItem label="Reports" icon="file-medical-alt" active={activeTab === 'reports'} onClick={() => setActiveTab('reports')} />
                             <SidebarItem label="Activity Logs" icon="history" active={activeTab === 'logs'} onClick={() => setActiveTab('logs')} />
                             <SidebarItem label="Admins" icon="user-shield" active={activeTab === 'admins'} onClick={() => setActiveTab('admins')} />
                         </div>
@@ -1746,302 +1690,15 @@ function DonorDetailView({ donor, onBack }) {
                     </div>
                 </div>
 
-                {/* Medical Reports */}
-                <div className="bg-white rounded-3xl shadow-xl shadow-gray-200/50 border border-white overflow-hidden">
-                    <div className="p-8 border-b border-gray-100">
-                        <h3 className="font-bold text-gray-900 flex items-center gap-2">
-                            <i className="fas fa-file-medical text-blue-500"></i>
-                            Medical Reports & Test Results
-                        </h3>
-                        <p className="text-xs text-gray-500 font-medium mt-1">
-                            All medical examinations and screening results ({donor.donations?.length || 0} total records)
-                        </p>
-                    </div>
-                    <div className="p-8 space-y-4">
-                        {donor.donations && donor.donations.length > 0 ? (
-                            donor.donations.map((report, idx) => (
-                                <DonationReportCard key={report.id} report={report} index={idx} />
-                            ))
-                        ) : (
-                            <div className="text-center py-12">
-                                <i className="fas fa-clipboard-list text-4xl text-gray-200 mb-3"></i>
-                                <p className="text-gray-400 font-medium">No medical reports found</p>
-                            </div>
-                        )}
-                    </div>
-                </div>
+
             </div>
         </div>
     );
 }
 
-function ReportDetailView({ report, onBack }) {
-    if (!report) return null;
 
-    const downloadPDF = async () => {
-        const { default: jsPDF } = await import('jspdf');
-        const html2canvas = (await import('html2canvas')).default;
 
-        const reportElement = document.getElementById('medical-report-content');
-        const canvas = await html2canvas(reportElement, {
-            scale: 2,
-            useCORS: true,
-            logging: false
-        });
 
-        const imgData = canvas.toDataURL('image/png');
-        const pdf = new jsPDF('p', 'mm', 'a4');
-        const pdfWidth = pdf.internal.pageSize.getWidth();
-        const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
-
-        pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
-        pdf.save(`Medical_Report_${report.id}_${report.donor_name}.pdf`);
-        toast.success('Report downloaded successfully');
-    };
-
-    return (
-        <div className="space-y-6 animate-fade-in-up">
-            <div className="flex justify-between items-center mb-2">
-                <button
-                    onClick={onBack}
-                    className="flex items-center gap-2 text-gray-500 hover:text-gray-900 font-bold bg-white px-5 py-2.5 rounded-xl shadow-sm border border-gray-200 hover:shadow-md transition-all"
-                >
-                    <i className="fas fa-arrow-left"></i> Back to Reports
-                </button>
-                <button
-                    onClick={downloadPDF}
-                    className="flex items-center gap-2 bg-gray-900 text-white px-6 py-3 rounded-xl font-bold hover:bg-black shadow-lg shadow-gray-900/20 transition-all transform hover:-translate-y-0.5"
-                >
-                    <i className="fas fa-download"></i> Download PDF
-                </button>
-            </div>
-
-            <div id="medical-report-content" className="bg-white rounded-3xl shadow-2xl border border-gray-100 overflow-hidden max-w-4xl mx-auto p-12">
-                {/* Report Header */}
-                <div className="border-b-4 border-red-600 pb-8 mb-10 flex justify-between items-start">
-                    <div>
-                        <h1 className="text-4xl font-black text-gray-900 mb-2">Medical Report</h1>
-                        <p className="text-gray-500 font-bold">Ref ID: #REP-{report.id.toString().padStart(6, '0')}</p>
-                    </div>
-                    <div className="text-right">
-                        <div className="font-black text-red-600 text-2xl mb-1">eBloodBank</div>
-                        <p className="text-xs text-gray-400 font-bold uppercase tracking-widest">Life Saving Network</p>
-                    </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-12 mb-12">
-                    <div>
-                        <h3 className="text-xs font-black text-gray-400 uppercase tracking-widest mb-4">Donor Information</h3>
-                        <div className="space-y-2">
-                            <p className="text-xl font-black text-gray-800">{report.donor_name}</p>
-                            <p className="text-gray-600 font-medium">{report.donor_email}</p>
-                            <p className="text-gray-600 font-medium">{report.donor_phone || 'N/A'}</p>
-                            <div className="pt-2">
-                                <span style={{
-                                    color: '#334155',
-                                    fontWeight: '800',
-                                    fontSize: '14px',
-                                    display: 'block',
-                                    lineHeight: '1.5'
-                                }}>Blood Group: {report.donor_blood_type}</span>
-                            </div>
-                        </div>
-                    </div>
-                    <div className="text-right">
-                        <h3 className="text-xs font-black text-gray-400 uppercase tracking-widest mb-4">Organization</h3>
-                        <div className="space-y-2">
-                            <p className="text-xl font-black text-gray-800">{report.org_name}</p>
-                            <p className="text-gray-600 font-medium">{report.org_email}</p>
-                            <p className="text-sm text-gray-500">{report.org_address}</p>
-                            <p className="text-gray-600 font-medium">Date: {new Date(report.test_date).toLocaleDateString()}</p>
-                        </div>
-                    </div>
-                </div>
-
-                {/* Vitals Grid */}
-                <div className="bg-gray-50 rounded-3xl p-8 mb-10 border border-gray-100">
-                    <h3 className="text-xs font-black text-gray-400 uppercase tracking-widest mb-6">Medical Vitals</h3>
-                    <div className="grid grid-cols-3 gap-8">
-                        <div>
-                            <label className="text-[10px] font-bold text-gray-400 uppercase block mb-1">HB Level</label>
-                            <p className="text-2xl font-black text-gray-800">{report.hb_level} <span className="text-xs text-gray-400 uppercase">g/dL</span></p>
-                        </div>
-                        <div>
-                            <label className="text-[10px] font-bold text-gray-400 uppercase block mb-1">Blood Pressure</label>
-                            <p className="text-2xl font-black text-gray-800">{report.blood_pressure} <span className="text-xs text-gray-400 uppercase">mmHg</span></p>
-                        </div>
-                        <div>
-                            <label className="text-[10px] font-bold text-gray-400 uppercase block mb-1">Pulse Rate</label>
-                            <p className="text-2xl font-black text-gray-800">{report.pulse_rate || '--'} <span className="text-xs text-gray-400 uppercase">bpm</span></p>
-                        </div>
-                        <div>
-                            <label className="text-[10px] font-bold text-gray-400 uppercase block mb-1">Weight</label>
-                            <p className="text-2xl font-black text-gray-800">{report.weight} <span className="text-xs text-gray-400 uppercase">kg</span></p>
-                        </div>
-                        <div>
-                            <label className="text-[10px] font-bold text-gray-400 uppercase block mb-1">Temperature</label>
-                            <p className="text-2xl font-black text-gray-800">{report.temperature || '--'} <span className="text-xs text-gray-400 uppercase">°C</span></p>
-                        </div>
-                        <div>
-                            <label className="text-[10px] font-bold text-gray-400 uppercase block mb-1">Units Donated</label>
-                            <p className="text-2xl font-black text-red-600">{report.units_donated} <span className="text-xs text-gray-400 uppercase">Unit</span></p>
-                        </div>
-                    </div>
-                </div>
-
-                {/* Test Results */}
-                <div className="mb-10">
-                    <h3 className="text-xs font-black text-gray-400 uppercase tracking-widest mb-6">Screening Results</h3>
-                    <div className="grid grid-cols-2 gap-4">
-                        {[
-                            { label: 'HIV Status', val: report.hiv_status },
-                            { label: 'Hepatitis B', val: report.hepatitis_b },
-                            { label: 'Hepatitis C', val: report.hepatitis_c },
-                            { label: 'Syphilis', val: report.syphilis },
-                            { label: 'Malaria', val: report.malaria }
-                        ].map((test, idx) => (
-                            <div key={idx} className="flex justify-between items-center p-4 bg-white border border-gray-100 rounded-2xl shadow-sm">
-                                <span className="font-bold text-gray-700">{test.label}</span>
-                                <span className={`font-black uppercase px-3 py-1 rounded-lg text-xs ${test.val === 'Negative' ? 'bg-green-50 text-green-600' : 'bg-red-50 text-red-600'}`}>
-                                    {test.val || 'Not Tested'}
-                                </span>
-                            </div>
-                        ))}
-                    </div>
-                </div>
-
-                {/* Notes */}
-                <div>
-                    <h3 className="text-xs font-black text-gray-400 uppercase tracking-widest mb-4">Medical Notes</h3>
-                    <p className="text-gray-700 font-medium leading-relaxed bg-blue-50/30 p-6 rounded-2xl border border-blue-100/50">
-                        {report.notes || 'No medical complications noted during this donation session.'}
-                    </p>
-                </div>
-
-                {/* Footer Signature */}
-                <div className="mt-16 pt-8 border-t border-gray-100 flex justify-between items-end">
-                    <div className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">
-                        System Generated Report • eBloodBank Admin
-                    </div>
-                    <div className="text-center w-48">
-                        <div className="h-0.5 bg-gray-200 mb-2"></div>
-                        <p className="text-[10px] font-black text-gray-800 uppercase tracking-widest">Medical Officer Signature</p>
-                    </div>
-                </div>
-            </div>
-        </div>
-    );
-}
-
-function DonationReportCard({ report, index }) {
-    const [isExpanded, setIsExpanded] = useState(false);
-
-    return (
-        <div className="border border-gray-100 rounded-2xl overflow-hidden hover:shadow-md transition-all">
-            {/* Collapsed View */}
-            <div
-                onClick={() => setIsExpanded(!isExpanded)}
-                className="p-6 bg-gradient-to-r from-gray-50 to-white cursor-pointer hover:from-gray-100 hover:to-gray-50 transition-all"
-            >
-                <div className="flex justify-between items-center">
-                    <div className="flex items-center gap-4">
-                        <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-red-500 to-pink-500 text-white flex items-center justify-center font-black shadow-lg">
-                            #{index + 1}
-                        </div>
-                        <div>
-                            <div className="flex items-center gap-3 mb-1">
-                                <h4 className="font-black text-gray-900">{report.org_name}</h4>
-                                <span className="text-xs font-bold text-gray-400">•</span>
-                                <span className="text-sm font-bold text-gray-600">{new Date(report.test_date).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}</span>
-                            </div>
-                            <div className="flex items-center gap-4 text-xs font-bold text-gray-500">
-                                <span className="flex items-center gap-1">
-                                    <i className="fas fa-tint text-red-500"></i>
-                                    {report.units_donated} unit{report.units_donated !== 1 ? 's' : ''}
-                                </span>
-                                <span className="flex items-center gap-1">
-                                    <i className="fas fa-heartbeat text-pink-500"></i>
-                                    HB: {report.hb_level}
-                                </span>
-                                <span className="flex items-center gap-1">
-                                    <i className="fas fa-stethoscope text-blue-500"></i>
-                                    BP: {report.blood_pressure}
-                                </span>
-                            </div>
-                        </div>
-                    </div>
-                    <button className="w-8 h-8 rounded-lg bg-white border border-gray-200 flex items-center justify-center text-gray-400 hover:text-gray-600 hover:border-gray-300 transition-all">
-                        <i className={`fas fa-chevron-${isExpanded ? 'up' : 'down'} text-sm`}></i>
-                    </button>
-                </div>
-            </div>
-
-            {/* Expanded View */}
-            {isExpanded && (
-                <div className="p-6 bg-white border-t border-gray-100 animate-fade-in-up">
-                    {/* Vitals Grid */}
-                    <div className="mb-6">
-                        <h5 className="text-xs font-black text-gray-400 uppercase tracking-widest mb-4">Medical Vitals</h5>
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                            <div className="bg-gradient-to-br from-red-50 to-pink-50 p-4 rounded-xl border border-red-100">
-                                <label className="text-[10px] font-bold text-red-400 uppercase block mb-1">HB Level</label>
-                                <p className="text-2xl font-black text-red-600">{report.hb_level} <span className="text-xs text-gray-400">g/dL</span></p>
-                            </div>
-                            <div className="bg-gradient-to-br from-blue-50 to-indigo-50 p-4 rounded-xl border border-blue-100">
-                                <label className="text-[10px] font-bold text-blue-400 uppercase block mb-1">Blood Pressure</label>
-                                <p className="text-2xl font-black text-blue-600">{report.blood_pressure} <span className="text-xs text-gray-400">mmHg</span></p>
-                            </div>
-                            <div className="bg-gradient-to-br from-purple-50 to-violet-50 p-4 rounded-xl border border-purple-100">
-                                <label className="text-[10px] font-bold text-purple-400 uppercase block mb-1">Weight</label>
-                                <p className="text-2xl font-black text-purple-600">{report.weight} <span className="text-xs text-gray-400">kg</span></p>
-                            </div>
-                            <div className="bg-gradient-to-br from-amber-50 to-orange-50 p-4 rounded-xl border border-amber-100">
-                                <label className="text-[10px] font-bold text-amber-400 uppercase block mb-1">Pulse Rate</label>
-                                <p className="text-2xl font-black text-amber-600">{report.pulse_rate || '--'} <span className="text-xs text-gray-400">bpm</span></p>
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Screening Results */}
-                    <div className="mb-6">
-                        <h5 className="text-xs font-black text-gray-400 uppercase tracking-widest mb-4">Disease Screening</h5>
-                        <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                            {[
-                                { label: 'HIV', value: report.hiv_status },
-                                { label: 'Hepatitis B', value: report.hepatitis_b },
-                                { label: 'Hepatitis C', value: report.hepatitis_c },
-                                { label: 'Syphilis', value: report.syphilis },
-                                { label: 'Malaria', value: report.malaria }
-                            ].map((test, idx) => (
-                                <div key={idx} className="flex justify-between items-center p-3 bg-gray-50 rounded-xl border border-gray-100">
-                                    <span className="text-sm font-bold text-gray-700">{test.label}</span>
-                                    <span className={`text-xs font-black uppercase px-2.5 py-1 rounded-lg ${test.value === 'Negative'
-                                        ? 'bg-green-100 text-green-700'
-                                        : test.value === 'Positive'
-                                            ? 'bg-red-100 text-red-700'
-                                            : 'bg-gray-100 text-gray-500'
-                                        }`}>
-                                        {test.value || 'N/A'}
-                                    </span>
-                                </div>
-                            ))}
-                        </div>
-                    </div>
-
-                    {/* Medical Notes */}
-                    {report.notes && (
-                        <div>
-                            <h5 className="text-xs font-black text-gray-400 uppercase tracking-widest mb-3">Medical Notes</h5>
-                            <div className="bg-blue-50/50 border border-blue-100 rounded-xl p-4">
-                                <p className="text-sm text-gray-700 font-medium leading-relaxed">{report.notes}</p>
-                            </div>
-                        </div>
-                    )}
-                </div>
-            )}
-        </div>
-    );
-}
 
 function ActivityLogsView({ logs }) {
     return (
