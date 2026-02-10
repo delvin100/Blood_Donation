@@ -4,6 +4,7 @@ const fs = require('fs');
 const bcrypt = require('bcrypt');
 
 const { calculateDonorAvailability } = require('../utils/donorUtils');
+const { addDonorLog } = require('../utils/logUtils');
 const { OpenAI } = require('openai');
 
 const openai = new OpenAI({
@@ -31,7 +32,7 @@ exports.getStats = async (req, res) => {
         `, [donorId]);
 
         const [unreadNotifications] = await pool.query(
-            'SELECT COUNT(*) as count FROM notifications WHERE recipient_id = ? AND recipient_type = "Donor" AND is_read = FALSE',
+            'SELECT COUNT(*) as count FROM notifications WHERE recipient_id = ? AND recipient_type = "Donor" AND is_read = FALSE AND is_dismissed = FALSE',
             [donorId]
         );
 
@@ -82,6 +83,7 @@ exports.addDonation = async (req, res) => {
         await pool.query('INSERT INTO donations (donor_id, date, units, notes, hb_level, blood_pressure) VALUES (?, ?, ?, ?, ?, ?)', [req.user.id, date, units, notes, hb_level, blood_pressure]);
         await calculateDonorAvailability(req.user.id);
         res.json({ message: 'Donation recorded successfully' });
+        await addDonorLog(req.user.id, 'DONATION_ADD', 'Donation Record', `Recorded a new donation of ${units} units`);
     } catch (err) {
         res.status(500).json({ error: 'Server error' });
     }
@@ -100,6 +102,7 @@ exports.updateProfile = async (req, res) => {
             [full_name, email, dob, phone, blood_type, gender, state, district, city, username, passwordHash, req.user.id]
         );
         res.json({ message: 'Profile updated' });
+        await addDonorLog(req.user.id, 'PROFILE_UPDATE', full_name, `Updated profile information`);
     } catch (err) {
         res.status(500).json({ error: 'Server error' });
     }
@@ -111,6 +114,7 @@ exports.uploadProfilePicture = async (req, res) => {
         const profilePicUrl = `/uploads/${req.file.filename}`;
         await pool.query('UPDATE donors SET profile_picture = ? WHERE id = ?', [profilePicUrl, req.user.id]);
         res.json({ message: 'Picture updated', profile_picture: profilePicUrl });
+        await addDonorLog(req.user.id, 'AVATAR_UPDATE', 'Profile Picture', `Updated profile picture`);
     } catch (err) {
         res.status(500).json({ error: 'Server error' });
     }
@@ -149,12 +153,113 @@ exports.getUrgentNeeds = async (req, res) => {
 exports.getNotifications = async (req, res) => {
     try {
         const { id: donorId } = req.user;
-        const [rows] = await pool.query('SELECT * FROM notifications WHERE recipient_id = ? AND recipient_type = "Donor" ORDER BY created_at DESC', [donorId]);
+
+        // 1. Sync Global Broadcasts (Lazy Sync)
+        // Find users created_at to filter old broadcasts
+        const [donorRows] = await pool.query('SELECT created_at FROM donors WHERE id = ?', [donorId]);
+        const donorCreatedAt = donorRows[0]?.created_at || new Date(0);
+
+        // Find relevant global broadcasts not yet in notifications
+        // We look for broadcasts targeting 'all' or 'donors' created AFTER the user joined
+        // AND which don't have a corresponding notification entry (source_id = broadcast.id)
+        // Note: We check if ANY notification entry exists, even if dismissed. 
+        // If a dismissed entry exists, we don't sync it again (Soft Delete logic).
+        const [newBroadcasts] = await pool.query(
+            `SELECT * FROM broadcasts 
+             WHERE target IN ('all', 'donors') 
+             AND created_at >= ? 
+             AND id NOT IN (
+                SELECT source_id FROM notifications 
+                WHERE recipient_id = ? AND recipient_type = 'Donor' AND source_id IS NOT NULL
+             )`,
+            [donorCreatedAt, donorId]
+        );
+
+        if (newBroadcasts.length > 0) {
+            const values = newBroadcasts.map(b => [
+                donorId,
+                'Donor',
+                'BROADCAST',
+                b.title,
+                b.message,
+                b.id
+            ]);
+
+            await pool.query(
+                'INSERT INTO notifications (recipient_id, recipient_type, type, title, message, source_id) VALUES ?',
+                [values]
+            );
+        }
+
+        // 2. Fetch Notifications (excluding dismissed)
+        const [rows] = await pool.query(
+            'SELECT * FROM notifications WHERE recipient_id = ? AND recipient_type = "Donor" AND is_dismissed = FALSE ORDER BY created_at DESC',
+            [donorId]
+        );
         res.json(rows);
+    } catch (err) {
+        console.error("Notif Error", err);
+        res.status(500).json({ error: 'Server error' });
+    }
+};
+
+exports.markAsRead = async (req, res) => {
+    try {
+        const { id } = req.params;
+        await pool.query(
+            'UPDATE notifications SET is_read = TRUE WHERE id = ? AND recipient_id = ?',
+            [id, req.user.id]
+        );
+        res.json({ message: 'Marked as read' });
     } catch (err) {
         res.status(500).json({ error: 'Server error' });
     }
 };
+
+exports.markAllRead = async (req, res) => {
+    try {
+        await pool.query(
+            'UPDATE notifications SET is_read = TRUE WHERE recipient_id = ? AND recipient_type = "Donor" AND is_dismissed = FALSE',
+            [req.user.id]
+        );
+        res.json({ message: 'All marked as read' });
+    } catch (err) {
+        res.status(500).json({ error: 'Server error' });
+    }
+};
+
+exports.deleteNotification = async (req, res) => {
+    try {
+        const result = await pool.query(
+            'UPDATE notifications SET is_dismissed = TRUE WHERE id = ? AND recipient_id = ?',
+            [req.params.id, req.user.id]
+        );
+        // Check if any row was affected
+        if (result[0].affectedRows === 0) {
+            // It might be already deleted or not belong to user, but for idempotency we say success
+            // or we could check if it exists at all. 
+            // Let's just return success.
+        }
+        res.json({ message: 'Notification removed' });
+    } catch (err) {
+        console.error('Delete Notif Error:', err);
+        res.status(500).json({ error: 'Server error' });
+    }
+};
+
+exports.clearAllNotifications = async (req, res) => {
+    try {
+        await pool.query(
+            'UPDATE notifications SET is_dismissed = TRUE, is_read = TRUE WHERE recipient_id = ? AND recipient_type = "Donor"',
+            [req.user.id]
+        );
+        res.json({ message: 'All notifications cleared' });
+    } catch (err) {
+        console.error('Clear All Notif Error:', err);
+        res.status(500).json({ error: 'Server error' });
+    }
+};
+
 
 const getCompatibilityInfo = (bloodType) => {
     const map = {
@@ -362,6 +467,7 @@ exports.chat = async (req, res) => {
         });
 
         res.json({ text: completion.choices[0].message.content, intent: null });
+        await addDonorLog(req.user.id, 'CHAT_AI', 'Assistant', `Interacted with AI Assistant`);
     } catch (err) {
         console.error('Chat error details:', err);
 

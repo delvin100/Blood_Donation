@@ -171,8 +171,18 @@ CREATE TABLE notifications (
   message TEXT NOT NULL,
   source_id INT DEFAULT NULL,
   is_read BOOLEAN DEFAULT FALSE,
+  is_dismissed BOOLEAN DEFAULT FALSE,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   INDEX idx_notif_recipient (recipient_id, recipient_type, is_read)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- Broadcasts (Global)
+CREATE TABLE broadcasts (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  target ENUM('all', 'donors', 'organizations') NOT NULL,
+  title VARCHAR(255) NOT NULL,
+  message TEXT NOT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- Medical Reports
@@ -211,6 +221,34 @@ CREATE TABLE org_logs (
   FOREIGN KEY (org_id) REFERENCES organizations(id) ON DELETE CASCADE,
   INDEX idx_org_logs_org_id (org_id),
   INDEX idx_org_logs_created_at (created_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- Donor Activity Logs
+CREATE TABLE donor_logs (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  donor_id INT NOT NULL,
+  action_type VARCHAR(50) NOT NULL,
+  entity_name VARCHAR(255) DEFAULT NULL,
+  description TEXT,
+  details JSON DEFAULT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (donor_id) REFERENCES donors(id) ON DELETE CASCADE,
+  INDEX idx_donor_logs_donor_id (donor_id),
+  INDEX idx_donor_logs_created_at (created_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- Admin Activity Logs
+CREATE TABLE admin_logs (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  admin_id INT NOT NULL,
+  action_type VARCHAR(50) NOT NULL,
+  entity_name VARCHAR(255) DEFAULT NULL,
+  description TEXT,
+  details JSON DEFAULT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (admin_id) REFERENCES admins(id) ON DELETE CASCADE,
+  INDEX idx_admin_logs_admin_id (admin_id),
+  INDEX idx_admin_logs_created_at (created_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 

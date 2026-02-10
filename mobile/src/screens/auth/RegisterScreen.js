@@ -19,7 +19,7 @@ import { Ionicons } from '@expo/vector-icons';
 import apiService from '../../api/apiService';
 import { saveToken, saveUser } from '../../utils/storage';
 import GoogleIcon from '../../components/common/GoogleIcon';
-import { parseError } from '../../utils/errors';
+import { parseError, logError } from '../../utils/errors';
 
 
 
@@ -32,15 +32,10 @@ const RegisterScreen = ({ navigation }) => {
     const [confirmPassword, setConfirmPassword] = useState('');
     const [showPassword, setShowPassword] = useState(false);
 
-    // Calculate 18 and 65 years ago from today
-    const maxDate = new Date();
-    maxDate.setFullYear(maxDate.getFullYear() - 18);
-    const minDate = new Date();
-    minDate.setFullYear(minDate.getFullYear() - 65);
-
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState('');
     const [showErrors, setShowErrors] = useState(false);
+
 
     // Field-specific error states
     const [errors, setErrors] = useState({
@@ -123,7 +118,7 @@ const RegisterScreen = ({ navigation }) => {
             fullName: fErr,
             email: eErr,
             password: pErr,
-            confirmPassword: cErr
+            confirmPassword: cErr,
         };
 
         setErrors(newErrors);
@@ -155,6 +150,7 @@ const RegisterScreen = ({ navigation }) => {
             // Our custom router in App.js will detect the token and switch screens
             navigation.navigate('Dashboard');
         } catch (err) {
+            logError('Register Error', err);
             setError(parseError(err));
         } finally {
             setIsLoading(false);
@@ -243,6 +239,8 @@ const RegisterScreen = ({ navigation }) => {
                             </View>
                             {errors.email ? <Text style={styles.fieldError}>{errors.email}</Text> : null}
                         </View>
+
+
 
                         <View style={styles.inputGroup}>
                             <Text style={styles.label}>Password</Text>

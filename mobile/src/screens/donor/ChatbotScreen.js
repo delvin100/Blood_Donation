@@ -14,6 +14,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons, FontAwesome5 } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import apiService from '../../api/apiService';
+import { logError } from '../../utils/errors';
 
 
 const ChatbotScreen = ({ navigation, route }) => {
@@ -78,7 +79,7 @@ const ChatbotScreen = ({ navigation, route }) => {
             }]);
             setLastBotIntent(res.data.intent);
         } catch (err) {
-            console.error('Chat error:', err);
+            logError('Chat Error', err);
 
             // Handle 429 Quota Error
             if (err.response?.status === 429) {

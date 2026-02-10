@@ -15,7 +15,8 @@ import { Picker } from '@react-native-picker/picker';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Location from 'expo-location';
-import { stateDistrictMapping, bloodGroups, cityToDistrictMapping } from '../../utils/locationData';
+import { stateDistrictMapping, bloodGroups, cityToDistrictMapping, districtAliases } from '../../utils/locationData';
+
 import apiService from '../../api/apiService';
 
 const CompleteProfileModal = ({ visible, onClose, onSuccess }) => {
@@ -75,60 +76,84 @@ const CompleteProfileModal = ({ visible, onClose, onSuccess }) => {
 
             if (reverseGeocode.length > 0) {
                 const addr = reverseGeocode[0];
+                const regionClean = addr.region ? addr.region.replace(/\s+/g, '').toLowerCase() : '';
 
-                // Find matching state
+                // Find matching state with robust comparison
                 const stateKeys = Object.keys(stateDistrictMapping);
-                const matchedState = stateKeys.find(s =>
-                    s.toLowerCase().includes(addr.region?.toLowerCase()) ||
-                    addr.region?.toLowerCase().includes(s.toLowerCase())
-                );
+                const matchedState = stateKeys.find(s => {
+                    const sClean = s.replace(/\s+/g, '').toLowerCase();
+                    return sClean === regionClean || sClean.includes(regionClean) || regionClean.includes(sClean);
+                });
 
                 if (matchedState) {
                     setState(matchedState);
-                    const dists = stateDistrictMapping[matchedState];
+                    const dists = stateDistrictMapping[matchedState] || [];
 
-                    // Smart matching for districts
+                    // 1. Identify City (prefer City -> Subregion -> Town -> Name)
+                    // If city is something generic like "undefined" or empty, fallback
+                    let detectedCity = addr.city || addr.town || addr.name || addr.subregion;
+                    // Filter out numeric or very short names if needed, but for now trust Geocoder
+                    if (detectedCity) {
+                        setCity(detectedCity);
+                    }
+
+                    // 2. Identify District
                     const possibleDistrictSource = [
                         addr.subregion,
                         addr.district,
-                        addr.city,
-                        addr.town,
-                        addr.name
+                        addr.city, // Sometimes city is the district name
+                        addr.town
                     ].filter(Boolean);
 
                     let matchedDist = null;
+
+                    // Helper to clean strings efficiently for matching
+                    const cleanString = (str) => {
+                        return str.toLowerCase()
+                            .replace('district', '')
+                            .replace('dt', '')
+                            .trim();
+                    };
+
                     for (const source of possibleDistrictSource) {
-                        const sourceLower = source.toLowerCase();
+                        const sourceClean = cleanString(source);
+
+                        // Check direct match or alias match
                         matchedDist = dists.find(d => {
-                            const dLower = d.toLowerCase();
-                            return dLower === sourceLower ||
-                                sourceLower.includes(dLower) ||
-                                dLower.includes(sourceLower);
+                            const dClean = cleanString(d);
+                            // Check aliases first
+                            if (districtAliases[source]) {
+                                return d === districtAliases[source];
+                            }
+                            // Direct containment check
+                            return dClean === sourceClean || sourceClean.includes(dClean) || dClean.includes(sourceClean);
                         });
+
                         if (matchedDist) break;
                     }
 
-                    // Extra check for Mumbai
+                    // Fallback: Check aliases on the city itself even if not in possible sources loop
+                    if (!matchedDist && detectedCity && districtAliases[detectedCity]) {
+                        matchedDist = districtAliases[detectedCity];
+                    }
+
+                    // Extra check for Mumbai (Legacy)
                     if (!matchedDist && matchedState === "Maharashtra") {
                         if (addr.city?.toLowerCase().includes("mumbai") || addr.region?.toLowerCase().includes("mumbai")) {
-                            matchedDist = "Mumbai City"; // Default heuristic
+                            matchedDist = "Mumbai City";
                         }
                     }
 
                     if (matchedDist) {
-                        setTimeout(() => setDistrict(matchedDist), 200);
+                        // Using a timeout to ensure state is settled before setting district
+                        setTimeout(() => setDistrict(matchedDist), 500);
+                    } else if (cityToDistrictMapping[detectedCity]) {
+                        // Use city mapping as last resort
+                        const fallbackDist = cityToDistrictMapping[detectedCity];
+                        setTimeout(() => setDistrict(fallbackDist), 500);
                     }
-
-                    if (addr.city || addr.town) {
-                        const cityVal = addr.city || addr.town;
-                        setCity(cityVal);
-
-                        // Use cityToDistrictMapping as a fallback if district wasn't found
-                        if (!matchedDist && cityToDistrictMapping[cityVal]) {
-                            const fallbackDist = cityToDistrictMapping[cityVal];
-                            setTimeout(() => setDistrict(fallbackDist), 250);
-                        }
-                    }
+                } else {
+                    setError('Could not auto-detect state. Please select manually.');
                 }
             }
         } catch (err) {
@@ -285,19 +310,21 @@ const CompleteProfileModal = ({ visible, onClose, onSuccess }) => {
                                 </View>
 
                                 <Text style={styles.label}>Date of Birth</Text>
-                                <View style={[styles.inputWrapper, showErrors && (dob === 'DD-MM-YYYY' || !dob) && styles.inputWrapperError]}>
-                                    <Ionicons name="calendar-outline" size={20} color="#6b7280" style={styles.inputIcon} />
-                                    <TextInput style={styles.input} placeholder="DD-MM-YYYY" value={dob} onChangeText={setDob} maxLength={10} />
-                                    <TouchableOpacity
-                                        onPress={() => {
-                                            if (!dob || dob === 'DD-MM-YYYY') setDob('01-01-2000');
-                                            setShowDatePicker(true);
-                                        }}
-                                        style={styles.datePickerBtn}
-                                    >
-                                        <Ionicons name="chevron-down" size={20} color="#dc2626" />
-                                    </TouchableOpacity>
-                                </View>
+                                <TouchableOpacity
+                                    onPress={() => {
+                                        if (!dob || dob === 'DD-MM-YYYY') setDob('01-01-2000');
+                                        setShowDatePicker(true);
+                                    }}
+                                    activeOpacity={0.7}
+                                >
+                                    <View style={[styles.inputWrapper, showErrors && (dob === 'DD-MM-YYYY' || !dob) && styles.inputWrapperError]} pointerEvents="none">
+                                        <Ionicons name="calendar-outline" size={20} color="#6b7280" style={styles.inputIcon} />
+                                        <TextInput style={styles.input} placeholder="DD-MM-YYYY" value={dob} editable={false} maxLength={10} />
+                                        <View style={styles.datePickerBtn}>
+                                            <Ionicons name="chevron-down" size={20} color="#dc2626" />
+                                        </View>
+                                    </View>
+                                </TouchableOpacity>
 
                                 {showDatePicker && (
                                     <DateTimePicker
@@ -341,6 +368,7 @@ const CompleteProfileModal = ({ visible, onClose, onSuccess }) => {
                                 <View style={[styles.inputWrapper, !state && styles.disabledPicker, showErrors && !district && styles.inputWrapperError]}>
                                     <Ionicons name="navigate-outline" size={20} color={state ? "#6b7280" : "#9ca3af"} style={styles.inputIcon} />
                                     <Picker
+                                        key={state} // Force re-render when state changes
                                         selectedValue={district}
                                         onValueChange={(val) => { if (state) setDistrict(val); }}
                                         style={styles.picker}

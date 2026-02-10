@@ -24,5 +24,10 @@ router.post('/verify', authMiddleware, orgController.verifyDonor);
 router.get('/members', authMiddleware, orgController.getMembers);
 router.post('/members/add', authMiddleware, orgController.addMember);
 router.delete('/members/:donorId', authMiddleware, orgController.removeMember);
+router.get('/notifications', authMiddleware, orgController.getNotifications);
+router.patch('/notifications/:id/read', authMiddleware, orgController.markAsRead);
+router.patch('/notifications/read-all', authMiddleware, orgController.markAllRead);
+router.delete('/notifications/clear-all', authMiddleware, orgController.clearAllNotifications);
+router.delete('/notifications/:id', authMiddleware, orgController.deleteNotification);
 
 module.exports = router;

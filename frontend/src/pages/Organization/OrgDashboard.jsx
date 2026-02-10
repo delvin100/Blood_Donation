@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-hot-toast';
 import axios from 'axios';
@@ -160,6 +160,9 @@ const DonorSearch = React.memo(({ onSelect, verifying }) => {
 export default function OrgDashboard() {
     const navigate = useNavigate();
     const [activeTab, setActiveTab] = useState('home');
+    const [notifications, setNotifications] = useState([]);
+    const [showNotifications, setShowNotifications] = useState(false);
+    const notificationsRef = useRef(null);
     const [sidebarOpen, setSidebarOpen] = useState(true);
     const [user, setUser] = useState(null);
     const [stats, setStats] = useState({ total_units: 0, active_requests: 0, verified_count: 0 });
@@ -245,7 +248,83 @@ export default function OrgDashboard() {
         fetchStats();
         fetchActivity();
         fetchOrgProfile();
+        fetchNotifications();
     }, []);
+
+    // Close notifications when clicking outside
+    useEffect(() => {
+        const handleClickOutside = (event) => {
+            if (notificationsRef.current && !notificationsRef.current.contains(event.target)) {
+                setShowNotifications(false);
+            }
+        };
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, []);
+
+    const fetchNotifications = async () => {
+        try {
+            const token = getAuthToken();
+            if (!token) return;
+            const res = await axios.get('/api/organization/notifications', {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+            setNotifications(res.data);
+        } catch (err) {
+            console.error('Error fetching notifications:', err);
+        }
+    };
+
+    const markAsRead = async (id) => {
+        try {
+            const token = getAuthToken();
+            await axios.patch(`/api/organization/notifications/${id}/read`, {}, {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+            setNotifications(prev => prev.map(n => n.id === id ? { ...n, is_read: 1 } : n));
+        } catch (err) {
+            console.error('Error marking read:', err);
+        }
+    };
+
+    const markAllRead = async () => {
+        try {
+            const token = getAuthToken();
+            await axios.patch('/api/organization/notifications/read-all', {}, {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+            setNotifications(prev => prev.map(n => ({ ...n, is_read: 1 })));
+        } catch (err) {
+            console.error('Error marking all read:', err);
+        }
+    };
+
+    const deleteNotification = async (e, id) => {
+        e.stopPropagation();
+        try {
+            const token = getAuthToken();
+            await axios.delete(`/api/organization/notifications/${id}`, {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+            setNotifications(prev => prev.filter(n => n.id !== id));
+            toast.success('Notification removed');
+        } catch (err) {
+            console.error('Error deleting notification:', err);
+        }
+    };
+
+    const clearAllNotifications = async () => {
+        try {
+            const token = getAuthToken();
+            await axios.delete('/api/organization/notifications/clear-all', {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+            setNotifications([]);
+            toast.success('All notifications cleared');
+        } catch (err) {
+            console.error('Error clearing notifications:', err);
+        }
+    };
 
     useEffect(() => {
         if (activeTab === 'home') {
@@ -1020,19 +1099,93 @@ export default function OrgDashboard() {
                         </div>
                     </div>
 
-                    <div className="flex items-center gap-6">
-
+                    <div className="flex items-center gap-2">
                         <div
                             onClick={() => setActiveTab('profile')}
-                            className="flex items-center gap-3 pl-6 border-l border-gray-100 cursor-pointer group"
+                            className="flex items-center gap-3 pr-4 border-r border-gray-100 cursor-pointer group"
                         >
                             <div className="text-right hidden md:block group-hover:opacity-80 transition-opacity">
                                 <p className="text-sm font-bold text-gray-900">{user?.name || 'Organization'}</p>
                                 <p className="text-xs font-semibold text-gray-400">{user?.type || 'Medical Facility'}</p>
                             </div>
-                            <div className="w-12 h-12 rounded-full bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center text-gray-500 font-black text-lg shadow-inner group-hover:scale-105 transition-transform duration-300">
+                            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center text-gray-500 font-black text-sm shadow-inner group-hover:scale-105 transition-transform duration-300">
                                 {user?.name?.charAt(0) || 'O'}
                             </div>
+                        </div>
+
+                        {/* Notifications */}
+                        <div className="relative" ref={notificationsRef}>
+                            <button
+                                onClick={() => setShowNotifications(!showNotifications)}
+                                className="w-12 h-12 rounded-full hover:bg-gray-100 flex items-center justify-center text-gray-400 transition-all relative group"
+                            >
+                                <i className="far fa-bell text-xl group-hover:text-red-500 transition-colors"></i>
+                                {notifications.filter(n => !n.is_read).length > 0 && (
+                                    <span className="absolute top-2.5 right-2.5 w-5 h-5 bg-red-600 border-2 border-white rounded-full text-[10px] text-white font-black flex items-center justify-center">
+                                        {notifications.filter(n => !n.is_read).length}
+                                    </span>
+                                )}
+                            </button>
+
+                            {showNotifications && (
+                                <div className="absolute right-0 mt-4 w-[400px] bg-white rounded-[2rem] shadow-2xl border border-gray-100 overflow-hidden animate-in fade-in slide-in-from-top-4 duration-300">
+                                    <div className="p-6 border-b border-gray-50 bg-gray-50/30 flex justify-between items-center">
+                                        <h3 className="font-black text-gray-900 tracking-tight">Notifications</h3>
+                                        {notifications.length > 0 && (
+                                            <button
+                                                onClick={clearAllNotifications}
+                                                className="text-xs font-bold text-red-600 hover:text-white hover:bg-red-600 border border-red-100 px-3 py-1.5 rounded-lg transition-all"
+                                            >
+                                                Clear All
+                                            </button>
+                                        )}
+                                    </div>
+                                    <div className="max-h-[450px] overflow-y-auto custom-scrollbar">
+                                        {notifications.length > 0 ? (
+                                            <div className="divide-y divide-gray-50">
+                                                {notifications.map((n) => (
+                                                    <div
+                                                        key={n.id}
+                                                        className={`p-6 transition-colors hover:bg-gray-50/50 relative group ${!n.is_read ? 'bg-red-50/30' : ''}`}
+                                                        onClick={() => !n.is_read && markAsRead(n.id)}
+                                                    >
+                                                        <div className="flex gap-4">
+                                                            <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${n.type === 'BROADCAST' ? 'bg-blue-100 text-blue-600' :
+                                                                n.type === 'Emergency' ? 'bg-red-100 text-red-600' :
+                                                                    'bg-gray-100 text-gray-600'
+                                                                }`}>
+                                                                <i className={`fas ${n.type === 'BROADCAST' ? 'fa-bullhorn' :
+                                                                    n.type === 'Emergency' ? 'fa-ambulance' :
+                                                                        'fa-bell'
+                                                                    } text-xs`}></i>
+                                                            </div>
+                                                            <div className="flex-1">
+                                                                <div className="flex justify-between items-start mb-1">
+                                                                    <p className={`text-sm font-bold ${!n.is_read ? 'text-gray-900' : 'text-gray-600'}`}>{n.title}</p>
+                                                                    <span className="text-[10px] font-bold text-gray-400">
+                                                                        {new Date(n.created_at).toLocaleDateString()}
+                                                                    </span>
+                                                                </div>
+                                                                <p className="text-xs text-gray-500 leading-relaxed line-clamp-2">{n.message}</p>
+                                                            </div>
+                                                        </div>
+                                                        {!n.is_read && (
+                                                            <div className="absolute right-4 top-1/2 -translate-y-1/2 w-1.5 h-1.5 bg-red-500 rounded-full"></div>
+                                                        )}
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        ) : (
+                                            <div className="py-16 text-center">
+                                                <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center text-gray-300 text-2xl mx-auto mb-4">
+                                                    <i className="fas fa-bell-slash"></i>
+                                                </div>
+                                                <p className="text-sm font-bold text-gray-400 uppercase tracking-widest">No notifications yet</p>
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                            )}
                         </div>
                     </div>
                 </header>

@@ -11,9 +11,11 @@ import {
     Platform,
     Dimensions
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons, FontAwesome5 } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import apiService from '../../api/apiService';
+import { logError } from '../../utils/errors';
 
 const { width } = Dimensions.get('window');
 
@@ -30,7 +32,7 @@ const UrgentNeedsModal = ({ visible, onClose, user }) => {
             setNeeds(response.data);
         } catch (err) {
             setError('Failed to fetch urgent needs');
-            console.error(err);
+            logError('Urgent Needs Fetch', err);
         } finally {
             setLoading(false);
         }
@@ -95,7 +97,7 @@ const UrgentNeedsModal = ({ visible, onClose, user }) => {
                         style={styles.callBtnGradient}
                     >
                         <Ionicons name="call" size={18} color="white" style={{ marginRight: 8 }} />
-                        <Text style={styles.callBtnText}>Connect Now</Text>
+                        <Text style={styles.callBtnText}>{item.org_phone}</Text>
                     </LinearGradient>
                 </TouchableOpacity>
             </View>
@@ -110,7 +112,7 @@ const UrgentNeedsModal = ({ visible, onClose, user }) => {
             onRequestClose={onClose}
         >
             <View style={styles.overlay}>
-                <View style={styles.content}>
+                <SafeAreaView style={styles.content}>
                     <View style={styles.header}>
                         <View>
                             <Text style={styles.title}>Urgent Needs</Text>
@@ -155,7 +157,7 @@ const UrgentNeedsModal = ({ visible, onClose, user }) => {
                             showsVerticalScrollIndicator={false}
                         />
                     )}
-                </View>
+                </SafeAreaView>
             </View>
         </Modal>
     );
@@ -165,13 +167,10 @@ const styles = StyleSheet.create({
     overlay: {
         flex: 1,
         backgroundColor: 'rgba(0,0,0,0.5)',
-        justifyContent: 'flex-end',
     },
     content: {
         backgroundColor: '#f9fafb',
-        borderTopLeftRadius: 32,
-        borderTopRightRadius: 32,
-        height: '85%',
+        flex: 1,
         overflow: 'hidden',
     },
     header: {

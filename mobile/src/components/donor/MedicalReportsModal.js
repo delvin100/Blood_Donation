@@ -15,6 +15,7 @@ import * as FileSystem from 'expo-file-system';
 import { getContentUriAsync } from 'expo-file-system/legacy';
 import * as IntentLauncher from 'expo-intent-launcher';
 import apiService from '../../api/apiService';
+import { parseError, logError } from '../../utils/errors';
 
 const MedicalReportsModal = ({ visible, onClose }) => {
     const [reports, setReports] = useState([]);
@@ -30,8 +31,8 @@ const MedicalReportsModal = ({ visible, onClose }) => {
             const response = await apiService.get('/donor/reports');
             setReports(response.data);
         } catch (err) {
-            setError('Failed to fetch medical reports');
-            console.error(err);
+            setError(parseError(err));
+            logError('Medical Reports Fetch', err);
         } finally {
             setLoading(false);
         }
@@ -293,8 +294,8 @@ const MedicalReportsModal = ({ visible, onClose }) => {
                 });
             }
         } catch (error) {
-            console.error('PDF View Error:', error);
-            Alert.alert('Error', 'Failed to open PDF viewer.');
+            logError('PDF View Error', error);
+            Alert.alert('Error', parseError(error));
         } finally {
             setViewingPdfId(null);
         }
@@ -314,8 +315,8 @@ const MedicalReportsModal = ({ visible, onClose }) => {
                 dialogTitle: 'Save Medical Report'
             });
         } catch (error) {
-            console.error('PDF Download Error:', error);
-            Alert.alert('Error', 'Failed to download PDF.');
+            logError('PDF Download Error', error);
+            Alert.alert('Error', parseError(error));
         } finally {
             setDownloadingPdfId(null);
         }

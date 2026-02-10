@@ -37,6 +37,7 @@ router.get('/reports/:id', verifyAdminToken, adminController.getReportDetails);
 router.delete('/donors/:id', verifyAdminToken, adminController.deleteDonor);
 router.delete('/organizations/:id', verifyAdminToken, adminController.deleteOrganization);
 
+router.get('/activity-logs', verifyAdminToken, adminController.getActivityLogs);
 router.post('/notifications', verifyAdminToken, adminController.createBroadcast);
 
 module.exports = router;

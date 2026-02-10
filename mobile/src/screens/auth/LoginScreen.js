@@ -21,7 +21,7 @@ import apiService from '../../api/apiService';
 import { saveToken, saveUser } from '../../utils/storage';
 import ForgotPasswordModal from '../../components/common/ForgotPasswordModal';
 import GoogleIcon from '../../components/common/GoogleIcon';
-import { parseError } from '../../utils/errors';
+import { parseError, logError } from '../../utils/errors';
 
 
 
@@ -70,7 +70,7 @@ const LoginScreen = ({ navigation }) => {
             console.log('Navigating to Dashboard...');
             navigation.navigate('Dashboard');
         } catch (err) {
-            console.error('Login Error Detected:', err);
+            logError('Login Error', err);
             setError(parseError(err));
         } finally {
             console.log('Login attempt finished.');

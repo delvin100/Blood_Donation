@@ -13,6 +13,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import apiService from '../../api/apiService';
+import { parseError, logError } from '../../utils/errors';
 
 const ForgotPasswordModal = ({ visible, onClose }) => {
     const [step, setStep] = useState(1);
@@ -50,7 +51,8 @@ const ForgotPasswordModal = ({ visible, onClose }) => {
             setStep(2);
             setSuccess('Verification code sent to your email.');
         } catch (err) {
-            setError(err.error || 'Failed to send reset code.');
+            logError('Forgot Password Send Code', err);
+            setError(parseError(err));
         } finally {
             setIsLoading(false);
         }
@@ -69,7 +71,8 @@ const ForgotPasswordModal = ({ visible, onClose }) => {
             setStep(3);
             setSuccess('Code verified. Set your new password.');
         } catch (err) {
-            setError(err.error || 'Invalid or expired code.');
+            logError('Forgot Password Verify Code', err);
+            setError(parseError(err));
         } finally {
             setIsLoading(false);
         }
@@ -90,7 +93,8 @@ const ForgotPasswordModal = ({ visible, onClose }) => {
                 handleClose();
             }, 2000);
         } catch (err) {
-            setError(err.error || 'Failed to reset password.');
+            logError('Forgot Password Reset', err);
+            setError(parseError(err));
         } finally {
             setIsLoading(false);
         }

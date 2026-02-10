@@ -18,6 +18,7 @@ import { Ionicons, FontAwesome5 } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import apiService from '../../api/apiService';
 import { removeToken, removeUser } from '../../utils/storage';
+import { parseError, logError } from '../../utils/errors';
 import CompleteProfileModal from '../../components/common/CompleteProfileModal';
 import UrgentNeedsModal from '../../components/donor/UrgentNeedsModal';
 import MedicalReportsModal from '../../components/donor/MedicalReportsModal';
@@ -126,7 +127,7 @@ const DashboardScreen = ({ navigation }) => {
                 setShowCompleteProfile(true);
             }
         } catch (error) {
-            console.error('Error fetching dashboard data:', error);
+            logError('Dashboard Data Error', error);
         } finally {
             setIsLoading(false);
             setRefreshing(false);
@@ -143,11 +144,16 @@ const DashboardScreen = ({ navigation }) => {
             setUrgentNeeds(urgentRes.data);
             setUrgentNeedsCount(urgentRes.data.length);
         } catch (error) {
-            console.error('Error fetching notifications:', error);
+            logError('Notifications Error', error);
         }
     };
 
     const markAsRead = async (id) => {
+        if (typeof id === 'string' && id.startsWith('un-')) {
+            setShowNotifications(false);
+            setTimeout(() => setShowUrgentNeeds(true), 100);
+            return;
+        }
         try {
             await apiService.patch(`/donor/notifications/${id}/read`);
             setNotifications(prev => prev.map(n => n.id === id ? { ...n, is_read: 1 } : n));
@@ -162,7 +168,7 @@ const DashboardScreen = ({ navigation }) => {
                 }));
             }
         } catch (err) {
-            console.error('Error marking read:', err);
+            logError('Mark Read Error', err);
         }
     };
 
@@ -177,7 +183,7 @@ const DashboardScreen = ({ navigation }) => {
                 }));
             }
         } catch (err) {
-            console.error('Error marking all read:', err);
+            logError('Mark All Read Error', err);
         }
     };
 
@@ -370,7 +376,7 @@ const DashboardScreen = ({ navigation }) => {
                                 >
                                     <LinearGradient colors={['#111827', '#000000']} style={styles.callBtnGradient}>
                                         <Ionicons name="call" size={18} color="white" style={{ marginRight: 8 }} />
-                                        <Text style={styles.callBtnText}>Connect Now</Text>
+                                        <Text style={styles.callBtnText}>{item.org_phone}</Text>
                                     </LinearGradient>
                                 </TouchableOpacity>
                             </View>
@@ -471,7 +477,7 @@ const DashboardScreen = ({ navigation }) => {
                 <View style={styles.sectionHeader}>
                     <Text style={styles.sectionTitle}>Recent Donations</Text>
                     <TouchableOpacity onPress={() => setShowDonationHistory(true)}>
-                        <Text style={styles.viewAll}>View All</Text>
+                        <Text style={styles.viewAll}>View More</Text>
                     </TouchableOpacity>
                 </View>
 
@@ -481,7 +487,7 @@ const DashboardScreen = ({ navigation }) => {
                         <Text style={styles.emptyText}>No donations recorded yet.</Text>
                     </View>
                 ) : (
-                    donations.slice(0, 1).map((donation) => (
+                    donations.slice(0, 2).map((donation) => (
                         <DonationItem key={donation.id} donation={donation} />
                     ))
                 )}
@@ -491,7 +497,7 @@ const DashboardScreen = ({ navigation }) => {
                     <Text style={styles.sectionTitle}>My Organizations</Text>
                     {data?.memberships?.length > 0 && (
                         <TouchableOpacity onPress={() => setShowMyOrganizations(true)}>
-                            <Text style={styles.viewAll}>Manage</Text>
+                            <Text style={styles.viewAll}>View More</Text>
                         </TouchableOpacity>
                     )}
                 </View>
@@ -502,7 +508,7 @@ const DashboardScreen = ({ navigation }) => {
                         <Text style={[styles.emptyText, { marginTop: 10 }]}>No memberships yet.</Text>
                     </View>
                 ) : (
-                    data.memberships.slice(0, 1).map((m, idx) => (
+                    data.memberships.slice(0, 2).map((m, idx) => (
                         <View key={idx} style={[styles.donationItem, { borderLeftColor: '#3b82f6' }]}>
                             <View style={[styles.donationIconContainer, { backgroundColor: '#eff6ff' }]}>
                                 <FontAwesome5 name={m.org_type === 'Hospital' ? 'hospital' : 'clinic-medical'} size={18} color="#3b82f6" />
@@ -513,7 +519,7 @@ const DashboardScreen = ({ navigation }) => {
                                     <Text style={[styles.donationNotes, { color: '#3b82f6' }]}>{m.org_city} • {m.org_type}</Text>
                                 </View>
                             </View>
-                            <View style={styles.donationUnits}>
+                            <View>
                                 <View style={{ backgroundColor: '#10b981', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6 }}>
                                     <Text style={{ color: 'white', fontSize: 10, fontWeight: 'bold' }}>VERIFIED</Text>
                                 </View>
@@ -557,7 +563,17 @@ const DashboardScreen = ({ navigation }) => {
             <NotificationsModal
                 visible={showNotifications}
                 onClose={() => setShowNotifications(false)}
-                notifications={notifications}
+                notifications={[
+                    ...urgentNeeds.map(un => ({
+                        id: `un-${un.id}`,
+                        type: 'Emergency',
+                        title: 'Urgent Requirement',
+                        message: `${un.blood_group} required at ${un.org_name} (${un.org_city}).\nTap to view details.`,
+                        created_at: un.created_at,
+                        is_read: false
+                    })),
+                    ...notifications
+                ]}
                 onMarkAsRead={markAsRead}
                 onMarkAllRead={markAllRead}
             />

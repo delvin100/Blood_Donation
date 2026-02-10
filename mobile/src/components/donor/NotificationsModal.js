@@ -23,9 +23,8 @@ const NotificationsModal = ({ visible, onClose, notifications, onMarkAsRead, onM
             visible={visible}
             onRequestClose={onClose}
         >
-            <View style={styles.modalContainer}>
-                <View style={styles.overlay} />
-                <View style={styles.modalContent}>
+            <View style={styles.overlay}>
+                <SafeAreaView style={styles.modalContent}>
                     <View style={styles.header}>
                         <View>
                             <Text style={styles.title}>Notifications</Text>
@@ -41,7 +40,11 @@ const NotificationsModal = ({ visible, onClose, notifications, onMarkAsRead, onM
                         </View>
                     </View>
 
-                    <ScrollView style={styles.notificationList} showsVerticalScrollIndicator={false}>
+                    <ScrollView
+                        style={styles.notificationList}
+                        showsVerticalScrollIndicator={false}
+                        contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 24 }}
+                    >
                         {notifications.length === 0 ? (
                             <View style={styles.emptyState}>
                                 <View style={styles.emptyIconContainer}>
@@ -76,32 +79,28 @@ const NotificationsModal = ({ visible, onClose, notifications, onMarkAsRead, onM
                             ))
                         )}
                     </ScrollView>
-                </View>
+                </SafeAreaView>
             </View>
         </Modal>
     );
 };
 
 const styles = StyleSheet.create({
-    modalContainer: {
-        flex: 1,
-        justifyContent: 'flex-end',
-    },
     overlay: {
-        ...StyleSheet.absoluteFillObject,
+        flex: 1,
         backgroundColor: 'rgba(0,0,0,0.5)',
     },
     modalContent: {
         backgroundColor: 'white',
         flex: 1,
-        padding: 24,
-        paddingTop: Platform.OS === 'ios' ? 60 : 40,
+        overflow: 'hidden',
     },
     header: {
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
-        marginBottom: 24,
+        padding: 24,
+        paddingBottom: 16,
     },
     title: {
         fontSize: 24,
@@ -142,12 +141,12 @@ const styles = StyleSheet.create({
         borderRadius: 20,
         marginBottom: 12,
         backgroundColor: 'white',
-        borderWidth: 1,
-        borderColor: '#f3f4f6',
+        borderWidth: 1.5,
+        borderColor: '#e5e7eb',
     },
     unreadItem: {
         backgroundColor: '#f9fafb',
-        borderColor: '#fee2e2',
+        borderColor: '#fecaca',
     },
     iconContainer: {
         width: 44,

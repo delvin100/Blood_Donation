@@ -1,6 +1,7 @@
 const pool = require('../config/database');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
+const { addAdminLog } = require('../utils/logUtils');
 
 const JWT_SECRET = process.env.JWT_SECRET || 'secret';
 
@@ -36,7 +37,7 @@ exports.getStats = async (req, res) => {
 
 exports.getDonors = async (req, res) => {
     try {
-        const [rows] = await pool.query('SELECT id, full_name, email, blood_type, phone, gender, state, district, city, dob, availability, created_at FROM donors ORDER BY created_at DESC');
+        const [rows] = await pool.query('SELECT id, full_name, email, blood_type, phone, gender, state, district, city, dob, availability, created_at FROM donors ORDER BY full_name ASC');
         res.json(rows);
     } catch (err) {
         res.status(500).json({ error: 'Server error' });
@@ -58,7 +59,9 @@ exports.verifyOrganization = async (req, res) => {
         if (result.affectedRows === 0) {
             return res.status(404).json({ error: 'Organization not found.' });
         }
+        const [org] = await pool.query('SELECT name FROM organizations WHERE id = ?', [req.params.id]);
         res.json({ message: 'Organization verification status updated.' });
+        await addAdminLog(req.adminId, 'ORG_VERIFY', org[0]?.name, `Toggled verification status for ${org[0]?.name}`);
     } catch (err) {
         console.error('Update verification failed:', err);
         res.status(500).json({ error: err.message || 'Server error' });
@@ -129,6 +132,7 @@ exports.addAdmin = async (req, res) => {
         const password_hash = await bcrypt.hash(password, 10);
         await pool.query('INSERT INTO admins (username, password_hash) VALUES (?, ?)', [username, password_hash]);
         res.json({ message: 'Admin added successfully' });
+        await addAdminLog(req.adminId, 'ADMIN_ADD', username, `Created new admin account: ${username}`);
     } catch (err) {
         res.status(500).json({ error: 'Server error' });
     }
@@ -136,8 +140,10 @@ exports.addAdmin = async (req, res) => {
 
 exports.deleteAdmin = async (req, res) => {
     try {
+        const [admin] = await pool.query('SELECT username FROM admins WHERE id = ?', [req.params.id]);
         await pool.query('DELETE FROM admins WHERE id = ?', [req.params.id]);
         res.json({ message: 'Admin deleted successfully' });
+        await addAdminLog(req.adminId, 'ADMIN_DELETE', admin[0]?.username, `Deleted admin account: ${admin[0]?.username}`);
     } catch (err) {
         res.status(500).json({ error: 'Server error' });
     }
@@ -158,6 +164,7 @@ exports.toggleAdminStatus = async (req, res) => {
         await pool.query('UPDATE admins SET status = ? WHERE id = ?', [newStatus, id]);
 
         res.json({ message: `Admin status updated to ${newStatus}`, status: newStatus });
+        await addAdminLog(req.adminId, 'ADMIN_STATUS', admin[0]?.username, `Changed ${admin[0]?.username} status to ${newStatus}`);
     } catch (err) {
         res.status(500).json({ error: 'Server error' });
     }
@@ -229,8 +236,10 @@ exports.getReportDetails = async (req, res) => {
 
 exports.deleteDonor = async (req, res) => {
     try {
+        const [donor] = await pool.query('SELECT full_name FROM donors WHERE id = ?', [req.params.id]);
         await pool.query('DELETE FROM donors WHERE id = ?', [req.params.id]);
         res.json({ message: 'Donor deleted successfully' });
+        await addAdminLog(req.adminId, 'DONOR_DELETE', donor[0]?.full_name, `Permanently removed donor: ${donor[0]?.full_name}`);
     } catch (err) {
         res.status(500).json({ error: 'Server error' });
     }
@@ -238,18 +247,101 @@ exports.deleteDonor = async (req, res) => {
 
 exports.deleteOrganization = async (req, res) => {
     try {
+        const [org] = await pool.query('SELECT name FROM organizations WHERE id = ?', [req.params.id]);
         await pool.query('DELETE FROM organizations WHERE id = ?', [req.params.id]);
         res.json({ message: 'Organization deleted successfully' });
+        await addAdminLog(req.adminId, 'ORG_DELETE', org[0]?.name, `Permanently removed organization: ${org[0]?.name}`);
     } catch (err) {
         res.status(500).json({ error: 'Server error' });
     }
 };
 
 exports.createBroadcast = async (req, res) => {
+    const { target, recipient_type, recipient_ids, title, message } = req.body;
+
     try {
-        // Stub for notifications since the frontend expects the endpoint
-        res.json({ message: 'Broadcast sent successfully (Simulation)' });
+        if (['all', 'donors', 'organizations'].includes(target)) {
+            // New Global Broadcast System
+            await pool.query(
+                'INSERT INTO broadcasts (target, title, message) VALUES (?, ?, ?)',
+                [target, title, message]
+            );
+
+            res.json({ message: `Global broadcast "${title}" sent to ${target}.` });
+            await addAdminLog(req.adminId, 'BROADCAST', title, `Sent global broadcast: "${title}" target: ${target}`);
+            return;
+        }
+
+        // Specific recipient logic
+        let recipients = [];
+        if (target === 'specific' && recipient_ids && recipient_type) {
+            recipients = recipient_ids.map(id => ({ id, type: recipient_type }));
+        }
+
+        if (recipients.length === 0) {
+            return res.status(400).json({ error: 'No recipients found' });
+        }
+
+        // Bulk insert notifications
+        const values = recipients.map(r => [
+            r.id,
+            r.type,
+            'BROADCAST',
+            title,
+            message
+        ]);
+
+        await pool.query(
+            'INSERT INTO notifications (recipient_id, recipient_type, type, title, message) VALUES ?',
+            [values]
+        );
+
+        res.json({ message: `Broadcast sent successfully to ${recipients.length} recipients.` });
+        await addAdminLog(req.adminId, 'BROADCAST', title, `Sent broadcast: "${title}" to ${recipients.length} specific recipients`);
     } catch (err) {
+        console.error('Broadcast Error:', err);
+        res.status(500).json({ error: 'Server error' });
+    }
+};
+
+exports.getActivityLogs = async (req, res) => {
+    try {
+        const [admin] = await pool.query('SELECT username FROM admins WHERE id = ?', [req.adminId]);
+        const isMasterAdmin = admin.length > 0 && admin[0].username === 'admin';
+
+        // 1. Fetch Organization logs (Visible to all admins)
+        const [orgLogs] = await pool.query(`
+            SELECT 'Organization' as entity_type, ol.action_type, ol.entity_name, ol.description, ol.created_at, o.name as origin_name
+            FROM org_logs ol 
+            JOIN organizations o ON ol.org_id = o.id
+        `);
+
+        // 2. Fetch Donor logs (Visible to all admins)
+        const [donorLogs] = await pool.query(`
+            SELECT 'Donor' as entity_type, dl.action_type, dl.entity_name, dl.description, dl.created_at, d.full_name as origin_name
+            FROM donor_logs dl
+            JOIN donors d ON dl.donor_id = d.id
+        `);
+
+        // 3. Fetch Admin logs (ONLY if master admin)
+        let adminLogs = [];
+        if (isMasterAdmin) {
+            const [rows] = await pool.query(`
+                SELECT 'Admin' as entity_type, al.action_type, al.entity_name, al.description, al.created_at, ad.username as origin_name
+                FROM admin_logs al
+                JOIN admins ad ON al.admin_id = ad.id
+            `);
+            adminLogs = rows;
+        }
+
+        // 4. Combine and Sort
+        const allLogs = [...orgLogs, ...donorLogs, ...adminLogs].sort((a, b) =>
+            new Date(b.created_at) - new Date(a.created_at)
+        );
+
+        res.json(allLogs);
+    } catch (err) {
+        console.error('getActivityLogs error:', err);
         res.status(500).json({ error: 'Server error' });
     }
 };

@@ -300,6 +300,33 @@ const Dashboard = () => {
     }
   };
 
+  const deleteNotification = async (e, id) => {
+    e.stopPropagation();
+    try {
+      const token = localStorage.getItem('authToken') || sessionStorage.getItem('authToken');
+      await axios.delete(`/api/donor/notifications/${id}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setNotifications(prev => prev.filter(n => n.id !== id));
+      toast.success('Notification removed');
+    } catch (err) {
+      console.error('Error deleting notification:', err);
+    }
+  };
+
+  const clearAllNotifications = async () => {
+    try {
+      const token = localStorage.getItem('authToken') || sessionStorage.getItem('authToken');
+      await axios.delete('/api/donor/notifications/clear-all', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setNotifications([]);
+      toast.success('All notifications cleared');
+    } catch (err) {
+      console.error('Error clearing notifications:', err);
+    }
+  };
+
   const handleEditDonation = async (e) => {
     e.preventDefault();
     try {
@@ -1264,12 +1291,12 @@ const Dashboard = () => {
                 {/* Notification Dropdown */}
                 {showNotifications && (
                   <div className="absolute right-0 mt-4 w-[400px] bg-white rounded-[2.5rem] shadow-2xl shadow-gray-200 border border-gray-100 py-8 overflow-hidden z-50 animate-in slide-in-from-top-4 duration-300">
-                    <div className="px-8 mb-6 flex items-center justify-between">
+                    <div className="px-8 mb-6 flex justify-between items-center">
                       <h3 className="text-xl font-black text-gray-900 tracking-tight">Activity Feed</h3>
-                      {data?.stats?.unreadNotifications > 0 && (
+                      {notifications.length > 0 && (
                         <button
-                          onClick={markAllRead}
-                          className="text-[10px] font-black text-red-600 uppercase tracking-widest hover:text-red-700 hover:underline"
+                          onClick={clearAllNotifications}
+                          className="text-xs font-bold text-red-600 hover:text-white hover:bg-red-600 border border-red-100 px-3 py-1.5 rounded-lg transition-all"
                         >
                           Clear All
                         </button>
@@ -1317,25 +1344,31 @@ const Dashboard = () => {
                             <div
                               key={n.id}
                               onClick={() => !n.is_read && markAsRead(n.id)}
-                              className={`p-6 rounded-[2rem] transition-all cursor-pointer group relative overflow-hidden
-                                                        ${n.is_read ? 'bg-white opacity-60' : 'bg-red-50/50 hover:bg-red-50 border border-red-100/50'}`}
+                              className={`p-6 transition-colors hover:bg-gray-50/50 relative group ${!n.is_read ? 'bg-red-50/30' : ''}`}
                             >
-                              <div className="flex gap-5 relative z-10">
-                                <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 shadow-lg 
-                                                            ${n.type === 'Emergency' ? 'bg-red-600 text-white' : 'bg-gray-900 text-white'}`}>
-                                  <i className={`fas ${n.type === 'Emergency' ? 'fa-radiation' : 'fa-info-circle'} text-md`}></i>
+                              <div className="flex gap-4">
+                                <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${n.type === 'BROADCAST' ? 'bg-blue-100 text-blue-600' :
+                                  n.type === 'Emergency' ? 'bg-red-100 text-red-600' :
+                                    'bg-gray-100 text-gray-600'
+                                  }`}>
+                                  <i className={`fas ${n.type === 'BROADCAST' ? 'fa-bullhorn' :
+                                    n.type === 'Emergency' ? 'fa-ambulance' :
+                                      'fa-bell'
+                                    } text-xs`}></i>
                                 </div>
-                                <div className="space-y-1 flex-1">
-                                  <h4 className={`text-sm font-black tracking-tight ${!n.is_read ? 'text-gray-900' : 'text-gray-500'}`}>{n.title}</h4>
-                                  <p className="text-[11px] font-bold text-gray-400 leading-relaxed line-clamp-2">{n.message}</p>
-                                  <div className="flex items-center gap-3 pt-2">
-                                    <span className="text-[10px] font-black text-gray-300 uppercase tracking-widest">
-                                      {new Date(n.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                <div className="flex-1">
+                                  <div className="flex justify-between items-start mb-1">
+                                    <p className={`text-sm font-bold ${!n.is_read ? 'text-gray-900' : 'text-gray-600'}`}>{n.title}</p>
+                                    <span className="text-[10px] font-bold text-gray-400">
+                                      {new Date(n.created_at).toLocaleDateString()}
                                     </span>
-                                    {!n.is_read && <span className="w-2 h-2 rounded-full bg-red-500"></span>}
                                   </div>
+                                  <p className="text-xs text-gray-500 leading-relaxed line-clamp-2">{n.message}</p>
                                 </div>
                               </div>
+                              {!n.is_read && (
+                                <div className="absolute right-4 top-1/2 -translate-y-1/2 w-1.5 h-1.5 bg-red-500 rounded-full"></div>
+                              )}
                             </div>
                           ))}
                         </>

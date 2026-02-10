@@ -19,6 +19,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import apiService from '../../api/apiService';
 import { stateDistrictMapping, bloodGroups, cityToDistrictMapping } from '../../utils/locationData';
+import { parseError, logError } from '../../utils/errors';
 
 const EditProfileScreen = ({ navigation, route }) => {
     const { user } = route.params || {};
@@ -190,8 +191,8 @@ const EditProfileScreen = ({ navigation, route }) => {
             Alert.alert('Success', 'Profile updated successfully!');
             navigation.navigate('Dashboard', { user: response.data.user });
         } catch (err) {
-            console.error('Update Error:', err);
-            Alert.alert('Error', err.response?.data?.error || 'Failed to update profile');
+            logError('Update Error', err);
+            Alert.alert('Error', parseError(err));
         } finally {
             setIsSubmitting(false);
         }
@@ -218,7 +219,7 @@ const EditProfileScreen = ({ navigation, route }) => {
                 setSelectedImage(pickedUri); // Store for later upload
             }
         } catch (err) {
-            console.error('Picker Error:', err);
+            logError('Picker Error', err);
             Alert.alert('Error', 'Could not open gallery');
         }
     };
@@ -282,21 +283,23 @@ const EditProfileScreen = ({ navigation, route }) => {
                     }
 
                     if (matchedDist) {
+                        // Using a slightly longer timeout to ensure state is settled and Picker can re-render its list
                         setTimeout(() => {
                             setFormData(prev => ({ ...prev, district: matchedDist }));
-                        }, 200);
+                        }, 300);
                     } else if (addr.city || addr.town) {
                         const cityVal = addr.city || addr.town;
                         if (cityToDistrictMapping[cityVal]) {
                             const fallbackDist = cityToDistrictMapping[cityVal];
                             setTimeout(() => {
                                 setFormData(prev => ({ ...prev, district: fallbackDist }));
-                            }, 250);
+                            }, 400);
                         }
                     }
                 }
             }
         } catch (err) {
+            logError('Location Error', err);
             Alert.alert('Error', 'Could not fetch location automatically.');
         } finally {
             setIsLoading(false);
@@ -322,39 +325,46 @@ const EditProfileScreen = ({ navigation, route }) => {
 
             return res.data.url;
         } catch (err) {
-            console.error('Upload Error:', err);
+            logError('Upload Error', err);
             throw err;
         } finally {
             setIsUploading(false);
         }
     };
 
-    const InputField = ({ label, name, icon, type = 'default', secure = false, placeholder, editable = true, children }) => (
+    const InputField = ({ label, name, icon, type = 'default', secure = false, placeholder, editable = true, children, onPress }) => (
         <View style={styles.inputWrapper}>
             <Text style={styles.label}>{label}</Text>
-            <View style={[styles.inputContainer, errors[name] && styles.inputError]}>
-                <Ionicons name={icon} size={20} color="#6b7280" style={styles.inputIcon} />
-                <TextInput
-                    style={[styles.input, !editable && styles.inputDisabled]}
-                    value={formData[name]}
-                    onChangeText={(val) => handleChange(name, val)}
-                    keyboardType={type}
-                    secureTextEntry={secure}
-                    placeholder={placeholder}
-                    editable={editable}
-                />
-                {children}
-            </View>
+            <TouchableOpacity
+                activeOpacity={onPress ? 0.7 : 1}
+                onPress={onPress}
+                disabled={!onPress}
+            >
+                <View style={[styles.inputContainer, errors[name] && styles.inputError]} pointerEvents={onPress ? "none" : "auto"}>
+                    <Ionicons name={icon} size={20} color="#6b7280" style={styles.inputIcon} />
+                    <TextInput
+                        style={[styles.input, !editable && styles.inputDisabled]}
+                        value={formData[name]}
+                        onChangeText={(val) => handleChange(name, val)}
+                        keyboardType={type}
+                        secureTextEntry={secure}
+                        placeholder={placeholder}
+                        editable={editable}
+                    />
+                    {children}
+                </View>
+            </TouchableOpacity>
             {errors[name] && <Text style={styles.errorText}>{errors[name]}</Text>}
         </View>
     );
 
-    const SelectField = ({ label, name, icon, options }) => (
+    const SelectField = ({ label, name, icon, options, pickerKey }) => (
         <View style={styles.inputWrapper}>
             <Text style={styles.label}>{label}</Text>
             <View style={[styles.inputContainer, errors[name] && styles.inputError]}>
                 <Ionicons name={icon} size={20} color="#6b7280" style={styles.inputIcon} />
                 <Picker
+                    key={pickerKey}
                     selectedValue={formData[name]}
                     onValueChange={(val) => handleChange(name, val)}
                     style={styles.picker}
@@ -486,16 +496,15 @@ const EditProfileScreen = ({ navigation, route }) => {
                         name="dob"
                         icon="calendar"
                         placeholder="DD-MM-YYYY"
+                        editable={false}
+                        onPress={() => {
+                            if (!formData.dob || formData.dob === 'DD-MM-YYYY' || formData.dob === '00-00-0000') handleChange('dob', '01-01-2000');
+                            setShowDatePicker(true);
+                        }}
                     >
-                        <TouchableOpacity
-                            onPress={() => {
-                                if (!formData.dob || formData.dob === 'DD-MM-YYYY' || formData.dob === '00-00-0000') handleChange('dob', '01-01-2000');
-                                setShowDatePicker(true);
-                            }}
-                            style={{ padding: 10 }}
-                        >
+                        <View style={{ padding: 10 }}>
                             <Ionicons name="chevron-down" size={18} color="#dc2626" />
-                        </TouchableOpacity>
+                        </View>
                     </InputField>
 
                     {showDatePicker && (
@@ -529,7 +538,8 @@ const EditProfileScreen = ({ navigation, route }) => {
                             label="District"
                             name="district"
                             icon="navigate"
-                            options={formData.state ? stateDistrictMapping[formData.state] : []}
+                            options={formData.state && stateDistrictMapping[formData.state] ? stateDistrictMapping[formData.state] : []}
+                            pickerKey={formData.state}
                         />
                     </View>
                     <InputField label="City" name="city" icon="business" placeholder="Mumbai" />

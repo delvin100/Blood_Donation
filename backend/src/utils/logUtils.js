@@ -19,11 +19,41 @@ const addOrgLog = async (orgId, actionType, entityName, description, details = n
         );
     } catch (err) {
         console.error('Error recording organization log:', err);
-        // We don't throw here to avoid failing the main action if logging fails,
-        // unless we are in a transaction and want to be strict.
+    }
+};
+
+/**
+ * Records a donor activity log entry.
+ */
+const addDonorLog = async (donorId, actionType, entityName, description, details = null, connection = null) => {
+    try {
+        const db = connection || pool;
+        await db.query(
+            'INSERT INTO donor_logs (donor_id, action_type, entity_name, description, details) VALUES (?, ?, ?, ?, ?)',
+            [donorId, actionType, entityName, description, details ? JSON.stringify(details) : null]
+        );
+    } catch (err) {
+        console.error('Error recording donor log:', err);
+    }
+};
+
+/**
+ * Records an admin activity log entry.
+ */
+const addAdminLog = async (adminId, actionType, entityName, description, details = null, connection = null) => {
+    try {
+        const db = connection || pool;
+        await db.query(
+            'INSERT INTO admin_logs (admin_id, action_type, entity_name, description, details) VALUES (?, ?, ?, ?, ?)',
+            [adminId, actionType, entityName, description, details ? JSON.stringify(details) : null]
+        );
+    } catch (err) {
+        console.error('Error recording admin log:', err);
     }
 };
 
 module.exports = {
-    addOrgLog
+    addOrgLog,
+    addDonorLog,
+    addAdminLog
 };

@@ -388,3 +388,104 @@ exports.removeMember = async (req, res) => {
         res.status(500).json({ error: 'Server error' });
     }
 };
+
+exports.getNotifications = async (req, res) => {
+    try {
+        const orgId = req.user.id;
+
+        // 1. Sync Global Broadcasts (Lazy Sync)
+        // Find org created_at
+        const [orgRows] = await pool.query('SELECT created_at FROM organizations WHERE id = ?', [orgId]);
+        const orgCreatedAt = orgRows[0]?.created_at || new Date(0);
+
+        // Find relevant global broadcasts not yet in notifications
+        // We look for broadcasts targeting 'all' or 'organizations' created AFTER the organization joined
+        // AND which don't have a corresponding notification entry (source_id = broadcast.id)
+        const [newBroadcasts] = await pool.query(
+            `SELECT * FROM broadcasts 
+             WHERE target IN ('all', 'organizations') 
+             AND created_at >= ? 
+             AND id NOT IN (
+                SELECT source_id FROM notifications 
+                WHERE recipient_id = ? AND recipient_type = 'Organization' AND source_id IS NOT NULL
+             )`,
+            [orgCreatedAt, orgId]
+        );
+
+        if (newBroadcasts.length > 0) {
+            const values = newBroadcasts.map(b => [
+                orgId,
+                'Organization',
+                'BROADCAST',
+                b.title,
+                b.message,
+                b.id
+            ]);
+
+            await pool.query(
+                'INSERT INTO notifications (recipient_id, recipient_type, type, title, message, source_id) VALUES ?',
+                [values]
+            );
+        }
+
+        const [rows] = await pool.query(
+            'SELECT * FROM notifications WHERE recipient_id = ? AND recipient_type = "Organization" AND is_dismissed = FALSE ORDER BY created_at DESC',
+            [orgId]
+        );
+        res.json(rows);
+    } catch (err) {
+        console.error("Notif Error", err);
+        res.status(500).json({ error: 'Server error' });
+    }
+};
+
+exports.markAsRead = async (req, res) => {
+    try {
+        const { id } = req.params;
+        await pool.query(
+            'UPDATE notifications SET is_read = TRUE WHERE id = ? AND recipient_id = ?',
+            [id, req.user.id]
+        );
+        res.json({ message: 'Marked as read' });
+    } catch (err) {
+        res.status(500).json({ error: 'Server error' });
+    }
+};
+
+exports.markAllRead = async (req, res) => {
+    try {
+        await pool.query(
+            'UPDATE notifications SET is_read = TRUE WHERE recipient_id = ? AND recipient_type = "Organization"',
+            [req.user.id]
+        );
+        res.json({ message: 'All marked as read' });
+    } catch (err) {
+        res.status(500).json({ error: 'Server error' });
+    }
+};
+
+exports.deleteNotification = async (req, res) => {
+    try {
+        await pool.query(
+            'UPDATE notifications SET is_dismissed = TRUE WHERE id = ? AND recipient_id = ?',
+            [req.params.id, req.user.id]
+        );
+        res.json({ message: 'Notification removed' });
+    } catch (err) {
+        console.error('Org Delete Notif Error:', err);
+        res.status(500).json({ error: 'Server error' });
+    }
+};
+
+exports.clearAllNotifications = async (req, res) => {
+    try {
+        await pool.query(
+            'UPDATE notifications SET is_dismissed = TRUE WHERE recipient_id = ? AND recipient_type = "Organization"',
+            [req.user.id]
+        );
+        res.json({ message: 'All notifications cleared' });
+    } catch (err) {
+        console.error('Org Clear All Notif Error:', err);
+        res.status(500).json({ error: 'Server error' });
+    }
+};

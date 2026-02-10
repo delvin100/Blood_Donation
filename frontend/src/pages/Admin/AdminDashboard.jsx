@@ -12,6 +12,14 @@ import ModernModal from '../../components/common/ModernModal';
 // --- COLORS & THEME ---
 const COLORS = ['#ef4444', '#f97316', '#eab308', '#22c55e', '#06b6d4', '#3b82f6', '#8b5cf6', '#d946ef'];
 
+// --- HELPERS ---
+const toTitleCase = (str) => {
+    if (!str) return '';
+    return str.split(' ')
+        .map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
+        .join(' ');
+};
+
 export default function AdminDashboard() {
     // --- STATE ---
     const [stats, setStats] = useState({ donors: 0, organizations: 0, bloodUnits: 0 });
@@ -21,14 +29,15 @@ export default function AdminDashboard() {
         inventory: [],
         requests: [],
         reports: [],
-        admins: []
+        admins: [],
+        activityLogs: []
     });
     const [activeTab, setActiveTab] = useState('dashboard');
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
     const [showAddAdminModal, setShowAddAdminModal] = useState(false);
     const [newAdmin, setNewAdmin] = useState({ username: '', password: '' });
-    const [broadcast, setBroadcast] = useState({ target: 'all', title: '', message: '' });
+    const [broadcast, setBroadcast] = useState({ target: 'all', recipient_type: 'Donor', recipient_ids: [], title: '', message: '' });
     const [sendingBroadcast, setSendingBroadcast] = useState(false);
     const [selectedDonor, setSelectedDonor] = useState(null);
     const [selectedReport, setSelectedReport] = useState(null);
@@ -63,14 +72,15 @@ export default function AdminDashboard() {
             const config = { headers: { Authorization: `Bearer ${token}` } };
             const baseUrl = '/api/admin';
 
-            const [statsRes, donorsRes, orgsRes, invRes, reqRes, repRes, adminsRes] = await Promise.all([
+            const [statsRes, donorsRes, orgsRes, invRes, reqRes, repRes, adminsRes, logsRes] = await Promise.all([
                 axios.get(`${baseUrl}/stats`, config),
                 axios.get(`${baseUrl}/donors`, config),
                 axios.get(`${baseUrl}/organizations`, config),
                 axios.get(`${baseUrl}/inventory`, config),
                 axios.get(`${baseUrl}/requests`, config),
                 axios.get(`${baseUrl}/reports`, config),
-                axios.get(`${baseUrl}/admins`, config)
+                axios.get(`${baseUrl}/admins`, config),
+                axios.get(`${baseUrl}/activity-logs`, config)
             ]);
 
             setStats(statsRes.data);
@@ -80,7 +90,8 @@ export default function AdminDashboard() {
                 inventory: invRes.data,
                 requests: reqRes.data,
                 reports: repRes.data,
-                admins: adminsRes.data
+                admins: adminsRes.data,
+                activityLogs: logsRes.data
             });
             setLoading(false);
         } catch (err) {
@@ -282,7 +293,7 @@ export default function AdminDashboard() {
         try {
             await axios.post('/api/admin/notifications', broadcast, getAuthConfig());
             toast.success('Broadcast sent successfully!');
-            setBroadcast({ target: 'all', title: '', message: '' });
+            setBroadcast({ target: 'all', recipient_type: 'Donor', recipient_ids: [], title: '', message: '' });
         } catch (error) {
             toast.error('Failed to send broadcast');
         } finally {
@@ -308,11 +319,16 @@ export default function AdminDashboard() {
             inventory: (item) => item.blood_group?.toLowerCase().includes(term) || item.org_name?.toLowerCase().includes(term),
             requests: (item) => item.blood_group?.toLowerCase().includes(term) || item.org_name?.toLowerCase().includes(term),
             reports: (item) => item.donor_name?.toLowerCase().includes(term) || item.org_name?.toLowerCase().includes(term),
+            activityLogs: (item) =>
+                item.origin_name?.toLowerCase().includes(term) ||
+                item.action_type?.toLowerCase().includes(term) ||
+                item.description?.toLowerCase().includes(term),
         };
 
         // Determine which data key to filter
         let dataKey = activeTab;
         if (activeTab === 'orgs') dataKey = 'organizations';
+        if (activeTab === 'logs') dataKey = 'activityLogs';
 
         if (filters[dataKey] && data[dataKey]) {
             return {
@@ -374,11 +390,12 @@ export default function AdminDashboard() {
                                     {activeTab === 'reports' && 'Reports History'}
                                     {activeTab === 'admins' && 'System Admins'}
                                     {activeTab === 'broadcast' && 'Broadcasts'}
+                                    {activeTab === 'logs' && 'Platform Activity Logs'}
                                 </h1>
                                 <p className="text-gray-500 font-medium mt-1">Dashboard / {activeTab.charAt(0).toUpperCase() + activeTab.slice(1)}</p>
                             </div>
 
-                            {activeTab !== 'dashboard' && activeTab !== 'broadcast' && activeTab !== 'inventory' && activeTab !== 'requests' && activeTab !== 'reports' && activeTab !== 'admins' && (
+                            {activeTab !== 'dashboard' && activeTab !== 'broadcast' && activeTab !== 'inventory' && activeTab !== 'requests' && activeTab !== 'reports' && activeTab !== 'admins' && activeTab !== 'logs' && (
                                 <div className="relative w-full md:w-96 group">
                                     <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
                                         <i className="fas fa-search text-gray-400 group-focus-within:text-red-500 transition-colors"></i>
@@ -413,11 +430,11 @@ export default function AdminDashboard() {
                                     data={filteredData.donors}
                                     renderRow={(donor) => (
                                         <tr key={donor.id} onClick={() => handleViewDonor(donor.id)} className="cursor-pointer hover:bg-red-50/30 transition-all border-b border-gray-100 last:border-0 group">
-                                            <td className="px-6 py-4">
-                                                <div className="flex items-center justify-center gap-4">
+                                            <td className="px-6 py-4 text-left">
+                                                <div className="flex items-center justify-start gap-4">
                                                     <Avatar name={donor.full_name} className="shadow-md" />
                                                     <div className="text-left">
-                                                        <div className="font-bold text-gray-900 group-hover:text-red-600 transition-colors">{donor.full_name}</div>
+                                                        <div className="font-bold text-gray-900 group-hover:text-red-600 transition-colors">{toTitleCase(donor.full_name)}</div>
                                                         <div className="text-xs text-gray-500 font-medium">{donor.email}</div>
                                                     </div>
                                                 </div>
@@ -457,13 +474,13 @@ export default function AdminDashboard() {
                                     data={filteredData.organizations}
                                     renderRow={(org) => (
                                         <tr key={org.id} onClick={() => handleViewOrg(org.id)} className="cursor-pointer hover:bg-blue-50/30 transition-all border-b border-gray-100 last:border-0 group">
-                                            <td className="px-6 py-4">
-                                                <div className="flex items-center justify-center gap-4">
+                                            <td className="px-6 py-4 text-left">
+                                                <div className="flex items-center justify-start gap-4">
                                                     <div className="w-12 h-12 rounded-2xl bg-white shadow-sm border border-gray-100 flex items-center justify-center text-blue-500 text-xl group-hover:scale-110 transition-transform duration-300">
                                                         <i className="fas fa-hospital-alt"></i>
                                                     </div>
                                                     <div className="text-left">
-                                                        <div className="font-bold text-gray-900 group-hover:text-blue-600 transition-colors">{org.name}</div>
+                                                        <div className="font-bold text-gray-900 group-hover:text-blue-600 transition-colors">{toTitleCase(org.name)}</div>
                                                         <div className="text-xs text-gray-500 font-medium">{org.email}</div>
                                                     </div>
                                                 </div>
@@ -507,8 +524,8 @@ export default function AdminDashboard() {
                                     data={filteredData.admins}
                                     renderRow={(admin) => (
                                         <tr key={admin.id} className="hover:bg-gray-50/50 transition-colors border-b border-gray-100 last:border-0">
-                                            <td className="px-6 py-4">
-                                                <div className="flex items-center justify-center gap-4">
+                                            <td className="px-6 py-4 text-left">
+                                                <div className="flex items-center justify-start gap-4">
                                                     <Avatar name={admin.username} bg="bg-gray-900" text="text-white" />
                                                     <span className="font-bold text-gray-900">{admin.username}</span>
                                                 </div>
@@ -567,8 +584,8 @@ export default function AdminDashboard() {
                                     <form onSubmit={handleBroadcast} className="space-y-8">
                                         <div>
                                             <label className="block text-sm font-bold text-gray-700 mb-3 uppercase tracking-wide">Target Audience</label>
-                                            <div className="grid grid-cols-3 gap-4">
-                                                {['all', 'donors', 'organizations'].map(t => (
+                                            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                                                {['all', 'donors', 'organizations', 'specific'].map(t => (
                                                     <button
                                                         key={t}
                                                         type="button"
@@ -579,11 +596,78 @@ export default function AdminDashboard() {
                                                                 : 'bg-white text-gray-500 border-gray-100 hover:border-gray-300 hover:text-gray-700'
                                                             }`}
                                                     >
-                                                        {t.charAt(0).toUpperCase() + t.slice(1)}
+                                                        {t === 'all' ? 'Everyone' : t.charAt(0).toUpperCase() + t.slice(1)}
                                                     </button>
                                                 ))}
                                             </div>
                                         </div>
+
+                                        {broadcast.target === 'specific' && (
+                                            <div className="space-y-6 animate-fade-in">
+                                                <div className="bg-gray-50/50 p-6 rounded-2xl border border-gray-100">
+                                                    <label className="block text-sm font-bold text-gray-700 mb-4 uppercase tracking-wide">Recipient Type</label>
+                                                    <div className="flex gap-4">
+                                                        {['Donor', 'Organization'].map(type => (
+                                                            <button
+                                                                key={type}
+                                                                type="button"
+                                                                onClick={() => setBroadcast({ ...broadcast, recipient_type: type, recipient_ids: [] })}
+                                                                className={`flex-1 py-3 rounded-xl text-sm font-bold border-2 transition-all
+                                                                    ${broadcast.recipient_type === type
+                                                                        ? 'bg-red-500 text-white border-red-500 shadow-lg shadow-red-200'
+                                                                        : 'bg-white text-gray-500 border-gray-200 hover:border-red-200 hover:text-red-500'
+                                                                    }`}
+                                                            >
+                                                                {type}s
+                                                            </button>
+                                                        ))}
+                                                    </div>
+                                                </div>
+
+                                                <div className="bg-gray-50/50 p-6 rounded-2xl border border-gray-100">
+                                                    <div className="flex justify-between items-center mb-4">
+                                                        <label className="block text-sm font-bold text-gray-700 uppercase tracking-wide">Select Recipients</label>
+                                                        <span className="text-[10px] font-black bg-gray-200 text-gray-600 px-3 py-1 rounded-full uppercase">
+                                                            {broadcast.recipient_ids.length} Selected
+                                                        </span>
+                                                    </div>
+
+                                                    <div className="max-h-60 overflow-y-auto custom-scrollbar space-y-2 pr-2">
+                                                        {(broadcast.recipient_type === 'Donor' ? data.donors : data.organizations).map(item => {
+                                                            const isSelected = broadcast.recipient_ids.includes(item.id);
+                                                            const name = item.full_name || item.name;
+                                                            return (
+                                                                <div
+                                                                    key={item.id}
+                                                                    onClick={() => {
+                                                                        const ids = isSelected
+                                                                            ? broadcast.recipient_ids.filter(id => id !== item.id)
+                                                                            : [...broadcast.recipient_ids, item.id];
+                                                                        setBroadcast({ ...broadcast, recipient_ids: ids });
+                                                                    }}
+                                                                    className={`flex items-center justify-between p-3 rounded-xl cursor-pointer border-2 transition-all
+                                                                        ${isSelected
+                                                                            ? 'bg-white border-red-500 shadow-sm'
+                                                                            : 'bg-white/50 border-transparent hover:border-gray-200'}`}
+                                                                >
+                                                                    <div className="flex items-center gap-3">
+                                                                        <Avatar name={name} size="w-8 h-8" />
+                                                                        <div>
+                                                                            <div className="text-sm font-bold text-gray-900">{toTitleCase(name)}</div>
+                                                                            <div className="text-[10px] text-gray-500 font-medium">{item.email}</div>
+                                                                        </div>
+                                                                    </div>
+                                                                    <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all
+                                                                        ${isSelected ? 'bg-red-500 border-red-500 text-white' : 'border-gray-300'}`}>
+                                                                        {isSelected && <i className="fas fa-check text-[10px]"></i>}
+                                                                    </div>
+                                                                </div>
+                                                            );
+                                                        })}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        )}
 
                                         <div className="space-y-4">
                                             <div>
@@ -687,9 +771,11 @@ export default function AdminDashboard() {
                                         </tr>
                                     )}
                                 />
-                            )
-                        )}
+                            ))}
 
+                        {activeTab === 'logs' && (
+                            <ActivityLogsView logs={data.activityLogs} />
+                        )}
                     </div>
                 </div>
             </main>
@@ -1238,6 +1324,7 @@ function Sidebar({ activeTab, setActiveTab, handleLogout }) {
                             <p className="text-xs font-bold text-gray-400/80 uppercase tracking-widest mb-3">Management</p>
                             <SidebarItem label="Emergencies" icon="ambulance" active={activeTab === 'requests'} onClick={() => setActiveTab('requests')} />
                             <SidebarItem label="Reports" icon="file-medical-alt" active={activeTab === 'reports'} onClick={() => setActiveTab('reports')} />
+                            <SidebarItem label="Activity Logs" icon="history" active={activeTab === 'logs'} onClick={() => setActiveTab('logs')} />
                             <SidebarItem label="Admins" icon="user-shield" active={activeTab === 'admins'} onClick={() => setActiveTab('admins')} />
                         </div>
                     </nav>
@@ -1335,10 +1422,10 @@ function DataTable({ columns, data, renderRow }) {
     );
 }
 
-function Avatar({ name, bg = "bg-gradient-to-br from-gray-100 to-gray-200", text = "text-gray-500", className = "" }) {
+function Avatar({ name, bg = "bg-gradient-to-br from-gray-100 to-gray-200", text = "text-gray-500", className = "", size = "w-12 h-12" }) {
     const initials = name ? name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase() : '?';
     return (
-        <div className={`w-12 h-12 rounded-2xl ${bg} flex items-center justify-center ${text} text-sm font-black shadow-sm ${className}`}>
+        <div className={`${size} rounded-2xl ${bg} flex items-center justify-center ${text} text-sm font-black shadow-sm ${className}`}>
             {initials}
         </div>
     );
@@ -1568,7 +1655,7 @@ function DonorDetailView({ donor, onBack }) {
                     </div>
                     <div className="flex-1 pt-12 md:pt-10">
                         <div className="flex flex-wrap items-center gap-4 mb-4">
-                            <h2 className="text-4xl md:text-5xl font-black text-gray-900 tracking-tight drop-shadow-sm">{donor.full_name}</h2>
+                            <h2 className="text-4xl md:text-5xl font-black text-gray-900 tracking-tight drop-shadow-sm">{toTitleCase(donor.full_name)}</h2>
                             <span className={`px-4 py-2 rounded-xl text-xs font-black uppercase tracking-widest shadow-sm ${donor.availability === 'Available' ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'}`}>
                                 {donor.availability}
                             </span>
@@ -1956,3 +2043,60 @@ function DonationReportCard({ report, index }) {
     );
 }
 
+function ActivityLogsView({ logs }) {
+    return (
+        <DataTable
+            columns={['Time', 'Actor', 'Action', 'Description']}
+            data={logs}
+            renderRow={(log, idx) => {
+                const typeColors = {
+                    'Donor': 'bg-red-50 text-red-600 border-red-100',
+                    'Organization': 'bg-blue-50 text-blue-600 border-blue-100',
+                    'Admin': 'bg-gray-900 text-white border-gray-900 shadow-sm'
+                };
+                const typeIcons = {
+                    'Donor': 'fa-user',
+                    'Organization': 'fa-hospital',
+                    'Admin': 'fa-user-shield'
+                };
+
+                return (
+                    <tr key={idx} className="hover:bg-gray-50/50 transition-colors border-b border-gray-100 last:border-0">
+                        <td className="px-6 py-4 text-center">
+                            <div className="text-sm font-bold text-gray-900">
+                                {new Date(log.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                            </div>
+                            <div className="text-[10px] text-gray-400 font-bold uppercase tracking-tight">
+                                {new Date(log.created_at).toLocaleDateString()}
+                            </div>
+                        </td>
+                        <td className="px-6 py-4">
+                            <div className="flex items-center gap-3">
+                                <div className={`w-8 h-8 rounded-lg border flex items-center justify-center text-[10px] ${typeColors[log.entity_type]}`}>
+                                    <i className={`fas ${typeIcons[log.entity_type]}`}></i>
+                                </div>
+                                <div>
+                                    <div className="text-sm font-black text-gray-900 leading-tight">{log.origin_name}</div>
+                                    <div className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">{log.entity_type}</div>
+                                </div>
+                            </div>
+                        </td>
+                        <td className="px-6 py-4 text-center">
+                            <span className="px-3 py-1 bg-gray-100 text-gray-600 rounded-lg text-[10px] font-black border border-gray-200 uppercase tracking-widest">
+                                {log.action_type.replace(/_/g, ' ')}
+                            </span>
+                        </td>
+                        <td className="px-6 py-4">
+                            <p className="text-sm font-bold text-gray-700 leading-relaxed italic border-l-2 border-red-100 pl-3">
+                                {log.description}
+                                {log.entity_name && (
+                                    <span className="text-red-500 not-italic ml-1"> • {log.entity_name}</span>
+                                )}
+                            </p>
+                        </td>
+                    </tr>
+                );
+            }}
+        />
+    );
+}
