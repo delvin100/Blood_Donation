@@ -57,6 +57,8 @@ const EditProfileScreen = ({ navigation, route }) => {
         state: '',
         district: '',
         city: '',
+        latitude: user?.latitude || null,
+        longitude: user?.longitude || null,
         username: '',
         password: '',
         confirm_password: ''
@@ -81,6 +83,8 @@ const EditProfileScreen = ({ navigation, route }) => {
                 state: user.state || '',
                 district: user.district || '',
                 city: user.city || '',
+                latitude: user.latitude || null,
+                longitude: user.longitude || null,
                 username: user.username || '',
                 password: '',
                 confirm_password: ''
@@ -239,6 +243,8 @@ const EditProfileScreen = ({ navigation, route }) => {
                 longitude: location.coords.longitude,
             });
 
+            const { latitude: lat, longitude: lng } = location.coords;
+
             if (reverseGeocode.length > 0) {
                 const addr = reverseGeocode[0];
                 const stateKeys = Object.keys(stateDistrictMapping);
@@ -251,7 +257,9 @@ const EditProfileScreen = ({ navigation, route }) => {
                     setFormData(prev => ({
                         ...prev,
                         state: matchedState,
-                        city: addr.city || addr.town || prev.city
+                        city: addr.city || addr.town || prev.city,
+                        latitude: lat,
+                        longitude: lng
                     }));
 
                     const dists = stateDistrictMapping[matchedState];

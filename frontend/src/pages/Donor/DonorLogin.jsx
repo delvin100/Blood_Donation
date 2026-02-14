@@ -539,7 +539,7 @@ export default function DonorLogin() {
 
       <Link
         className="back-chip"
-        to="/#action-cards"
+        to="/#donor-section"
         aria-label="Back to homepage"
       >
         <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">

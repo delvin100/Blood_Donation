@@ -91,15 +91,16 @@ exports.addDonation = async (req, res) => {
 
 exports.updateProfile = async (req, res) => {
     try {
-        const { full_name, email, dob, phone, blood_type, gender, state, district, city, username, password } = req.body;
+        const { full_name, email, dob, phone, blood_type, gender, state, district, city, username, password, latitude, longitude } = req.body;
         let passwordHash = password ? await bcrypt.hash(password, 10) : null;
         await pool.query(`
             UPDATE donors SET 
                 full_name = COALESCE(?, full_name), email = COALESCE(?, email), 
                 dob = ?, phone = ?, blood_type = ?, gender = ?, state = ?, district = ?, city = ?,
-                username = COALESCE(?, username), password_hash = COALESCE(?, password_hash)
+                username = COALESCE(?, username), password_hash = COALESCE(?, password_hash),
+                latitude = COALESCE(?, latitude), longitude = COALESCE(?, longitude)
             WHERE id = ?`,
-            [full_name, email, dob, phone, blood_type, gender, state, district, city, username, passwordHash, req.user.id]
+            [full_name, email, dob, phone, blood_type, gender, state, district, city, username, passwordHash, latitude, longitude, req.user.id]
         );
         res.json({ message: 'Profile updated' });
         await addDonorLog(req.user.id, 'PROFILE_UPDATE', full_name, `Updated profile information`);

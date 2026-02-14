@@ -106,8 +106,8 @@ exports.register = async (req, res) => {
 
         const hash = await bcrypt.hash(password, 10);
         const [result] = await pool.query(
-            `INSERT INTO donors (username, full_name, email, password_hash, blood_type, dob, phone, gender, availability, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
-            [username, full_name, email, hash, blood_type, dob, phone, gender, availability || 'Available']
+            `INSERT INTO donors (username, full_name, email, password_hash, blood_type, dob, phone, gender, availability, latitude, longitude, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
+            [username, full_name, email, hash, blood_type, dob, phone, gender, availability || 'Available', req.body.latitude || null, req.body.longitude || null]
         );
 
         const insertId = result.insertId;
@@ -209,9 +209,9 @@ exports.resetPassword = async (req, res) => {
 
 exports.completeProfile = async (req, res) => {
     try {
-        const { bloodGroup, gender, phoneNumber, dob, state, district, city } = req.body;
+        const { bloodGroup, gender, phoneNumber, dob, state, district, city, latitude, longitude } = req.body;
         const { id: donorId } = req.user;
-        await pool.query('UPDATE donors SET blood_type = ?, gender = ?, phone = ?, dob = ?, state = ?, district = ?, city = ? WHERE id = ?', [bloodGroup, gender, phoneNumber, dob, state, district, city, donorId]);
+        await pool.query('UPDATE donors SET blood_type = ?, gender = ?, phone = ?, dob = ?, state = ?, district = ?, city = ?, latitude = ?, longitude = ? WHERE id = ?', [bloodGroup, gender, phoneNumber, dob, state, district, city, latitude, longitude, donorId]);
         res.json({ message: 'Profile updated successfully.' });
     } catch (err) {
         res.status(500).json({ error: 'Server error.' });

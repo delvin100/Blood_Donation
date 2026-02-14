@@ -28,6 +28,8 @@ const CompleteProfileModal = ({ visible, onClose, onSuccess }) => {
     const [state, setState] = useState('');
     const [district, setDistrict] = useState('');
     const [city, setCity] = useState('');
+    const [latitude, setLatitude] = useState(null);
+    const [longitude, setLongitude] = useState(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [isFetchingLocation, setIsFetchingLocation] = useState(false);
     const [error, setError] = useState('');
@@ -69,9 +71,13 @@ const CompleteProfileModal = ({ visible, onClose, onSuccess }) => {
             }
 
             let location = await Location.getCurrentPositionAsync({});
+            const { latitude: lat, longitude: lng } = location.coords;
+            setLatitude(lat);
+            setLongitude(lng);
+
             let reverseGeocode = await Location.reverseGeocodeAsync({
-                latitude: location.coords.latitude,
-                longitude: location.coords.longitude,
+                latitude: lat,
+                longitude: lng,
             });
 
             if (reverseGeocode.length > 0) {
@@ -219,6 +225,8 @@ const CompleteProfileModal = ({ visible, onClose, onSuccess }) => {
                 state,
                 district,
                 city,
+                latitude,
+                longitude
             });
             onSuccess();
             onClose();

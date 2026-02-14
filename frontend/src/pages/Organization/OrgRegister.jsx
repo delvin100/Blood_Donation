@@ -517,7 +517,7 @@ export default function OrgRegister() {
 
             {/* Back to Home Button */}
             <Link
-                to="/#action-cards"
+                to="/#organization-section"
                 className="back-chip"
                 aria-label="Back to Get Started section"
             >

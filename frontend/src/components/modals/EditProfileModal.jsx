@@ -105,7 +105,10 @@ const EditProfileModal = ({ isOpen, onClose, user, onUpdate }) => {
         password: '',
         confirm_password: ''
     });
-    // ... (rest of the component state)
+    const [latitude, setLatitude] = useState(user?.latitude || null);
+    const [longitude, setLongitude] = useState(user?.longitude || null);
+    const [isFetchingLocation, setIsFetchingLocation] = useState(false);
+    const [locationError, setLocationError] = useState('');
     const [errors, setErrors] = useState({});
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [globalError, setGlobalError] = useState('');
@@ -155,9 +158,165 @@ const EditProfileModal = ({ isOpen, onClose, user, onUpdate }) => {
                 password: '',
                 confirm_password: ''
             });
+            setLatitude(user.latitude || null);
+            setLongitude(user.longitude || null);
             setErrors({}); // Clear errors when user changes
         }
     }, [user, isOpen]);
+
+    // Fetch location using GPS and reverse geocoding
+    const fetchLocation = async () => {
+        setIsFetchingLocation(true);
+        setLocationError('');
+
+        try {
+            if (!navigator.geolocation) {
+                throw new Error('Geolocation is not supported by your browser');
+            }
+
+            const getPosition = (options) => {
+                return new Promise((resolve, reject) => {
+                    navigator.geolocation.getCurrentPosition(resolve, reject, options);
+                });
+            };
+
+            let position;
+            try {
+                position = await getPosition({
+                    enableHighAccuracy: true,
+                    timeout: 20000,
+                    maximumAge: 0
+                });
+            } catch (err) {
+                position = await getPosition({
+                    enableHighAccuracy: false,
+                    timeout: 20000,
+                    maximumAge: 0
+                });
+            }
+
+            const { latitude, longitude } = position.coords;
+
+            let locationData = null;
+
+            try {
+                const nominatimResponse = await fetch(
+                    `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&addressdetails=1`,
+                    { headers: { 'User-Agent': 'BloodDonationApp/1.0' } }
+                );
+
+                if (nominatimResponse.ok) {
+                    const nominatimData = await nominatimResponse.json();
+                    if (nominatimData.address) {
+                        const addr = nominatimData.address;
+                        locationData = {
+                            state: addr.state,
+                            district: addr.state_district || addr.county || addr.district,
+                            city: addr.city || addr.town || addr.village || addr.suburb || addr.municipality
+                        };
+                    }
+                }
+            } catch (err) { console.warn('Nominatim failed:', err); }
+
+            if (!locationData) {
+                try {
+                    const bigDataResponse = await fetch(
+                        `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${latitude}&longitude=${longitude}&localityLanguage=en`
+                    );
+
+                    if (bigDataResponse.ok) {
+                        const bigData = await bigDataResponse.json();
+                        locationData = {
+                            state: bigData.principalSubdivision,
+                            district: bigData.localityInfo?.administrative?.[2]?.name || bigData.locality,
+                            city: bigData.city || bigData.locality
+                        };
+                    }
+                } catch (err) { console.warn('BigDataCloud failed:', err); }
+            }
+
+            if (!locationData || !locationData.state) {
+                throw new Error('Unable to determine location from coordinates');
+            }
+
+            let matchedState = null;
+            const stateKeys = Object.keys(stateDistrictMapping);
+
+            for (const stateKey of stateKeys) {
+                if (stateKey.toLowerCase().includes(locationData.state.toLowerCase()) ||
+                    locationData.state.toLowerCase().includes(stateKey.toLowerCase())) {
+                    matchedState = stateKey;
+                    break;
+                }
+            }
+
+            if (!matchedState) throw new Error(`State "${locationData.state}" not found in our database`);
+
+            let matchedDistrict = null;
+            const districts = stateDistrictMapping[matchedState] || [];
+
+            for (const dist of districts) {
+                if (dist.toLowerCase() === locationData.district?.toLowerCase()) {
+                    matchedDistrict = dist;
+                    break;
+                }
+            }
+
+            if (!matchedDistrict && locationData.district) {
+                for (const dist of districts) {
+                    if (dist.toLowerCase().includes(locationData.district.toLowerCase()) ||
+                        locationData.district.toLowerCase().includes(dist.toLowerCase())) {
+                        matchedDistrict = dist;
+                        break;
+                    }
+                }
+            }
+
+            setLatitude(latitude);
+            setLongitude(longitude);
+            setFormData(prev => ({
+                ...prev,
+                state: matchedState,
+                district: matchedDistrict || prev.district,
+                city: locationData.city || prev.city
+            }));
+
+            setErrors(prev => ({ ...prev, state: '', district: '', city: '' }));
+
+        } catch (err) {
+            setLocationError(err.message || 'Failed to fetch location. Please enter manually.');
+        } finally {
+            setIsFetchingLocation(false);
+        }
+    };
+
+    // Dynamic Geocoding for Manual Entries
+    useEffect(() => {
+        const geocodeManualLocation = async () => {
+            if (!formData.city || !formData.district || !formData.state) return;
+            if (isFetchingLocation) return;
+
+            try {
+                const query = `${formData.city}, ${formData.district}, ${formData.state}, India`;
+                const response = await fetch(
+                    `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=1`,
+                    { headers: { 'User-Agent': 'BloodDonationApp/1.0' } }
+                );
+
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data && data.length > 0) {
+                        setLatitude(parseFloat(data[0].lat));
+                        setLongitude(parseFloat(data[0].lon));
+                        console.log(`Manual geocode success: ${query} -> ${data[0].lat}, ${data[0].lon}`);
+                    }
+                }
+            } catch (err) { console.warn('Manual geocoding failed', err); }
+        };
+
+        const timeoutId = setTimeout(geocodeManualLocation, 1500);
+        return () => clearTimeout(timeoutId);
+    }, [formData.city, formData.district, formData.state]);
 
     if (!isOpen) return null;
 
@@ -270,7 +429,7 @@ const EditProfileModal = ({ isOpen, onClose, user, onUpdate }) => {
         }
 
         // Only send password if it's filled
-        const submissionData = { ...formData };
+        const submissionData = { ...formData, latitude, longitude };
         if (!submissionData.password) {
             delete submissionData.password;
             delete submissionData.confirm_password;
@@ -372,6 +531,33 @@ const EditProfileModal = ({ isOpen, onClose, user, onUpdate }) => {
                             <InputField label="District" name="district" options={districts} disabled={!formData.state} icon="fa-map-signs" value={formData.district} onChange={handleChange} error={errors.district} />
                             <InputField label="City" name="city" icon="fa-city" value={formData.city} onChange={handleChange} error={errors.city} />
                         </div>
+
+                        {/* Fetch My Location Row */}
+                        <div className="mt-8 pt-6 border-t border-indigo-100 flex flex-col sm:flex-row items-center justify-between gap-4">
+                            <div className="flex items-center gap-3">
+                                <div className={`w-10 h-10 rounded-full flex items-center justify-center ${latitude ? 'bg-green-100 text-green-600' : 'bg-gray-100 text-gray-400'}`}>
+                                    <i className={`fas ${latitude ? 'fa-check' : 'fa-location-dot'}`}></i>
+                                </div>
+                                <div>
+                                    <p className="text-sm font-bold text-indigo-900">{latitude ? 'Precise Location Locked' : 'GPS Location Optional'}</p>
+                                    <p className="text-[10px] font-medium text-indigo-500 uppercase tracking-wider">{latitude ? `${latitude.toFixed(4)}, ${longitude.toFixed(4)}` : 'Enable GPS for better matching'}</p>
+                                </div>
+                            </div>
+                            <button
+                                type="button"
+                                onClick={fetchLocation}
+                                disabled={isFetchingLocation}
+                                className="w-full sm:w-auto px-6 py-3 bg-white border-2 border-indigo-200 rounded-xl text-indigo-600 text-sm font-bold hover:bg-indigo-50 hover:border-indigo-300 transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+                            >
+                                {isFetchingLocation ? <i className="fas fa-spinner fa-spin"></i> : <i className="fas fa-crosshairs"></i>}
+                                {isFetchingLocation ? 'Locating...' : 'Use My GPS Location'}
+                            </button>
+                        </div>
+                        {locationError && (
+                            <p className="mt-4 text-xs text-red-500 font-bold text-center italic">
+                                <i className="fas fa-exclamation-triangle mr-1"></i> {locationError}
+                            </p>
+                        )}
                     </div>
 
                     {/* Section 3: Account Security (Only for non-Google users) */}

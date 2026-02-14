@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import { useGoogleLogin } from '@react-oauth/google';
 import CompleteProfileModal from "../../components/modals/CompleteProfileModal";
 import "../../assets/css/auth-base.css";
@@ -624,9 +625,9 @@ export default function DonorRegister() {
         </section>
       </main>
 
-      <a
+      <Link
         className="back-chip"
-        href="/"
+        to="/#donor-section"
         aria-label="Back to homepage"
       >
         <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
@@ -639,7 +640,7 @@ export default function DonorRegister() {
             strokeLinejoin="round"
           />
         </svg>
-      </a>
+      </Link>
       {console.log("showCompleteProfileModal state:", showCompleteProfileModal)}
       {showCompleteProfileModal && <CompleteProfileModal onClose={() => setShowCompleteProfileModal(false)} user={googleUser || { full_name: name, email: email }} />}
     </div>

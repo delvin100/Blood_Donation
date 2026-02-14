@@ -73,23 +73,16 @@ const Seeker = () => {
     const [donors, setDonors] = useState([]);
     const [loading, setLoading] = useState(false);
     const [searched, setSearched] = useState(false);
-    const [isEmergencyModalOpen, setIsEmergencyModalOpen] = useState(false);
+
     const [isCompatibilityModalOpen, setIsCompatibilityModalOpen] = useState(false);
     const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
     const [selectedDonor, setSelectedDonor] = useState(null);
     const [isFetchingLocation, setIsFetchingLocation] = useState(false);
     const [locationError, setLocationError] = useState("");
+    const [lat, setLat] = useState(null);
+    const [lng, setLng] = useState(null);
 
-    // Emergency Form State
-    const [emergencyForm, setEmergencyForm] = useState({
-        full_name: "",
-        email: "",
-        phone: "",
-        blood_type: "",
-        required_by: "",
-        state: "",
-        district: ""
-    });
+
 
     const navigate = useNavigate();
 
@@ -250,9 +243,14 @@ const Seeker = () => {
                 }
             }
 
+            // Flag to ignore the subsequent useEffect/manual geocode trigger
+            ignoreGeocodeRef.current = true;
+
             setState(matchedState);
             if (matchedDistrict) setDistrict(matchedDistrict);
             if (locationData.city) setCity(locationData.city);
+            setLat(latitude);
+            setLng(longitude);
 
             toast.success(`Location detected: ${locationData.city || matchedDistrict || matchedState}`);
 
@@ -265,20 +263,87 @@ const Seeker = () => {
         }
     };
 
+    const ignoreGeocodeRef = React.useRef(false);
+
+    // Dynamic Geocoding for Manual Search
+    useEffect(() => {
+        const geocodeManualLocation = async () => {
+            if (!city || !district || !state) return;
+
+            if (ignoreGeocodeRef.current) {
+                ignoreGeocodeRef.current = false;
+                return;
+            }
+
+            // Avoid re-geocoding if coordinates were already set by GPS for this exact location
+            // But if city changes, we should geocode
+            setIsFetchingLocation(true);
+            try {
+                const query = `${city}, ${district}, ${state}, India`;
+                const response = await fetch(
+                    `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=1`,
+                    {
+                        headers: { "User-Agent": "BloodDonationApp/1.0" }
+                    }
+                );
+
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data && data.length > 0) {
+                        setLat(parseFloat(data[0].lat));
+                        setLng(parseFloat(data[0].lon));
+                        console.log(`Geocoded manual entry: ${query} -> ${data[0].lat}, ${data[0].lon}`);
+                    }
+                }
+            } catch (err) {
+                console.error("Manual geocoding failed:", err);
+            } finally {
+                setIsFetchingLocation(false);
+            }
+        };
+
+        const timeoutId = setTimeout(() => {
+            geocodeManualLocation();
+        }, 1500); // 1.5s debounce
+
+        return () => clearTimeout(timeoutId);
+    }, [city, district, state]);
+
+    // Reset coordinates if state/district changes and GPS wasn't used
+    useEffect(() => {
+        // If the user manually changes these without getting geocoded results yet
+        // or to ensure fresh geocoding triggers
+        if (!isFetchingLocation) {
+            // No reset needed here as the geocodeManualLocation effect handles it
+        }
+    }, [state, district]);
+
+    const resultsRef = React.useRef(null);
+
     const handleSearch = async (e) => {
         if (e) e.preventDefault();
         setLoading(true);
         setSearched(true);
         try {
-            const response = await axios.get(`/api/seeker/donors`, {
+            // Use the Smart-Match API for AI-powered ranking
+            const response = await axios.get(`/api/seeker/smart-match`, {
                 params: {
                     blood_type: bloodType,
-                    state: state,
-                    district: district,
-                    city: city
+                    lat: lat,
+                    lng: lng,
+                    city: city,
+                    district: district
                 }
             });
             setDonors(response.data);
+            // Scroll to results with an offset so it doesn't go too far down
+            setTimeout(() => {
+                if (resultsRef.current) {
+                    const yOffset = -100; // Keep more context visible
+                    const y = resultsRef.current.getBoundingClientRect().top + window.pageYOffset + yOffset;
+                    window.scrollTo({ top: y, behavior: 'smooth' });
+                }
+            }, 100);
         } catch (error) {
             console.error("Error fetching donors:", error);
             toast.error("Failed to fetch donors. Please try again.");
@@ -287,27 +352,7 @@ const Seeker = () => {
         }
     };
 
-    const handleEmergencySubmit = async (e) => {
-        e.preventDefault();
-        const loadingToast = toast.loading("Submitting request...");
-        try {
-            await axios.post(`/api/seeker/request`, emergencyForm);
-            toast.success("Emergency request posted successfully!", { id: loadingToast });
-            setIsEmergencyModalOpen(false);
-            setEmergencyForm({
-                full_name: "",
-                email: "",
-                phone: "",
-                blood_type: "",
-                required_by: "",
-                state: "",
-                district: ""
-            });
-        } catch (error) {
-            console.error("Error submitting request:", error);
-            toast.error("Failed to submit request.", { id: loadingToast });
-        }
-    };
+
 
     const SkeletonCard = () => (
         <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 animate-pulse">
@@ -319,6 +364,42 @@ const Seeker = () => {
             <div className="flex gap-3">
                 <div className="h-10 flex-1 bg-gray-200 rounded-xl"></div>
                 <div className="h-10 flex-1 bg-gray-200 rounded-xl"></div>
+            </div>
+        </div>
+    );
+
+    const ScoreLegend = () => (
+        <div className="bg-blue-50/50 border border-blue-100 rounded-3xl p-6 mb-8 relative overflow-hidden">
+
+            <h4 className="text-sm font-black text-gray-800 uppercase tracking-widest mb-4 flex items-center gap-2">
+                <i className="fas fa-book-open text-blue-500"></i> How to read these scores?
+            </h4>
+            <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div className="bg-white p-3 rounded-xl shadow-sm border border-gray-100">
+                    <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-1">Match %</span>
+                    <p className="text-xs font-medium text-gray-600">
+                        <span className="text-green-600 font-bold">100%</span> = Exact blood type.<br />
+                        <span className="text-yellow-600 font-bold">80%</span> = Safe/Compatible.
+                    </p>
+                </div>
+                <div className="bg-white p-3 rounded-xl shadow-sm border border-gray-100">
+                    <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-1">Score</span>
+                    <p className="text-xs font-medium text-gray-600">
+                        Overall donor quality (0-100) based on distance & history.
+                    </p>
+                </div>
+                <div className="bg-white p-3 rounded-xl shadow-sm border border-gray-100">
+                    <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-1">Dist.</span>
+                    <p className="text-xs font-medium text-gray-600">
+                        Distance from your searched location (KM).
+                    </p>
+                </div>
+                <div className="bg-white p-3 rounded-xl shadow-sm border border-gray-100">
+                    <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-1">AI Chance</span>
+                    <p className="text-xs font-medium text-gray-600">
+                        Likelihood of this donor saying "Yes" to your request.
+                    </p>
+                </div>
             </div>
         </div>
     );
@@ -516,14 +597,12 @@ const Seeker = () => {
                 </div>
 
                 {/* Results Section */}
-                <div className="space-y-8">
+                <div ref={resultsRef} className="space-y-8">
                     <div className="flex items-center justify-between px-2">
                         <h3 className="text-2xl font-bold text-gray-800">
                             {searched ? `Found ${donors.length} Potential Heroes` : "Featured Donors"}
                         </h3>
-                        {searched && (
-                            <button onClick={() => { setSearched(false); setDonors([]); }} className="text-sm font-bold text-red-500 hover:text-red-600">Clear Records</button>
-                        )}
+
                     </div>
 
                     {loading ? (
@@ -531,42 +610,76 @@ const Seeker = () => {
                             {[1, 2, 3, 4, 5, 6].map(i => <SkeletonCard key={i} />)}
                         </div>
                     ) : donors.length > 0 ? (
-                        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-                            {donors.map((donor) => (
-                                <div key={donor.id} className="group bg-white p-7 rounded-[2rem] shadow-sm hover:shadow-2xl hover:shadow-gray-200 transition-all duration-500 border border-gray-50 hover:-translate-y-2 relative overflow-hidden">
-                                    <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
-                                        <i className="fas fa-heart text-6xl text-red-500"></i>
-                                    </div>
-                                    <div className="flex justify-between items-start mb-6 relative z-10">
-                                        <div className="bg-red-50 p-3 rounded-2xl">
-                                            <span className="text-2xl font-black text-red-600">{donor.blood_group}</span>
+                        <>
+                            <ScoreLegend />
+                            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+                                {donors.map((donor) => (
+                                    <div key={donor.id} className="group bg-white p-7 rounded-[2rem] shadow-sm hover:shadow-2xl hover:shadow-gray-200 transition-all duration-500 border border-gray-50 hover:-translate-y-2 relative overflow-hidden">
+                                        <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+                                            <i className="fas fa-heart text-6xl text-red-500"></i>
                                         </div>
-                                    </div>
-                                    <h3 className="text-xl font-black text-gray-800 mb-2 truncate group-hover:text-red-600 transition-colors uppercase tracking-tight">{donor.name}</h3>
-                                    <div className="flex items-center gap-2 text-gray-500 mb-8 font-medium">
-                                        <div className="w-8 h-8 rounded-lg bg-gray-50 flex items-center justify-center text-xs">
-                                            <i className="fas fa-location-dot"></i>
+                                        <div className="flex justify-between items-start mb-6 relative z-10">
+                                            <div className="bg-red-50 p-3 rounded-2xl">
+                                                <span className="text-2xl font-black text-red-600">{donor.blood_group}</span>
+                                            </div>
+                                            {donor.compatibility_score === 100 ? (
+                                                <div className="bg-green-100 text-green-700 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border border-green-200">
+                                                    Exact Match
+                                                </div>
+                                            ) : (
+                                                <div className="bg-yellow-100 text-yellow-700 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border border-yellow-200">
+                                                    Compatible
+                                                </div>
+                                            )}
                                         </div>
-                                        <span className="text-sm">{donor.city}, {donor.district}</span>
-                                    </div>
+                                        <h3 className="text-xl font-black text-gray-800 mb-2 truncate group-hover:text-red-600 transition-colors uppercase tracking-tight">{donor.name}</h3>
+                                        <div className="flex items-center gap-2 text-gray-500 mb-4 font-medium">
+                                            <div className="w-8 h-8 rounded-lg bg-gray-50 flex items-center justify-center text-xs">
+                                                <i className="fas fa-location-dot"></i>
+                                            </div>
+                                            <span className="text-sm">{donor.city}, {donor.district}</span>
+                                        </div>
 
-                                    <div className="grid grid-cols-2 gap-3 relative z-10">
-                                        <a
-                                            href={`tel:${donor.phone}`}
-                                            className="bg-gray-900 text-white py-3 rounded-xl text-xs font-black flex items-center justify-center gap-2 hover:bg-red-600 transition-all uppercase tracking-widest"
-                                        >
-                                            <i className="fas fa-phone"></i> Call
-                                        </a>
-                                        <button
-                                            onClick={() => { setSelectedDonor(donor); setIsDetailsModalOpen(true); }}
-                                            className="bg-red-500 text-white py-3 rounded-xl text-xs font-black flex items-center justify-center gap-2 hover:bg-red-600 transition-all uppercase tracking-widest"
-                                        >
-                                            <i className="fas fa-info-circle"></i> Details
-                                        </button>
+                                        {/* AI Smart Stats */}
+                                        <div className="grid grid-cols-4 gap-2 mb-8 bg-gray-50/50 p-4 rounded-2xl border border-gray-100/50">
+                                            <div className="text-center">
+                                                <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest block mb-1">Match</span>
+                                                <span className={`text-sm font-black ${donor.compatibility_score === 100 ? 'text-green-600' : 'text-yellow-600'}`}>
+                                                    {donor.compatibility_score}%
+                                                </span>
+                                            </div>
+                                            <div className="text-center border-l border-gray-200">
+                                                <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest block mb-1">Score</span>
+                                                <span className="text-sm font-black text-blue-600">{donor.suitability_score}</span>
+                                            </div>
+                                            <div className="text-center border-l border-gray-200">
+                                                <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest block mb-1">Dist.</span>
+                                                <span className="text-sm font-black text-gray-700">{(donor.distance === null || donor.distance === Infinity) ? 'N/A' : `${donor.distance}km`}</span>
+                                            </div>
+                                            <div className="text-center border-l border-gray-200">
+                                                <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest block mb-1">AI</span>
+                                                <span className="text-sm font-black text-red-600">{Math.round(donor.ai_confidence * 100)}%</span>
+                                            </div>
+                                        </div>
+
+                                        <div className="grid grid-cols-2 gap-3 relative z-10">
+                                            <a
+                                                href={`tel:${donor.phone}`}
+                                                className="bg-gray-900 text-white py-3 rounded-xl text-xs font-black flex items-center justify-center gap-2 hover:bg-red-600 transition-all uppercase tracking-widest"
+                                            >
+                                                <i className="fas fa-phone"></i> Call
+                                            </a>
+                                            <button
+                                                onClick={() => { setSelectedDonor(donor); setIsDetailsModalOpen(true); }}
+                                                className="bg-red-500 text-white py-3 rounded-xl text-xs font-black flex items-center justify-center gap-2 hover:bg-red-600 transition-all uppercase tracking-widest"
+                                            >
+                                                <i className="fas fa-info-circle"></i> Details
+                                            </button>
+                                        </div>
                                     </div>
-                                </div>
-                            ))}
-                        </div>
+                                ))}
+                            </div>
+                        </>
                     ) : searched ? (
                         <div className="text-center py-20 bg-white rounded-[3rem] shadow-inner border border-dashed border-gray-200">
                             <div className="bg-gray-50 w-24 h-24 rounded-full flex items-center justify-center mx-auto mb-6 text-3xl text-gray-300">
@@ -574,12 +687,7 @@ const Seeker = () => {
                             </div>
                             <h3 className="text-2xl font-bold text-gray-800 mb-2">No Matches Found</h3>
                             <p className="text-gray-500 max-w-sm mx-auto">We couldn't find any donors matching your criteria. Try expanding your search area.</p>
-                            <button
-                                onClick={() => setIsEmergencyModalOpen(true)}
-                                className="mt-8 text-red-600 font-bold hover:underline"
-                            >
-                                Post an Emergency Request Instead →
-                            </button>
+
                         </div>
                     ) : (
                         <div className="grid md:grid-cols-2 lg:grid-cols-2 gap-8 items-center bg-white p-12 rounded-[2.5rem] shadow-sm border border-gray-100">
@@ -588,7 +696,7 @@ const Seeker = () => {
                                 <p className="text-gray-500 mb-8 font-medium leading-relaxed">Enter a blood group and city to see available donors in your vicinity. Our network includes thousands of verified volunteers ready to help.</p>
                                 <div className="flex gap-4">
                                     <div className="bg-red-50 p-4 rounded-2xl flex-1 text-center">
-                                        <span className="block text-2xl font-black text-red-600">8+</span>
+                                        <span className="block text-2xl font-black text-red-600">18</span>
                                         <span className="text-[10px] font-bold text-red-400 uppercase tracking-widest">Blood Types</span>
                                     </div>
                                     <div className="bg-blue-50 p-4 rounded-2xl flex-1 text-center">
@@ -611,102 +719,7 @@ const Seeker = () => {
             </main>
 
             {/* Emergency Modal */}
-            {
-                isEmergencyModalOpen && (
-                    <div className="fixed inset-0 bg-gray-900/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4 animate-in fade-in duration-300">
-                        <div className="bg-white rounded-[2.5rem] shadow-2xl w-full max-w-2xl overflow-hidden relative animate-in zoom-in-95 duration-300">
-                            <button
-                                onClick={() => setIsEmergencyModalOpen(false)}
-                                className="absolute top-6 right-6 w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center text-gray-400 hover:text-red-500 hover:bg-red-50 transition-all z-10 text-xl"
-                            >
-                                <i className="fas fa-times"></i>
-                            </button>
 
-                            <div className="grid md:grid-cols-[1fr_1.5fr]">
-                                <div className="gradient-bg p-10 text-white flex flex-col justify-between">
-                                    <div>
-                                        <h3 className="text-3xl font-black leading-tight mb-4">Urgent Support</h3>
-                                        <p className="text-red-100 text-sm font-medium">Post your requirement and we'll notify donors in your area immediately.</p>
-                                    </div>
-                                    <div className="space-y-4">
-                                        <div className="flex items-center gap-3">
-                                            <div className="w-8 h-8 bg-white/20 rounded-lg flex items-center justify-center"><i className="fas fa-check"></i></div>
-                                            <span className="text-xs font-bold uppercase tracking-widest">Fast Approval</span>
-                                        </div>
-                                        <div className="flex items-center gap-3">
-                                            <div className="w-8 h-8 bg-white/20 rounded-lg flex items-center justify-center"><i className="fas fa-bell"></i></div>
-                                            <span className="text-xs font-bold uppercase tracking-widest">Global Reach</span>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <div className="p-10">
-                                    <form onSubmit={handleEmergencySubmit} className="space-y-4">
-                                        <div className="grid grid-cols-2 gap-4">
-                                            <div className="space-y-1">
-                                                <label className="text-[10px] font-black uppercase text-gray-400 ml-1">Full Name</label>
-                                                <input required type="text" className="w-full bg-gray-50 border-none rounded-xl py-3 px-4 font-bold text-sm" placeholder="Patient/Requester" value={emergencyForm.full_name} onChange={e => setEmergencyForm({ ...emergencyForm, full_name: e.target.value })} />
-                                            </div>
-                                            <div className="space-y-1">
-                                                <label className="text-[10px] font-black uppercase text-gray-400 ml-1">Phone</label>
-                                                <input required type="tel" className="w-full bg-gray-50 border-none rounded-xl py-3 px-4 font-bold text-sm" placeholder="Contact number" value={emergencyForm.phone} onChange={e => setEmergencyForm({ ...emergencyForm, phone: e.target.value })} />
-                                            </div>
-                                        </div>
-                                        <div className="space-y-1">
-                                            <label className="text-[10px] font-black uppercase text-gray-400 ml-1">Blood Type Required</label>
-                                            <select required className="w-full bg-gray-50 border-none rounded-xl py-3 px-4 font-bold text-sm appearance-none" value={emergencyForm.blood_type} onChange={e => setEmergencyForm({ ...emergencyForm, blood_type: e.target.value })}>
-                                                <option value="">Select Group</option>
-                                                {bloodGroups.map(bg => <option key={bg} value={bg}>{bg}</option>)}
-                                            </select>
-                                        </div>
-                                        <div className="space-y-1">
-                                            <label className="text-[10px] font-black uppercase text-gray-400 ml-1">Required By (Date)</label>
-                                            <input required type="date" className="w-full bg-gray-50 border-none rounded-xl py-3 px-4 font-bold text-sm uppercase" value={emergencyForm.required_by} onChange={e => setEmergencyForm({ ...emergencyForm, required_by: e.target.value })} />
-                                        </div>
-
-                                        <div className="space-y-1">
-                                            <label className="text-[10px] font-black uppercase text-gray-400 ml-1">State</label>
-                                            <select required className="w-full bg-gray-50 border-none rounded-xl py-3 px-4 font-bold text-sm" value={emergencyForm.state} onChange={e => setEmergencyForm({ ...emergencyForm, state: e.target.value, district: "" })}>
-                                                <option value="">Select State</option>
-                                                {Object.keys(stateDistrictMapping).map(s => <option key={s} value={s}>{s}</option>)}
-                                            </select>
-                                        </div>
-
-                                        <div className="grid grid-cols-2 gap-4">
-                                            <div className="space-y-1">
-                                                <label className="text-[10px] font-black uppercase text-gray-400 ml-1">District</label>
-                                                <select required className="w-full bg-gray-50 border-none rounded-xl py-3 px-4 font-bold text-sm" value={emergencyForm.district} onChange={e => setEmergencyForm({ ...emergencyForm, district: e.target.value })} disabled={!emergencyForm.state}>
-                                                    <option value="">Select District</option>
-                                                    {(stateDistrictMapping[emergencyForm.state] || []).map(d => <option key={d} value={d}>{d}</option>)}
-                                                </select>
-                                            </div>
-                                            <div className="space-y-1">
-                                                <label className="text-[10px] font-black uppercase text-gray-400 ml-1">City/Area</label>
-                                                <input required type="text" placeholder="City" className="w-full bg-gray-50 border-none rounded-xl py-3 px-4 font-bold text-sm" value={emergencyForm.city || ""} onChange={e => setEmergencyForm({ ...emergencyForm, city: e.target.value })} />
-                                                <div className="pt-1">
-                                                    <button
-                                                        type="button"
-                                                        onClick={fetchLocation}
-                                                        disabled={isFetchingLocation}
-                                                        className="w-full py-2 bg-blue-50 text-blue-600 rounded-lg text-[10px] font-black uppercase tracking-widest hover:bg-blue-100 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
-                                                    >
-                                                        {isFetchingLocation ? (
-                                                            <><i className="fas fa-spinner fa-spin"></i> Detecting...</>
-                                                        ) : (
-                                                            <><i className="fas fa-location-arrow"></i> Use Current Location</>
-                                                        )}
-                                                    </button>
-                                                </div>
-                                            </div>
-                                        </div>
-                                        <button type="submit" className="w-full gradient-bg text-white font-black py-4 rounded-xl mt-6 shadow-xl shadow-red-100 hover:scale-[1.02] active:scale-95 transition-all text-sm uppercase tracking-widest">Submit Request</button>
-                                    </form>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                )
-            }
 
             {/* Compatibility Modal */}
             {
@@ -786,6 +799,16 @@ const Seeker = () => {
                                     <div>
                                         <span className="text-[10px] font-black uppercase tracking-widest text-gray-400 block mb-1">Contact Number</span>
                                         <p className="font-bold text-gray-700">{selectedDonor.phone}</p>
+                                    </div>
+                                </div>
+
+                                <div className="flex items-start gap-4">
+                                    <div className="w-10 h-10 bg-purple-50 rounded-xl flex items-center justify-center text-purple-600 flex-shrink-0">
+                                        <i className="fas fa-envelope"></i>
+                                    </div>
+                                    <div>
+                                        <span className="text-[10px] font-black uppercase tracking-widest text-gray-400 block mb-1">Email Address</span>
+                                        <p className="font-bold text-gray-700 break-all">{selectedDonor.email || 'N/A'}</p>
                                     </div>
                                 </div>
 

@@ -323,7 +323,7 @@ export default function Home() {
 
             <div className="grid md:grid-cols-2 lg:grid-cols-2 gap-8 max-w-5xl mx-auto">
               {/* Donor Card */}
-              <div className="card-gradient-1 rounded-2xl shadow-xl p-8 card-hover slide-in-left">
+              <div id="donor-section" className="card-gradient-1 rounded-2xl shadow-xl p-8 card-hover slide-in-left">
                 <div className="text-center">
                   <img
                     src="https://indianblooddonors.com/public//website/assets/images/homeImage/Request-For-Blood-2.webp"
@@ -367,7 +367,7 @@ export default function Home() {
               </div>
 
               {/* Organization Login */}
-              <div className="card-gradient-3 rounded-2xl shadow-xl p-8 card-hover slide-in-up">
+              <div id="organization-section" className="card-gradient-3 rounded-2xl shadow-xl p-8 card-hover slide-in-up">
                 <div className="text-center">
                   <img
                     src="https://cdn-icons-png.flaticon.com/512/2966/2966327.png"

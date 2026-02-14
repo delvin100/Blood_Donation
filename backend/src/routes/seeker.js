@@ -4,6 +4,7 @@ const seekerController = require('../controllers/seekerController');
 
 router.get('/donors', seekerController.getDonors);
 router.get('/featured', seekerController.getFeaturedDonors);
-router.post('/request', seekerController.addSeeker);
+router.get('/smart-match', seekerController.getSmartMatches);
+
 
 module.exports = router;

@@ -85,6 +85,8 @@ export default function CompleteProfileModal({ onClose, onSuccess, user }) {
   const [state, setState] = useState('');
   const [district, setDistrict] = useState('');
   const [city, setCity] = useState('');
+  const [latitude, setLatitude] = useState(null);
+  const [longitude, setLongitude] = useState(null);
 
   // Error state should be an object for inline errors
   const [errors, setErrors] = useState({});
@@ -269,6 +271,8 @@ export default function CompleteProfileModal({ onClose, onSuccess, user }) {
 
       // Auto-fill the form
       setState(matchedState);
+      setLatitude(latitude);
+      setLongitude(longitude);
 
       if (matchedDistrict) {
         setDistrict(matchedDistrict);
@@ -304,7 +308,47 @@ export default function CompleteProfileModal({ onClose, onSuccess, user }) {
     }
   };
 
+  // Dynamic Geocoding for Manual Location Entries
+  useEffect(() => {
+    const geocodeManualLocation = async () => {
+      if (!city || !district || !state) return;
 
+      // Avoid redundant calls if fetching via GPS
+      if (isFetchingLocation) return;
+
+      try {
+        const query = `${city}, ${district}, ${state}, India`;
+        const response = await fetch(
+          `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=1`,
+          {
+            headers: { 'User-Agent': 'BloodDonationApp/1.0' }
+          }
+        );
+
+        if (response.ok) {
+          const data = await response.json();
+          if (data && data.length > 0) {
+            setLatitude(parseFloat(data[0].lat));
+            setLongitude(parseFloat(data[0].lon));
+            console.log(`Manual geocode success: ${query} -> ${data[0].lat}, ${data[0].lon}`);
+          }
+        }
+      } catch (err) {
+        console.warn('Manual geocoding failed', err);
+      }
+    };
+
+    const timeoutId = setTimeout(geocodeManualLocation, 1500);
+    return () => clearTimeout(timeoutId);
+  }, [city, district, state]);
+
+  // Reset coordinates if fields are cleared
+  useEffect(() => {
+    if (!city && !district && !state) {
+      setLatitude(null);
+      setLongitude(null);
+    }
+  }, [city, district, state]);
 
   const handleNextStep = (e) => {
     e.preventDefault();
@@ -379,7 +423,9 @@ export default function CompleteProfileModal({ onClose, onSuccess, user }) {
           dob,
           state,
           district,
-          city
+          city,
+          latitude,
+          longitude
         }),
       });
 
