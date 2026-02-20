@@ -11,6 +11,7 @@ import OrgDashboard from './pages/Organization/OrgDashboard';
 import AdminLogin from './pages/Admin/AdminLogin';
 import AdminDashboard from './pages/Admin/AdminDashboard';
 import Seeker from './pages/Seeker/Seeker';
+import OrganizationSearch from './pages/Organization/OrganizationSearch';
 
 // Global Scroll to Top on Route Change
 function ScrollToTop() {
@@ -55,6 +56,7 @@ export default function App() {
         {/* Home Route */}
         <Route path="/" element={<Home />} />
         <Route path="/seeker" element={<Seeker />} />
+        <Route path="/organization-search" element={<OrganizationSearch />} />
 
         {/* Donor Routes */}
         <Route path="/dashboard" element={<DonorDashboard />} />

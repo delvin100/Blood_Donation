@@ -18,7 +18,6 @@ DROP TABLE IF EXISTS blood_inventory;
 DROP TABLE IF EXISTS donations;
 DROP TABLE IF EXISTS organizations;
 DROP TABLE IF EXISTS admins;
-
 DROP TABLE IF EXISTS donors;
 
 -- 3. Create Tables

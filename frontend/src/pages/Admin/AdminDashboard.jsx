@@ -1743,8 +1743,8 @@ function ActivityLogsView({ logs }) {
                                 {log.action_type.replace(/_/g, ' ')}
                             </span>
                         </td>
-                        <td className="px-6 py-4">
-                            <p className="text-sm font-bold text-gray-700 leading-relaxed italic border-l-2 border-red-100 pl-3">
+                        <td className="px-6 py-4 text-center">
+                            <p className="text-sm font-bold text-gray-700 leading-relaxed italic">
                                 {log.description}
                                 {log.entity_name && (
                                     <span className="text-red-500 not-italic ml-1"> • {log.entity_name}</span>

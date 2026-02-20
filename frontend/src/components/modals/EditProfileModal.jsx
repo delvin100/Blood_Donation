@@ -164,6 +164,17 @@ const EditProfileModal = ({ isOpen, onClose, user, onUpdate }) => {
         }
     }, [user, isOpen]);
 
+    // Prevent body scroll when modal is open
+    useEffect(() => {
+        if (isOpen) {
+            const originalStyle = window.getComputedStyle(document.body).overflow;
+            document.body.style.overflow = 'hidden';
+            return () => {
+                document.body.style.overflow = originalStyle;
+            };
+        }
+    }, [isOpen]);
+
     // Fetch location using GPS and reverse geocoding
     const fetchLocation = async () => {
         setIsFetchingLocation(true);
@@ -318,26 +329,47 @@ const EditProfileModal = ({ isOpen, onClose, user, onUpdate }) => {
         return () => clearTimeout(timeoutId);
     }, [formData.city, formData.district, formData.state]);
 
-    if (!isOpen) return null;
+    if (!isOpen) {
+        console.log('EditProfileModal not rendering because isOpen is false');
+        return null;
+    }
+
+    if (!user) {
+        console.error('EditProfileModal: Missing user object!');
+        return (
+            <div className="fixed inset-0 bg-red-600 text-white z-[2147483647] flex items-center justify-center p-10 text-center">
+                <div>
+                    <h1 className="text-4xl font-black mb-4">CRITICAL ERROR</h1>
+                    <p className="text-xl">User data is missing. Please refresh the page.</p>
+                    <button onClick={onClose} className="mt-8 px-8 py-3 bg-white text-red-600 font-bold rounded-xl">Close</button>
+                </div>
+            </div>
+        );
+    }
+
+    console.log('EditProfileModal rendering now...');
 
     const validateField = (name, value) => {
         // ... (validation logic same as before)
         let error = '';
+        if (!value && name !== 'password' && name !== 'confirm_password') {
+            // Basic check
+        }
         switch (name) {
             case 'full_name':
-                if (value.startsWith(' ')) error = 'Full name should not start with space.';
+                if (!value || value.startsWith(' ')) error = 'Full name should not start with space.';
                 else if (!value.trim()) error = 'Full Name is required.';
                 else if (value.trim().length < 2) error = 'Name must be at least 2 characters.';
                 else if (value.trim().length > 50) error = 'Full name must not exceed 50 characters.';
                 else if (!/^[a-zA-Z][a-zA-Z\s]*$/.test(value.trim())) error = 'Full name can only contain letters and spaces, and must start with a letter.';
                 break;
             case 'email':
-                if (!value.trim()) error = 'Email is required.';
+                if (!value || !value.trim()) error = 'Email is required.';
                 else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) error = 'Invalid email address.';
                 else if (value.length > 100) error = 'Email must not exceed 100 characters.';
                 break;
             case 'phone':
-                if (!value.trim()) error = 'Please enter your phone number.';
+                if (!value || !value.trim()) error = 'Please enter your phone number.';
                 else if (!/^[0-9]{10}$/.test(value)) error = 'Phone number must be exactly 10 digits.';
                 break;
             case 'dob':
@@ -355,7 +387,7 @@ const EditProfileModal = ({ isOpen, onClose, user, onUpdate }) => {
                 }
                 break;
             case 'username':
-                if (!value.trim()) error = 'Username is required.';
+                if (!value || !value.trim()) error = 'Username is required.';
                 else if (value.length < 3) error = 'Username must be at least 3 characters.';
                 else if (value.length > 30) error = 'Username must not exceed 30 characters.';
                 else if (!/^[a-zA-Z][a-zA-Z0-9_]*$/.test(value)) error = 'Username must start with a letter and contain only letters, numbers, or underscores.';
@@ -375,7 +407,7 @@ const EditProfileModal = ({ isOpen, onClose, user, onUpdate }) => {
             case 'state':
             case 'district':
             case 'city':
-                if (!value.trim()) error = 'This field is required.';
+                if (!value || !value.trim()) error = 'This field is required.';
                 break;
             default:
                 break;
@@ -473,9 +505,9 @@ const EditProfileModal = ({ isOpen, onClose, user, onUpdate }) => {
     const districts = formData.state ? stateDistrictMapping[formData.state] || [] : [];
 
     return (
-        <div className="fixed inset-0 bg-white z-[2000] overflow-y-auto flex flex-col animate-in slide-in-from-bottom-5">
+        <div className="fixed inset-0 bg-white z-[2147483647] flex flex-col overflow-hidden">
             {/* Modern Header */}
-            <div className="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-gray-100 px-6 py-4 flex items-center justify-between shadow-sm">
+            <div className="z-50 bg-white/80 backdrop-blur-md border-b border-gray-100 px-6 py-4 flex items-center justify-between shadow-sm flex-shrink-0">
                 <div className="flex items-center gap-4">
                     <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white shadow-lg shadow-blue-500/20">
                         <i className="fas fa-user-edit text-xl"></i>
@@ -493,140 +525,142 @@ const EditProfileModal = ({ isOpen, onClose, user, onUpdate }) => {
                 </button>
             </div>
 
-            <div className="flex-1 max-w-5xl mx-auto w-full p-6 lg:p-10">
-                {globalError && (
-                    <div className="mb-8 p-4 rounded-2xl bg-red-50 border border-red-100 text-red-600 font-bold flex items-center gap-3 shadow-sm">
-                        <i className="fas fa-exclamation-triangle text-xl"></i>
-                        {globalError}
-                    </div>
-                )}
-
-                <form onSubmit={handleSubmit} className="space-y-12 pb-20">
-
-                    {/* Section 1: Personal Details */}
-                    <div className="bg-blue-50/50 p-8 rounded-[32px] border border-blue-100">
-                        <h3 className="text-xl font-black text-blue-900 mb-6 flex items-center gap-2">
-                            <i className="fas fa-id-card text-blue-500"></i>
-                            Personal Information
-                        </h3>
-                        <div className="grid md:grid-cols-2 gap-x-8 gap-y-6">
-                            <InputField label="Full Name" name="full_name" icon="fa-user" value={formData.full_name} onChange={handleChange} error={errors.full_name} />
-                            <InputField label="Date of Birth" name="dob" type="date" icon="fa-calendar-alt" value={formData.dob} onChange={handleChange} error={errors.dob} max={getMaxDate()} min={getMinDate()} />
-                            <InputField label="Blood Type" name="blood_type" options={bloodTypes} icon="fa-heartbeat" value={formData.blood_type} onChange={handleChange} error={errors.blood_type} />
-                            <InputField label="Gender" name="gender" options={genders} icon="fa-venus-mars" value={formData.gender} onChange={handleChange} error={errors.gender} />
-                            <InputField label="Email Address" name="email" type="email" icon="fa-envelope" value={formData.email} onChange={handleChange} error={errors.email} />
-                        </div>
-                    </div>
-
-                    {/* Section 2: Contact & Location */}
-                    <div className="bg-indigo-50/50 p-8 rounded-[32px] border border-indigo-100">
-                        <h3 className="text-xl font-black text-indigo-900 mb-6 flex items-center gap-2">
-                            <i className="fas fa-map-marked-alt text-indigo-500"></i>
-                            Contact & Location
-                        </h3>
-                        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-x-8 gap-y-6">
-                            <InputField label="Phone Number" name="phone" type="tel" icon="fa-phone" value={formData.phone} onChange={handleChange} error={errors.phone} />
-                            <InputField label="Country" name="country" disabled={true} icon="fa-globe-asia" value={formData.country} onChange={handleChange} error={errors.country} />
-                            <InputField label="State" name="state" options={Object.keys(stateDistrictMapping)} icon="fa-map" value={formData.state} onChange={handleChange} error={errors.state} />
-                            <InputField label="District" name="district" options={districts} disabled={!formData.state} icon="fa-map-signs" value={formData.district} onChange={handleChange} error={errors.district} />
-                            <InputField label="City" name="city" icon="fa-city" value={formData.city} onChange={handleChange} error={errors.city} />
-                        </div>
-
-                        {/* Fetch My Location Row */}
-                        <div className="mt-8 pt-6 border-t border-indigo-100 flex flex-col sm:flex-row items-center justify-between gap-4">
-                            <div className="flex items-center gap-3">
-                                <div className={`w-10 h-10 rounded-full flex items-center justify-center ${latitude ? 'bg-green-100 text-green-600' : 'bg-gray-100 text-gray-400'}`}>
-                                    <i className={`fas ${latitude ? 'fa-check' : 'fa-location-dot'}`}></i>
-                                </div>
-                                <div>
-                                    <p className="text-sm font-bold text-indigo-900">{latitude ? 'Precise Location Locked' : 'GPS Location Optional'}</p>
-                                    <p className="text-[10px] font-medium text-indigo-500 uppercase tracking-wider">{latitude ? `${latitude.toFixed(4)}, ${longitude.toFixed(4)}` : 'Enable GPS for better matching'}</p>
-                                </div>
-                            </div>
-                            <button
-                                type="button"
-                                onClick={fetchLocation}
-                                disabled={isFetchingLocation}
-                                className="w-full sm:w-auto px-6 py-3 bg-white border-2 border-indigo-200 rounded-xl text-indigo-600 text-sm font-bold hover:bg-indigo-50 hover:border-indigo-300 transition-all flex items-center justify-center gap-2 disabled:opacity-50"
-                            >
-                                {isFetchingLocation ? <i className="fas fa-spinner fa-spin"></i> : <i className="fas fa-crosshairs"></i>}
-                                {isFetchingLocation ? 'Locating...' : 'Use My GPS Location'}
-                            </button>
-                        </div>
-                        {locationError && (
-                            <p className="mt-4 text-xs text-red-500 font-bold text-center italic">
-                                <i className="fas fa-exclamation-triangle mr-1"></i> {locationError}
-                            </p>
-                        )}
-                    </div>
-
-                    {/* Section 3: Account Security (Only for non-Google users) */}
-                    {!user.google_id && (
-                        <div className="bg-rose-50/50 p-8 rounded-[32px] border border-rose-100">
-                            <h3 className="text-xl font-black text-rose-900 mb-6 flex items-center gap-2">
-                                <i className="fas fa-shield-alt text-rose-500"></i>
-                                Account Security
-                            </h3>
-                            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-x-8 gap-y-6">
-                                <InputField label="Username" name="username" icon="fa-user-tag" value={formData.username} onChange={handleChange} error={errors.username} />
-                                <div className="space-y-2">
-                                    <InputField label="New Password" name="password" type="password" icon="fa-lock" value={formData.password} onChange={handleChange} error={errors.password} />
-                                    {formData.password && (
-                                        <div className="px-1 pt-1">
-                                            <div className="flex justify-between items-center mb-1">
-                                                <span className="text-[10px] font-black uppercase tracking-wider text-gray-400">Strength: <span style={{ color: passwordStrength.color }}>{passwordStrength.label}</span></span>
-                                            </div>
-                                            <div className="h-1.5 w-full bg-gray-100 rounded-full overflow-hidden flex gap-1">
-                                                <div className={`h-full transition-all duration-500 rounded-full ${passwordStrength.level >= 1 ? '' : 'bg-transparent'}`} style={{ width: '33.33%', backgroundColor: passwordStrength.level >= 1 ? passwordStrength.color : '' }}></div>
-                                                <div className={`h-full transition-all duration-500 rounded-full ${passwordStrength.level >= 2 ? '' : 'bg-transparent'}`} style={{ width: '33.33%', backgroundColor: passwordStrength.level >= 2 ? passwordStrength.color : '' }}></div>
-                                                <div className={`h-full transition-all duration-500 rounded-full ${passwordStrength.level >= 3 ? '' : 'bg-transparent'}`} style={{ width: '33.33%', backgroundColor: passwordStrength.level >= 3 ? passwordStrength.color : '' }}></div>
-                                            </div>
-                                        </div>
-                                    )}
-                                </div>
-                                <InputField
-                                    label="Confirm New Password"
-                                    name="confirm_password"
-                                    type="password"
-                                    icon="fa-check-double"
-                                    value={formData.confirm_password}
-                                    onChange={handleChange}
-                                    error={errors.confirm_password}
-                                    placeholder="Confirm your password"
-                                    disabled={!formData.password}
-                                />
-                            </div>
-                            <p className="mt-4 text-xs text-rose-600 font-medium">
-                                <i className="fas fa-info-circle mr-1"></i>
-                                Leave password fields blank if you don't want to change it.
-                            </p>
+            <div className="flex-1 overflow-y-auto">
+                <div className="max-w-5xl mx-auto w-full p-6 lg:p-10">
+                    {globalError && (
+                        <div className="mb-8 p-4 rounded-2xl bg-red-50 border border-red-100 text-red-600 font-bold flex items-center gap-3 shadow-sm">
+                            <i className="fas fa-exclamation-triangle text-xl"></i>
+                            {globalError}
                         </div>
                     )}
 
-                    {/* Action Bar */}
-                    <div className="flex items-center gap-4 pt-4">
-                        <button
-                            type="button"
-                            onClick={onClose}
-                            className="flex-1 py-4 rounded-2xl font-bold text-gray-600 bg-gray-100 hover:bg-gray-200 transition-all"
-                        >
-                            Cancel
-                        </button>
-                        <button
-                            type="submit"
-                            disabled={isSubmitting}
-                            className="flex-[2] py-4 rounded-2xl font-bold text-white bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 shadow-xl shadow-blue-500/30 hover:shadow-2xl hover:shadow-blue-500/40 hover:-translate-y-1 transition-all flex items-center justify-center gap-3 disabled:opacity-70 disabled:hover:translate-y-0 disabled:shadow-none"
-                        >
-                            {isSubmitting ? (
-                                <><i className="fas fa-circle-notch animate-spin"></i> Saving Changes...</>
-                            ) : (
-                                <><i className="fas fa-check-circle"></i> Save Profile Changes</>
+                    <form onSubmit={handleSubmit} className="space-y-12 pb-20">
+
+                        {/* Section 1: Personal Details */}
+                        <div className="bg-blue-50/50 p-8 rounded-[32px] border border-blue-100">
+                            <h3 className="text-xl font-black text-blue-900 mb-6 flex items-center gap-2">
+                                <i className="fas fa-id-card text-blue-500"></i>
+                                Personal Information
+                            </h3>
+                            <div className="grid md:grid-cols-2 gap-x-8 gap-y-6">
+                                <InputField label="Full Name" name="full_name" icon="fa-user" value={formData.full_name} onChange={handleChange} error={errors.full_name} />
+                                <InputField label="Date of Birth" name="dob" type="date" icon="fa-calendar-alt" value={formData.dob} onChange={handleChange} error={errors.dob} max={getMaxDate()} min={getMinDate()} />
+                                <InputField label="Blood Type" name="blood_type" options={bloodTypes} icon="fa-heartbeat" value={formData.blood_type} onChange={handleChange} error={errors.blood_type} />
+                                <InputField label="Gender" name="gender" options={genders} icon="fa-venus-mars" value={formData.gender} onChange={handleChange} error={errors.gender} />
+                                <InputField label="Email Address" name="email" type="email" icon="fa-envelope" value={formData.email} onChange={handleChange} error={errors.email} />
+                            </div>
+                        </div>
+
+                        {/* Section 2: Contact & Location */}
+                        <div className="bg-indigo-50/50 p-8 rounded-[32px] border border-indigo-100">
+                            <h3 className="text-xl font-black text-indigo-900 mb-6 flex items-center gap-2">
+                                <i className="fas fa-map-marked-alt text-indigo-500"></i>
+                                Contact & Location
+                            </h3>
+                            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-x-8 gap-y-6">
+                                <InputField label="Phone Number" name="phone" type="tel" icon="fa-phone" value={formData.phone} onChange={handleChange} error={errors.phone} />
+                                <InputField label="Country" name="country" disabled={true} icon="fa-globe-asia" value={formData.country} onChange={handleChange} error={errors.country} />
+                                <InputField label="State" name="state" options={Object.keys(stateDistrictMapping)} icon="fa-map" value={formData.state} onChange={handleChange} error={errors.state} />
+                                <InputField label="District" name="district" options={districts} disabled={!formData.state} icon="fa-map-signs" value={formData.district} onChange={handleChange} error={errors.district} />
+                                <InputField label="City" name="city" icon="fa-city" value={formData.city} onChange={handleChange} error={errors.city} />
+                            </div>
+
+                            {/* Fetch My Location Row */}
+                            <div className="mt-8 pt-6 border-t border-indigo-100 flex flex-col sm:flex-row items-center justify-between gap-4">
+                                <div className="flex items-center gap-3">
+                                    <div className={`w-10 h-10 rounded-full flex items-center justify-center ${latitude ? 'bg-green-100 text-green-600' : 'bg-gray-100 text-gray-400'}`}>
+                                        <i className={`fas ${latitude ? 'fa-check' : 'fa-location-dot'}`}></i>
+                                    </div>
+                                    <div>
+                                        <p className="text-sm font-bold text-indigo-900">{latitude ? 'Precise Location Locked' : 'GPS Location Optional'}</p>
+                                        <p className="text-[10px] font-medium text-indigo-500 uppercase tracking-wider">{latitude ? `${Number(latitude).toFixed(4)}, ${Number(longitude).toFixed(4)}` : 'Enable GPS for better matching'}</p>
+                                    </div>
+                                </div>
+                                <button
+                                    type="button"
+                                    onClick={fetchLocation}
+                                    disabled={isFetchingLocation}
+                                    className="w-full sm:w-auto px-6 py-3 bg-white border-2 border-indigo-200 rounded-xl text-indigo-600 text-sm font-bold hover:bg-indigo-50 hover:border-indigo-300 transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+                                >
+                                    {isFetchingLocation ? <i className="fas fa-spinner fa-spin"></i> : <i className="fas fa-crosshairs"></i>}
+                                    {isFetchingLocation ? 'Locating...' : 'Use My GPS Location'}
+                                </button>
+                            </div>
+                            {locationError && (
+                                <p className="mt-4 text-xs text-red-500 font-bold text-center italic">
+                                    <i className="fas fa-exclamation-triangle mr-1"></i> {locationError}
+                                </p>
                             )}
-                        </button>
-                    </div>
-                </form>
-            </div >
-        </div >
+                        </div>
+
+                        {/* Section 3: Account Security (Only for non-Google users) */}
+                        {user?.google_id ? null : (
+                            <div className="bg-rose-50/50 p-8 rounded-[32px] border border-rose-100">
+                                <h3 className="text-xl font-black text-rose-900 mb-6 flex items-center gap-2">
+                                    <i className="fas fa-shield-alt text-rose-500"></i>
+                                    Account Security
+                                </h3>
+                                <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-x-8 gap-y-6">
+                                    <InputField label="Username" name="username" icon="fa-user-tag" value={formData.username} onChange={handleChange} error={errors.username} />
+                                    <div className="space-y-2">
+                                        <InputField label="New Password" name="password" type="password" icon="fa-lock" value={formData.password} onChange={handleChange} error={errors.password} />
+                                        {formData.password && (
+                                            <div className="px-1 pt-1">
+                                                <div className="flex justify-between items-center mb-1">
+                                                    <span className="text-[10px] font-black uppercase tracking-wider text-gray-400">Strength: <span style={{ color: passwordStrength.color }}>{passwordStrength.label}</span></span>
+                                                </div>
+                                                <div className="h-1.5 w-full bg-gray-100 rounded-full overflow-hidden flex gap-1">
+                                                    <div className={`h-full transition-all duration-500 rounded-full ${passwordStrength.level >= 1 ? '' : 'bg-transparent'}`} style={{ width: '33.33%', backgroundColor: passwordStrength.level >= 1 ? passwordStrength.color : '' }}></div>
+                                                    <div className={`h-full transition-all duration-500 rounded-full ${passwordStrength.level >= 2 ? '' : 'bg-transparent'}`} style={{ width: '33.33%', backgroundColor: passwordStrength.level >= 2 ? passwordStrength.color : '' }}></div>
+                                                    <div className={`h-full transition-all duration-500 rounded-full ${passwordStrength.level >= 3 ? '' : 'bg-transparent'}`} style={{ width: '33.33%', backgroundColor: passwordStrength.level >= 3 ? passwordStrength.color : '' }}></div>
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
+                                    <InputField
+                                        label="Confirm New Password"
+                                        name="confirm_password"
+                                        type="password"
+                                        icon="fa-check-double"
+                                        value={formData.confirm_password}
+                                        onChange={handleChange}
+                                        error={errors.confirm_password}
+                                        placeholder="Confirm your password"
+                                        disabled={!formData.password}
+                                    />
+                                </div>
+                                <p className="mt-4 text-xs text-rose-600 font-medium">
+                                    <i className="fas fa-info-circle mr-1"></i>
+                                    Leave password fields blank if you don't want to change it.
+                                </p>
+                            </div>
+                        )}
+
+                        {/* Action Bar */}
+                        <div className="flex items-center gap-4 pt-4">
+                            <button
+                                type="button"
+                                onClick={onClose}
+                                className="flex-1 py-4 rounded-2xl font-bold text-gray-600 bg-gray-100 hover:bg-gray-200 transition-all"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                type="submit"
+                                disabled={isSubmitting}
+                                className="flex-[2] py-4 rounded-2xl font-bold text-white bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 shadow-xl shadow-blue-500/30 hover:shadow-2xl hover:shadow-blue-500/40 hover:-translate-y-1 transition-all flex items-center justify-center gap-3 disabled:opacity-70 disabled:hover:translate-y-0 disabled:shadow-none"
+                            >
+                                {isSubmitting ? (
+                                    <><i className="fas fa-circle-notch animate-spin"></i> Saving Changes...</>
+                                ) : (
+                                    <><i className="fas fa-check-circle"></i> Save Profile Changes</>
+                                )}
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
     );
 };
 

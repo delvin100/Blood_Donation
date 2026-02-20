@@ -1687,7 +1687,10 @@ const Dashboard = () => {
                             <p><i className="fas fa-flag text-green-600 mr-2"></i> {data.user.state}, India</p>
                           </div>
                           <button
-                            onClick={() => setShowEditProfile(true)}
+                            onClick={() => {
+                              console.log('Edit profile button clicked');
+                              setShowEditProfile(true);
+                            }}
                             className="bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white px-6 py-3 rounded-xl font-bold text-base transition-all duration-300 shadow-lg hover:shadow-green-200 transform hover:-translate-y-1 flex items-center justify-center gap-2 w-auto mx-auto"
                           >
                             <i className="fas fa-edit text-lg"></i>

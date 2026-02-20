@@ -4,6 +4,8 @@ const jwt = require('jsonwebtoken');
 const nodemailer = require('nodemailer');
 const { calculateDonorAvailability } = require('../utils/donorUtils');
 const { addOrgLog } = require('../utils/logUtils');
+const https = require('https');
+const { getIndiaCoordinates } = require('../utils/matchUtils');
 
 
 const JWT_SECRET = process.env.JWT_SECRET || 'secret';
@@ -15,11 +17,48 @@ const transporter = nodemailer.createTransport({
 exports.register = async (req, res) => {
     try {
         const { name, email, phone, password, confirm_password, license_number, type, state, district, city, address } = req.body;
+        let { latitude, longitude } = req.body;
+
         if (password !== confirm_password) return res.status(400).json({ error: 'Passwords do not match.' });
+
+        // Backend Geocoding Fallback if coordinates missing
+        if (!latitude || !longitude) {
+            // 1. Try Internal Map
+            const internalCoords = getIndiaCoordinates(city, district);
+            if (internalCoords) {
+                latitude = internalCoords.lat;
+                longitude = internalCoords.lng;
+            } else {
+                // 2. Try External API (Nominatim)
+                try {
+                    const query = `${city}, ${district}, ${state}, India`;
+                    const geoUrl = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&limit=1`;
+
+                    const geoData = await new Promise((resolve, reject) => {
+                        const options = {
+                            headers: { 'User-Agent': 'eBloodBank-Backend' }
+                        };
+                        https.get(geoUrl, options, (resp) => {
+                            let data = '';
+                            resp.on('data', (chunk) => data += chunk);
+                            resp.on('end', () => resolve(JSON.parse(data)));
+                        }).on("error", (err) => reject(err));
+                    });
+
+                    if (geoData && geoData.length > 0) {
+                        latitude = geoData[0].lat;
+                        longitude = geoData[0].lon;
+                    }
+                } catch (geoErr) {
+                    console.error("Backend Geocoding Error:", geoErr.message);
+                }
+            }
+        }
+
         const hash = await bcrypt.hash(password, 10);
         const [result] = await pool.query(
-            `INSERT INTO organizations (name, email, phone, password_hash, license_number, type, state, district, city, address, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
-            [name, email, phone, hash, license_number, type, state, district, city, address]
+            `INSERT INTO organizations (name, email, phone, password_hash, license_number, type, state, district, city, address, latitude, longitude, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
+            [name, email, phone, hash, license_number, type, state, district, city, address, latitude, longitude]
         );
         const token = jwt.sign({ id: result.insertId, role: 'organization' }, JWT_SECRET, { expiresIn: '7d' });
         res.json({ token, user: { id: result.insertId, name, email, type, role: 'organization' } });
@@ -74,10 +113,24 @@ exports.getInventory = async (req, res) => {
 
 exports.updateInventory = async (req, res) => {
     try {
-        const { blood_group, units, min_threshold, isDonation } = req.body;
-        await pool.query(`INSERT INTO blood_inventory (org_id, blood_group, units, min_threshold) VALUES (?, ?, ?, ?) ON DUPLICATE KEY UPDATE units = ?, min_threshold = IFNULL(?, min_threshold)`, [req.user.id, blood_group, units, min_threshold || 5, units, min_threshold]);
+        const { blood_group, units, min_threshold } = req.body;
+        const orgId = req.user.id;
 
-        await addOrgLog(req.user.id, 'INVENTORY_SYNC', blood_group, `Inventory updated for ${blood_group} (+${units} units)`);
+        // Fetch current units to calculate increment
+        const [current] = await pool.query('SELECT units FROM blood_inventory WHERE org_id = ? AND blood_group = ?', [orgId, blood_group]);
+        const oldUnits = current.length > 0 ? current[0].units : 0;
+        const diff = units - oldUnits;
+
+        await pool.query(
+            `INSERT INTO blood_inventory (org_id, blood_group, units, min_threshold) 
+             VALUES (?, ?, ?, ?) 
+             ON DUPLICATE KEY UPDATE units = ?, min_threshold = IFNULL(?, min_threshold)`,
+            [orgId, blood_group, units, min_threshold || 5, units, min_threshold]
+        );
+
+        // Log the increment/decrement
+        const sign = diff >= 0 ? '+' : '';
+        await addOrgLog(orgId, 'INVENTORY_SYNC', blood_group, `Inventory updated for ${blood_group} (${sign}${diff} units)`);
 
         res.json({ message: 'Inventory updated' });
 
@@ -89,9 +142,47 @@ exports.updateInventory = async (req, res) => {
 
 exports.getProfile = async (req, res) => {
     try {
-        const [rows] = await pool.query('SELECT name, email, phone, license_number, type, state, district, city, address, verified, created_at FROM organizations WHERE id = ?', [req.user.id]);
+        const [rows] = await pool.query('SELECT id, name, email, phone, license_number, type, state, district, city, address, verified, latitude, longitude, created_at FROM organizations WHERE id = ?', [req.user.id]);
         if (rows.length === 0) return res.status(404).json({ error: 'Organization not found' });
-        res.json(rows[0]);
+
+        let org = rows[0];
+
+        // Self-Healing: If coordinates are missing, attempt to geocode on-the-fly
+        if (!org.latitude || !org.longitude) {
+            console.log(`[Self-Healing] Geocoding missing coordinates for Org #${org.id} (${org.name})`);
+            const internalCoords = getIndiaCoordinates(org.city, org.district);
+            let lat = internalCoords?.lat;
+            let lng = internalCoords?.lng;
+
+            if (!lat || !lng) {
+                try {
+                    const query = `${org.city}, ${org.district}, ${org.state}, India`;
+                    const geoUrl = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&limit=1`;
+                    const geoData = await new Promise((resolve, reject) => {
+                        https.get(geoUrl, { headers: { 'User-Agent': 'eBloodBank-Backend' } }, (resp) => {
+                            let data = '';
+                            resp.on('data', (chunk) => data += chunk);
+                            resp.on('end', () => resolve(JSON.parse(data)));
+                        }).on("error", (err) => reject(err));
+                    });
+                    if (geoData && geoData.length > 0) {
+                        lat = geoData[0].lat;
+                        lng = geoData[0].lon;
+                    }
+                } catch (e) {
+                    console.error("Self-healing geocode failed:", e.message);
+                }
+            }
+
+            if (lat && lng) {
+                await pool.query('UPDATE organizations SET latitude = ?, longitude = ? WHERE id = ?', [lat, lng, org.id]);
+                org.latitude = lat;
+                org.longitude = lng;
+                console.log(`[Self-Healing] Coordinates assigned: ${lat}, ${lng}`);
+            }
+        }
+
+        res.json(org);
     } catch (err) {
         res.status(500).json({ error: 'Server error' });
     }
@@ -99,10 +190,10 @@ exports.getProfile = async (req, res) => {
 
 exports.updateProfile = async (req, res) => {
     try {
-        const { name, email, phone, license_number, type, state, district, city, address } = req.body;
+        const { name, email, phone, license_number, type, state, district, city, address, latitude, longitude } = req.body;
         await pool.query(
-            `UPDATE organizations SET name = ?, email = ?, phone = ?, license_number = ?, type = ?, state = ?, district = ?, city = ?, address = ? WHERE id = ?`,
-            [name, email, phone, license_number, type, state, district, city, address, req.user.id]
+            `UPDATE organizations SET name = ?, email = ?, phone = ?, license_number = ?, type = ?, state = ?, district = ?, city = ?, address = ?, latitude = ?, longitude = ? WHERE id = ?`,
+            [name, email, phone, license_number, type, state, district, city, address, latitude, longitude, req.user.id]
         );
         res.json({ message: 'Profile updated' });
     } catch (err) {

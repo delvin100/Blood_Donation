@@ -17,7 +17,9 @@ export default function OrgRegister() {
         address: '',
         state: '',
         district: '',
-        city: ''
+        city: '',
+        latitude: null,
+        longitude: null
     });
     const [errors, setErrors] = useState({});
     const [fetchingLocation, setFetchingLocation] = useState(false);
@@ -150,12 +152,14 @@ export default function OrgRegister() {
                     ...prev,
                     state: address.state || '',
                     district: address.county || address.state_district || '',
-                    city: address.city || address.town || address.village || address.suburb || ''
+                    city: address.city || address.town || address.village || address.suburb || '',
+                    latitude: latitude,
+                    longitude: longitude
                 }));
                 toast.success("Location synchronized successfully.", { id: toastId });
             } catch (error) {
                 console.error(error);
-                toast.error("Failed to resolve address signatures.", { id: toastId });
+                toast.error("Geolocation failed. Please enter manually.", { id: toastId });
             } finally {
                 setFetchingLocation(false);
             }
@@ -163,6 +167,28 @@ export default function OrgRegister() {
             toast.error("Position access denied by user.", { id: toastId });
             setFetchingLocation(false);
         });
+    };
+
+    const handleManualGeocode = async () => {
+        if (!formData.city || (formData.latitude && formData.longitude)) return;
+
+        const query = `${formData.city}, ${formData.district}, ${formData.state}, India`;
+        try {
+            const res = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&limit=1`, {
+                headers: { 'Accept-Language': 'en-US,en;q=0.9' }
+            }).then(r => r.json());
+
+            if (res && res.length > 0) {
+                setFormData(prev => ({
+                    ...prev,
+                    latitude: res[0].lat,
+                    longitude: res[0].lon
+                }));
+                console.log("Manual geocode successful:", res[0].lat, res[0].lon);
+            }
+        } catch (err) {
+            console.warn("Manual geocoding failed:", err);
+        }
     };
 
     return (
@@ -402,7 +428,15 @@ export default function OrgRegister() {
                                         <div className="absolute inset-y-0 left-0 pl-5 flex items-center pointer-events-none text-gray-400 group-focus-within/field:text-red-500 transition-colors">
                                             <i className="fas fa-city"></i>
                                         </div>
-                                        <input type="text" name="city" value={formData.city} onChange={handleChange} placeholder="City / Area" className={`w-full pl-12 px-6 py-4 bg-gray-50 border ${errors.city ? 'border-red-500 ring-2 ring-red-500/10' : 'border-gray-100'} rounded-[1.5rem] focus:bg-white focus:ring-4 focus:ring-red-500/5 focus:border-red-500/30 outline-none transition-all placeholder:text-gray-400 font-bold text-gray-900 shadow-sm`} />
+                                        <input
+                                            type="text"
+                                            name="city"
+                                            value={formData.city}
+                                            onChange={handleChange}
+                                            onBlur={handleManualGeocode}
+                                            placeholder="City / Area"
+                                            className={`w-full pl-12 px-6 py-4 bg-gray-50 border ${errors.city ? 'border-red-500 ring-2 ring-red-500/10' : 'border-gray-100'} rounded-[1.5rem] focus:bg-white focus:ring-4 focus:ring-red-500/5 focus:border-red-500/30 outline-none transition-all placeholder:text-gray-400 font-bold text-gray-900 shadow-sm`}
+                                        />
                                     </div>
                                     {errors.city && <p className="text-red-500 text-xs font-bold ml-2">{errors.city}</p>}
                                 </div>

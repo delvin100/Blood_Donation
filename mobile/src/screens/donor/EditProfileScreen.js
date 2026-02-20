@@ -17,6 +17,8 @@ import { Picker } from '@react-native-picker/picker';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
+import * as ImagePicker from 'expo-image-picker';
+import * as Location from 'expo-location';
 import apiService from '../../api/apiService';
 import { stateDistrictMapping, bloodGroups, cityToDistrictMapping } from '../../utils/locationData';
 import { parseError, logError } from '../../utils/errors';
@@ -532,12 +534,18 @@ const EditProfileScreen = ({ navigation, route }) => {
                     <InputField label="Phone" name="phone" icon="call" type="numeric" placeholder="10-digit number" />
 
                     <TouchableOpacity
-                        style={styles.locationFetchBtn}
+                        style={[styles.locationFetchBtn, isLoading && { opacity: 0.7 }]}
                         onPress={handleFetchLocation}
                         disabled={isLoading}
                     >
-                        <Ionicons name="location" size={18} color="white" />
-                        <Text style={styles.locationFetchText}>Fetch My Location</Text>
+                        {isLoading ? (
+                            <ActivityIndicator size="small" color="white" />
+                        ) : (
+                            <>
+                                <Ionicons name="location" size={18} color="white" />
+                                <Text style={styles.locationFetchText}>Fetch My Location</Text>
+                            </>
+                        )}
                     </TouchableOpacity>
 
                     <SelectField label="State" name="state" icon="map" options={Object.keys(stateDistrictMapping)} />

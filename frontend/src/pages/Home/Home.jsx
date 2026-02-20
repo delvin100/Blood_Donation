@@ -389,7 +389,7 @@ export default function Home() {
               </div>
 
               {/* Organization Search */}
-              <div className="card-gradient-4 rounded-2xl shadow-xl p-8 card-hover slide-in-up">
+              <div id="org-search-section" className="card-gradient-4 rounded-2xl shadow-xl p-8 card-hover slide-in-up">
                 <div className="text-center">
                   <img
                     src="https://cdn-icons-png.flaticon.com/512/3141/3141805.png"
@@ -400,13 +400,13 @@ export default function Home() {
                   <p className="text-gray-600 mb-6">
                     Find verified partner organizations to collaborate on blood donation drives.
                   </p>
-                  <a
-                    href="/organization-search.html"
+                  <Link
+                    to="/organization-search"
                     className="block text-center w-full bg-green-500 hover:bg-green-600 text-white font-semibold py-3 px-6 rounded-lg transition-colors glow-effect"
                     aria-label="Search organization"
                   >
                     Search for Organization
-                  </a>
+                  </Link>
                 </div>
               </div>
             </div>

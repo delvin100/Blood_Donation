@@ -124,25 +124,45 @@ exports.uploadProfilePicture = async (req, res) => {
 exports.getUrgentNeeds = async (req, res) => {
     try {
         const donorId = req.user.id;
-        const [donorRows] = await pool.query('SELECT blood_type, city, availability FROM donors WHERE id = ?', [donorId]);
+        const [donorRows] = await pool.query('SELECT blood_type, city, district, availability FROM donors WHERE id = ?', [donorId]);
         if (donorRows.length === 0) return res.status(404).json({ error: 'Donor not found' });
-        const { blood_type, city, availability } = donorRows[0];
+        const { blood_type, city, district, availability } = donorRows[0];
 
         // Strict Filter: If donor is not available, return empty list
         if (availability !== 'Available') {
             return res.json([]);
         }
 
+        // Blood Compatibility Logic (Who can donate to whom)
+        const compatibilityMap = {
+            'O-': ['O-', 'O+', 'A-', 'A+', 'B-', 'B+', 'AB-', 'AB+'],
+            'O+': ['O+', 'A+', 'B+', 'AB+'],
+            'A-': ['A-', 'A+', 'AB-', 'AB+'],
+            'A+': ['A+', 'AB+'],
+            'B-': ['B-', 'B+', 'AB-', 'AB+'],
+            'B+': ['B+', 'AB+'],
+            'AB-': ['AB-', 'AB+'],
+            'AB+': ['AB+']
+        };
+
+        // Normalize subtypes (e.g., A1+ -> A+) for compatibility lookup
+        const normalizedType = blood_type ? blood_type.replace(/1/, '') : null;
+        const compatibleGroups = compatibilityMap[normalizedType] || [blood_type];
+
         const [requests] = await pool.query(`
-            SELECT er.*, o.name as org_name, o.city as org_city, o.phone as org_phone,
+            SELECT er.*, o.name as org_name, o.city as org_city, o.district as org_district, o.phone as org_phone,
                    (SELECT COUNT(*) FROM org_members om WHERE om.org_id = er.org_id AND om.donor_id = ?) as is_member
             FROM emergency_requests er
             JOIN organizations o ON er.org_id = o.id
             WHERE er.status = 'Active' 
-              AND er.blood_group = ? -- Strict blood group match
-              AND (o.city = ? OR er.org_id IN (SELECT org_id FROM org_members WHERE donor_id = ?))
+              AND er.blood_group IN (?) 
+              AND (
+                o.city = ? 
+                OR o.district = ? 
+                OR er.org_id IN (SELECT org_id FROM org_members WHERE donor_id = ?)
+              )
             ORDER BY er.created_at DESC
-        `, [donorId, blood_type, city, donorId]);
+        `, [donorId, compatibleGroups, city, district, donorId]);
 
         res.json(requests);
     } catch (err) {

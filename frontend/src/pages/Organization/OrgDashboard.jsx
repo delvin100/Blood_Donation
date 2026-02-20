@@ -189,7 +189,9 @@ export default function OrgDashboard() {
         state: '',
         district: '',
         city: '',
-        address: ''
+        address: '',
+        latitude: null,
+        longitude: null
     });
 
     // Emergency Request Form State
@@ -357,7 +359,9 @@ export default function OrgDashboard() {
                 state: res.data.state,
                 district: res.data.district,
                 city: res.data.city,
-                address: res.data.address
+                address: res.data.address,
+                latitude: res.data.latitude,
+                longitude: res.data.longitude
             });
             // Refresh counts to ensure profile shows latest data
             fetchStats();
@@ -390,6 +394,28 @@ export default function OrgDashboard() {
             localStorage.setItem('user', JSON.stringify(updatedUser));
         } catch (err) {
             toast.error(err.response?.data?.error || "Failed to update profile");
+        }
+    };
+
+    const handleManualGeocode = async () => {
+        if (!editForm.city) return;
+
+        const query = `${editForm.city}, ${editForm.district}, ${editForm.state}, India`;
+        try {
+            const res = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&limit=1`, {
+                headers: { 'Accept-Language': 'en-US,en;q=0.9' }
+            }).then(r => r.json());
+
+            if (res && res.length > 0) {
+                setEditForm(prev => ({
+                    ...prev,
+                    latitude: res[0].lat,
+                    longitude: res[0].lon
+                }));
+                console.log("Profile manual geocode successful:", res[0].lat, res[0].lon);
+            }
+        } catch (err) {
+            console.warn("Profile manual geocoding failed:", err);
         }
     };
 
@@ -2218,8 +2244,10 @@ export default function OrgDashboard() {
                                                                         <input
                                                                             type="text"
                                                                             value={editForm.city}
-                                                                            onChange={e => setEditForm({ ...editForm, city: e.target.value })}
-                                                                            className="w-full bg-white/10 border border-white/20 rounded-xl px-4 py-2 font-bold text-white focus:border-red-500 outline-none transition-all text-sm"
+                                                                            onChange={(e) => setEditForm({ ...editForm, city: e.target.value })}
+                                                                            onBlur={handleManualGeocode}
+                                                                            placeholder="City"
+                                                                            className="w-full px-5 py-3.5 bg-gray-50 border border-gray-100 rounded-2xl focus:ring-4 focus:ring-red-500/5 focus:border-red-500/30 outline-none transition-all font-bold text-gray-900"
                                                                         />
                                                                     </div>
                                                                     <div>

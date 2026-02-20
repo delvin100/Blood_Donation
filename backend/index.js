@@ -16,7 +16,7 @@ const organizationRoutes = require('./src/routes/organization');
 const adminRoutes = require('./src/routes/admin');
 const seekerRoutes = require('./src/routes/seeker');
 
-app.use('/api', homeRoutes);
+app.use('/api/home', homeRoutes);
 app.use('/api/auth', authRoutes);
 app.use('/api/donor', donorRoutes);
 app.use('/api/organization', organizationRoutes);
