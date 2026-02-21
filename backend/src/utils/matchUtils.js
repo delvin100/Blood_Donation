@@ -270,5 +270,6 @@ const calculateSuitabilityScore = async (donor, seeker) => {
 module.exports = {
     calculateDistance,
     calculateSuitabilityScore,
-    getCompatibleBloodTypes
+    getCompatibleBloodTypes,
+    getIndiaCoordinates
 };

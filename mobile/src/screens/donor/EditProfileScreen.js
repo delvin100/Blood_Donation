@@ -95,7 +95,7 @@ const EditProfileScreen = ({ navigation, route }) => {
                 setProfilePic(user.profile_picture);
             }
         }
-    }, [user]);
+    }, []);
 
     const handleChange = (name, value) => {
         let finalValue = value;
@@ -166,19 +166,6 @@ const EditProfileScreen = ({ navigation, route }) => {
 
         setIsSubmitting(true);
         try {
-            let finalProfilePic = user.profile_picture;
-
-            // Upload profile picture if one was selected
-            if (selectedImage) {
-                try {
-                    finalProfilePic = await uploadImage(selectedImage);
-                } catch (err) {
-                    Alert.alert('Upload Error', 'Failed to upload profile picture. Please try again.');
-                    setIsSubmitting(false);
-                    return;
-                }
-            }
-
             const submissionData = { ...formData };
             submissionData.dob = convertToBackendDate(submissionData.dob);
 
@@ -222,7 +209,19 @@ const EditProfileScreen = ({ navigation, route }) => {
             if (!result.canceled) {
                 const pickedUri = result.assets[0].uri;
                 setProfilePic(pickedUri); // Immediate preview
-                setSelectedImage(pickedUri); // Store for later upload
+
+                // Immediately upload the picked image
+                try {
+                    const uploadedUrl = await uploadImage(pickedUri);
+                    // Update the global state or component params if necessary
+                    if (navigation.setParams) {
+                        navigation.setParams({ user: { ...user, profile_picture: uploadedUrl } });
+                    }
+                    Alert.alert('Success', 'Profile picture updated successfully!');
+                } catch (err) {
+                    Alert.alert('Upload Error', 'Failed to upload profile picture. Please try again.');
+                    setProfilePic(user?.profile_picture || null); // Revert on failure
+                }
             }
         } catch (err) {
             logError('Picker Error', err);
@@ -333,7 +332,7 @@ const EditProfileScreen = ({ navigation, route }) => {
                 headers: { 'Content-Type': 'multipart/form-data' },
             });
 
-            return res.data.url;
+            return res.data.profile_picture;
         } catch (err) {
             logError('Upload Error', err);
             throw err;
@@ -342,98 +341,7 @@ const EditProfileScreen = ({ navigation, route }) => {
         }
     };
 
-    const InputField = ({ label, name, icon, type = 'default', secure = false, placeholder, editable = true, children, onPress }) => (
-        <View style={styles.inputWrapper}>
-            <Text style={styles.label}>{label}</Text>
-            <TouchableOpacity
-                activeOpacity={onPress ? 0.7 : 1}
-                onPress={onPress}
-                disabled={!onPress}
-            >
-                <View style={[styles.inputContainer, errors[name] && styles.inputError]} pointerEvents={onPress ? "none" : "auto"}>
-                    <Ionicons name={icon} size={20} color="#6b7280" style={styles.inputIcon} />
-                    <TextInput
-                        style={[styles.input, !editable && styles.inputDisabled]}
-                        value={formData[name]}
-                        onChangeText={(val) => handleChange(name, val)}
-                        keyboardType={type}
-                        secureTextEntry={secure}
-                        placeholder={placeholder}
-                        editable={editable}
-                    />
-                    {children}
-                </View>
-            </TouchableOpacity>
-            {errors[name] && <Text style={styles.errorText}>{errors[name]}</Text>}
-        </View>
-    );
-
-    const SelectField = ({ label, name, icon, options, pickerKey }) => (
-        <View style={styles.inputWrapper}>
-            <Text style={styles.label}>{label}</Text>
-            <View style={[styles.inputContainer, errors[name] && styles.inputError]}>
-                <Ionicons name={icon} size={20} color="#6b7280" style={styles.inputIcon} />
-                <Picker
-                    key={pickerKey}
-                    selectedValue={formData[name]}
-                    onValueChange={(val) => handleChange(name, val)}
-                    style={styles.picker}
-                    enabled={name === 'state' ? true : (!!formData.state)}
-                >
-                    <Picker.Item label={`Select ${label}`} value="" color="#9ca3af" />
-                    {options.map((opt, i) => {
-                        const optLabel = typeof opt === 'string' ? opt : opt.label;
-                        const optValue = typeof opt === 'string' ? opt : opt.value;
-                        return <Picker.Item key={i} label={optLabel} value={optValue} />;
-                    })}
-                </Picker>
-            </View>
-            {errors[name] && <Text style={styles.errorText}>{errors[name]}</Text>}
-        </View>
-    );
-
-    const onDateChange = (event, selectedDate) => {
-        const currentDate = selectedDate || new Date();
-        setShowDatePicker(Platform.OS === 'ios');
-        if (event.type === 'set' || Platform.OS === 'ios') {
-            handleChange('dob', formatDate(currentDate));
-        }
-    };
-
-    const GenderOption = ({ label, value, icon }) => {
-        const isActive = formData.gender === value;
-        return (
-            <TouchableOpacity
-                style={[styles.genderCard, isActive && styles.activeGenderCard, errors.gender && styles.inputError]}
-                onPress={() => handleChange('gender', value)}
-                activeOpacity={0.7}
-            >
-                <Ionicons
-                    name={icon}
-                    size={20}
-                    color={isActive ? 'white' : '#6b7280'}
-                />
-                <Text style={[styles.genderText, isActive && styles.activeGenderText]}>
-                    {label}
-                </Text>
-            </TouchableOpacity>
-        );
-    };
-
-    const BloodGroupChip = ({ group }) => {
-        const isActive = formData.blood_type === group;
-        return (
-            <TouchableOpacity
-                style={[styles.bloodChip, isActive && styles.activeBloodChip, errors.blood_type && styles.inputError]}
-                onPress={() => handleChange('blood_type', group)}
-                activeOpacity={0.7}
-            >
-                <Text style={[styles.bloodChipText, isActive && styles.activeBloodChipText]}>
-                    {group}
-                </Text>
-            </TouchableOpacity>
-        );
-    };
+    // Component definitions moved outside
 
     return (
         <SafeAreaView style={styles.container}>
@@ -459,7 +367,7 @@ const EditProfileScreen = ({ navigation, route }) => {
                                 source={{
                                     uri: profilePic.startsWith('file') || profilePic.startsWith('content')
                                         ? profilePic
-                                        : `http://192.168.137.1:4000${profilePic}${profilePic.includes('?') ? '&' : '?'}t=${new Date().getTime()}`
+                                        : `http://192.168.137.1:4000${profilePic}`
                                 }}
                                 style={styles.profilePic}
                             />
@@ -478,14 +386,14 @@ const EditProfileScreen = ({ navigation, route }) => {
 
                 <View style={styles.section}>
                     <Text style={styles.sectionTitle}>Personal Information</Text>
-                    <InputField label="Full Name" name="full_name" icon="person" placeholder="John Doe" />
-                    <InputField label="Email" name="email" icon="mail" type="email-address" placeholder="john@example.com" />
+                    <InputField label="Full Name" name="full_name" icon="person" placeholder="John Doe" formData={formData} errors={errors} handleChange={handleChange} styles={styles} />
+                    <InputField label="Email" name="email" icon="mail" type="email-address" placeholder="john@example.com" formData={formData} errors={errors} handleChange={handleChange} styles={styles} />
 
                     <View style={styles.inputWrapper}>
                         <Text style={styles.label}>Blood Group</Text>
                         <View style={styles.bloodGrid}>
                             {bloodGroups.map(bg => (
-                                <BloodGroupChip key={bg} group={bg} />
+                                <BloodGroupChip key={bg} group={bg} formData={formData} errors={errors} handleChange={handleChange} styles={styles} />
                             ))}
                         </View>
                         {errors.blood_type && <Text style={styles.errorText}>{errors.blood_type}</Text>}
@@ -494,9 +402,9 @@ const EditProfileScreen = ({ navigation, route }) => {
                     <View style={styles.inputWrapper}>
                         <Text style={styles.label}>Gender</Text>
                         <View style={styles.genderContainer}>
-                            <GenderOption label="Male" value="male" icon="male" />
-                            <GenderOption label="Female" value="female" icon="female" />
-                            <GenderOption label="Other" value="other" icon="transgender" />
+                            <GenderOption label="Male" value="male" icon="male" formData={formData} errors={errors} handleChange={handleChange} styles={styles} />
+                            <GenderOption label="Female" value="female" icon="female" formData={formData} errors={errors} handleChange={handleChange} styles={styles} />
+                            <GenderOption label="Other" value="other" icon="transgender" formData={formData} errors={errors} handleChange={handleChange} styles={styles} />
                         </View>
                         {errors.gender && <Text style={styles.errorText}>{errors.gender}</Text>}
                     </View>
@@ -507,6 +415,7 @@ const EditProfileScreen = ({ navigation, route }) => {
                         icon="calendar"
                         placeholder="DD-MM-YYYY"
                         editable={false}
+                        formData={formData} errors={errors} handleChange={handleChange} styles={styles}
                         onPress={() => {
                             if (!formData.dob || formData.dob === 'DD-MM-YYYY' || formData.dob === '00-00-0000') handleChange('dob', '01-01-2000');
                             setShowDatePicker(true);
@@ -531,7 +440,7 @@ const EditProfileScreen = ({ navigation, route }) => {
 
                 <View style={styles.section}>
                     <Text style={styles.sectionTitle}>Contact & Location</Text>
-                    <InputField label="Phone" name="phone" icon="call" type="numeric" placeholder="10-digit number" />
+                    <InputField label="Phone" name="phone" icon="call" type="numeric" placeholder="10-digit number" formData={formData} errors={errors} handleChange={handleChange} styles={styles} />
 
                     <TouchableOpacity
                         style={[styles.locationFetchBtn, isLoading && { opacity: 0.7 }]}
@@ -548,7 +457,7 @@ const EditProfileScreen = ({ navigation, route }) => {
                         )}
                     </TouchableOpacity>
 
-                    <SelectField label="State" name="state" icon="map" options={Object.keys(stateDistrictMapping)} />
+                    <SelectField label="State" name="state" icon="map" options={Object.keys(stateDistrictMapping)} formData={formData} errors={errors} handleChange={handleChange} styles={styles} />
                     <View style={!formData.state && { opacity: 0.5 }}>
                         <SelectField
                             label="District"
@@ -556,16 +465,17 @@ const EditProfileScreen = ({ navigation, route }) => {
                             icon="navigate"
                             options={formData.state && stateDistrictMapping[formData.state] ? stateDistrictMapping[formData.state] : []}
                             pickerKey={formData.state}
+                            formData={formData} errors={errors} handleChange={handleChange} styles={styles}
                         />
                     </View>
-                    <InputField label="City" name="city" icon="business" placeholder="Mumbai" />
+                    <InputField label="City" name="city" icon="business" placeholder="Mumbai" formData={formData} errors={errors} handleChange={handleChange} styles={styles} />
                 </View>
 
                 <View style={styles.section}>
                     <Text style={styles.sectionTitle}>Account Security</Text>
-                    <InputField label="Username" name="username" icon="person-circle" placeholder="johndoe123" />
-                    <InputField label="New Password" name="password" icon="lock-closed" secure placeholder="Leave blank to keep current" />
-                    <InputField label="Confirm Password" name="confirm_password" icon="lock-closed" secure placeholder="Repeat new password" />
+                    <InputField label="Username" name="username" icon="person-circle" placeholder="johndoe123" formData={formData} errors={errors} handleChange={handleChange} styles={styles} />
+                    <InputField label="New Password" name="password" icon="lock-closed" secure placeholder="Leave blank to keep current" formData={formData} errors={errors} handleChange={handleChange} styles={styles} />
+                    <InputField label="Confirm Password" name="confirm_password" icon="lock-closed" secure placeholder="Repeat new password" formData={formData} errors={errors} handleChange={handleChange} styles={styles} />
                 </View>
 
                 <TouchableOpacity
@@ -825,5 +735,90 @@ const styles = StyleSheet.create({
         fontSize: 14,
     },
 });
+
+const InputField = ({ label, name, icon, type = 'default', secure = false, placeholder, editable = true, children, onPress, formData, errors, handleChange, styles }) => (
+    <View style={styles.inputWrapper}>
+        <Text style={styles.label}>{label}</Text>
+        <TouchableOpacity
+            activeOpacity={onPress ? 0.7 : 1}
+            onPress={onPress}
+            disabled={!onPress}
+        >
+            <View style={[styles.inputContainer, errors[name] && styles.inputError]} pointerEvents={onPress ? "none" : "auto"}>
+                <Ionicons name={icon} size={20} color="#6b7280" style={styles.inputIcon} />
+                <TextInput
+                    style={[styles.input, !editable && styles.inputDisabled]}
+                    value={formData[name]}
+                    onChangeText={(val) => handleChange(name, val)}
+                    keyboardType={type}
+                    secureTextEntry={secure}
+                    placeholder={placeholder}
+                    editable={editable}
+                />
+                {children}
+            </View>
+        </TouchableOpacity>
+        {errors[name] && <Text style={styles.errorText}>{errors[name]}</Text>}
+    </View>
+);
+
+const SelectField = ({ label, name, icon, options, pickerKey, formData, errors, handleChange, styles }) => (
+    <View style={styles.inputWrapper}>
+        <Text style={styles.label}>{label}</Text>
+        <View style={[styles.inputContainer, errors[name] && styles.inputError]}>
+            <Ionicons name={icon} size={20} color="#6b7280" style={styles.inputIcon} />
+            <Picker
+                key={pickerKey}
+                selectedValue={formData[name]}
+                onValueChange={(val) => handleChange(name, val)}
+                style={styles.picker}
+                enabled={name === 'state' ? true : (!!formData.state)}
+            >
+                <Picker.Item label={`Select ${label}`} value="" color="#9ca3af" />
+                {options.map((opt, i) => {
+                    const optLabel = typeof opt === 'string' ? opt : opt.label;
+                    const optValue = typeof opt === 'string' ? opt : opt.value;
+                    return <Picker.Item key={i} label={optLabel} value={optValue} />;
+                })}
+            </Picker>
+        </View>
+        {errors[name] && <Text style={styles.errorText}>{errors[name]}</Text>}
+    </View>
+);
+
+const GenderOption = ({ label, value, icon, formData, errors, handleChange, styles }) => {
+    const isActive = formData.gender === value;
+    return (
+        <TouchableOpacity
+            style={[styles.genderCard, isActive && styles.activeGenderCard, errors.gender && styles.inputError]}
+            onPress={() => handleChange('gender', value)}
+            activeOpacity={0.7}
+        >
+            <Ionicons
+                name={icon}
+                size={20}
+                color={isActive ? 'white' : '#6b7280'}
+            />
+            <Text style={[styles.genderText, isActive && styles.activeGenderText]}>
+                {label}
+            </Text>
+        </TouchableOpacity>
+    );
+};
+
+const BloodGroupChip = ({ group, formData, errors, handleChange, styles }) => {
+    const isActive = formData.blood_type === group;
+    return (
+        <TouchableOpacity
+            style={[styles.bloodChip, isActive && styles.activeBloodChip, errors.blood_type && styles.inputError]}
+            onPress={() => handleChange('blood_type', group)}
+            activeOpacity={0.7}
+        >
+            <Text style={[styles.bloodChipText, isActive && styles.activeBloodChipText]}>
+                {group}
+            </Text>
+        </TouchableOpacity>
+    );
+};
 
 export default EditProfileScreen;

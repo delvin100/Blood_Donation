@@ -840,7 +840,7 @@ const Seeker = () => {
                                     href={`tel:${selectedDonor.phone}`}
                                     className="w-full gradient-bg text-white font-black py-4 rounded-2xl flex items-center justify-center gap-3 shadow-xl shadow-red-100 hover:scale-[1.02] active:scale-95 transition-all uppercase tracking-widest text-sm"
                                 >
-                                    <i className="fas fa-phone"></i> Contact Now
+                                    <i className="fas fa-phone"></i> {selectedDonor.phone}
                                 </a>
                             </div>
                         </div>
