@@ -19,7 +19,7 @@ exports.getSmartMatches = async (req, res) => {
                 d.id, d.username, d.full_name, d.phone, d.email, d.blood_type, 
                 d.state, d.district, d.city, d.latitude, d.longitude,
                 d.total_donations as base_donations,
-                (SELECT MAX(date) FROM donations WHERE donor_id = d.id) as last_donation_date,
+                d.last_donation_date,
                 (SELECT COUNT(*) FROM donations WHERE donor_id = d.id) as live_donations
             FROM donors d
             WHERE d.availability = 'Available' 
@@ -76,11 +76,10 @@ exports.getSmartMatches = async (req, res) => {
         // 4. Log suggestions to DB (non-blocking)
         // Log top 50 matches to avoid overwhelming the database with too many inserts,
         // but return ALL matching donors to the frontend as requested.
-        const donorsToLog = scoredDonors.slice(0, 50);
         donorsToLog.forEach(donor => {
             pool.query(
-                'INSERT INTO match_outcomes (donor_id, seeker_id, suggested_at, outcome, suitability_score, distance_km) VALUES (?, ?, NOW(), ?, ?, ?)',
-                [donor.id, null, 'Pending', donor.suitability_score, donor.distance]
+                'INSERT INTO match_outcomes (donor_id, suggested_at, outcome, suitability_score, distance_km) VALUES (?, NOW(), ?, ?, ?)',
+                [donor.id, 'Pending', donor.suitability_score, donor.distance]
             ).catch(err => console.error('Error logging suggestion:', err));
         });
 

@@ -240,6 +240,7 @@ exports.googleAuth = async (req, res) => {
         const token = jwt.sign({ id: donor.id, username: donor.username || email }, JWT_SECRET, { expiresIn: '7d' });
         res.json({ token, user: donor });
     } catch (err) {
+        console.error('Google Auth Error:', err);
         res.status(500).json({ error: 'Google auth failed.' });
     }
 };

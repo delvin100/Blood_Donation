@@ -30,8 +30,8 @@ CREATE TABLE donors (
   email VARCHAR(255) UNIQUE,
   password_hash VARCHAR(255) NULL,
   google_id VARCHAR(255) UNIQUE DEFAULT NULL,
-  blood_type VARCHAR(50),
-  dob DATE,
+  blood_type VARCHAR(50) DEFAULT NULL,
+  dob DATE DEFAULT NULL,
   availability ENUM('Available','Unavailable') DEFAULT 'Available',
   phone VARCHAR(50) DEFAULT NULL,
   gender ENUM('male','female','other') DEFAULT NULL,
@@ -46,9 +46,12 @@ CREATE TABLE donors (
   latitude DECIMAL(10, 8) DEFAULT NULL,
   longitude DECIMAL(11, 8) DEFAULT NULL,
   total_donations INT DEFAULT 0,
+  last_donation_date DATE DEFAULT NULL,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   INDEX idx_blood_type (blood_type),
-  INDEX idx_location (city, district)
+  INDEX idx_location (city, district),
+  INDEX idx_last_donation (last_donation_date),
+  INDEX idx_donor_location (latitude, longitude)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 
@@ -71,7 +74,8 @@ CREATE TABLE organizations (
   reset_code_expires_at DATETIME DEFAULT NULL,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   INDEX idx_org_city (city),
-  INDEX idx_org_type (type)
+  INDEX idx_org_type (type),
+  INDEX idx_org_location (latitude, longitude)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- Donations Table (Past Donations)
@@ -228,7 +232,6 @@ CREATE TABLE donor_logs (
 CREATE TABLE match_outcomes (
   id INT AUTO_INCREMENT PRIMARY KEY,
   donor_id INT NOT NULL,
-  seeker_id INT NULL, 
   suggested_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   outcome ENUM('Pending', 'Accepted', 'Rejected', 'Completed', 'TimedOut') DEFAULT 'Pending',
   response_time_seconds INT DEFAULT NULL,
@@ -264,9 +267,7 @@ VALUES ('admin','$2b$10$s/wNd/VHlfpK4pHMKqC7XehD2sev7CLaGPJkmpP52agx8JcAbJbXi');
 INSERT INTO organizations
 (name, email, phone, password_hash, license_number, type, address, state, district, city, verified)
 VALUES
-('Caritas Hospital', 'info@caritashospital.org', '04822260000', NULL, 'LIC-KTM-001', 'Hospital', 'Thellakom PO', 'Kerala', 'Kottayam', 'Thellakom', TRUE),
 ('Government Medical College Kottayam', 'gmckottayam@kerala.gov.in', '04812562000', NULL, 'LIC-KTM-002', 'Hospital', 'Gandhinagar', 'Kerala', 'Kottayam', 'Gandhinagar', TRUE),
-('Lourdes Hospital', 'contact@lourdeskottayam.com', '04812300000', NULL, 'LIC-KTM-003', 'Hospital', 'Collectorate PO', 'Kerala', 'Kottayam', 'Kottayam', TRUE),
 ('SH Medical Centre', 'admin@shmedical.org', '04812420000', NULL, 'LIC-KTM-004', 'Hospital', 'Changanassery', 'Kerala', 'Kottayam', 'Changanassery', TRUE),
 ('Marian Medical Centre', 'info@marianmedicalcentre.com', '04822270000', NULL, 'LIC-KTM-005', 'Hospital', 'Pala', 'Kerala', 'Kottayam', 'Pala', TRUE);
 

@@ -32,7 +32,7 @@ const calculateDonorAvailability = async (donorId, connection = null) => {
         }
 
         // Keep database in sync
-        await db.query('UPDATE donors SET availability = ? WHERE id = ?', [status, donorId]);
+        await db.query('UPDATE donors SET availability = ?, last_donation_date = ? WHERE id = ?', [status, lastDonationDate, donorId]);
 
         return {
             status,

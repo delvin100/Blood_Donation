@@ -47,8 +47,8 @@ async function generateSyntheticData(count = 500) {
             const suitabilityScore = 40 + Math.random() * 50;
 
             await pool.query(
-                'INSERT INTO match_outcomes (donor_id, seeker_id, suggested_at, outcome, response_time_seconds, suitability_score, distance_km) VALUES (?, ?, ?, ?, ?, ?, ?)',
-                [donor.id, null, new Date(Date.now() - Math.random() * 30 * 24 * 60 * 60 * 1000), outcome, responseTime, suitabilityScore, distance]
+                'INSERT INTO match_outcomes (donor_id, suggested_at, outcome, response_time_seconds, suitability_score, distance_km) VALUES (?, ?, ?, ?, ?, ?)',
+                [donor.id, new Date(Date.now() - Math.random() * 30 * 24 * 60 * 60 * 1000), outcome, responseTime, suitabilityScore, distance]
             );
 
             if (i % 100 === 0) console.log(`Inserted ${i} records...`);
