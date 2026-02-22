@@ -5,90 +5,100 @@ import {
     StyleSheet,
     TouchableOpacity,
     Dimensions,
-    SafeAreaView,
-    ImageBackground,
+    Platform,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
+import { BlurView } from 'expo-blur';
 
 const { width, height } = Dimensions.get('window');
 
 const SelectionScreen = ({ navigation }) => {
     return (
         <View style={styles.container}>
-            <ImageBackground
-                source={{ uri: 'https://images.unsplash.com/photo-1519032465794-2da0cebf0b63?auto=format&fit=crop&q=80&w=1000' }}
-                style={styles.backgroundImage}
-                blurRadius={2}
-            >
-                <LinearGradient
-                    colors={['rgba(0,0,0,0.3)', 'rgba(0,0,0,0.7)', '#000000']}
-                    style={styles.gradient}
-                >
-                    <SafeAreaView style={styles.content}>
-                        <View style={styles.header}>
-                            <View style={styles.logoContainer}>
-                                <LinearGradient
-                                    colors={['#dc2626', '#991b1b']}
-                                    style={styles.logoGradient}
-                                >
-                                    <Ionicons name="water" size={60} color="white" />
-                                </LinearGradient>
+            <SafeAreaView style={styles.content}>
+                <View style={styles.header}>
+                    <View style={styles.logoContainer}>
+                        <LinearGradient
+                            colors={['#ef4444', '#991b1b']}
+                            style={styles.logoGradient}
+                        >
+                            <View style={styles.logoInnerShadow}>
+                                <Ionicons name="water" size={48} color="white" />
                             </View>
-                            <Text style={styles.logoText}>eBloodBank</Text>
-                            <Text style={styles.tagline}>Every drop counts, every donor is a hero.</Text>
-                        </View>
+                        </LinearGradient>
+                    </View>
+                    <Text style={styles.logoText}>eBloodBank</Text>
+                    <View style={styles.badge}>
+                        <Text style={styles.badgeText}>COMMUNITY DRIVEN</Text>
+                    </View>
+                    <Text style={styles.tagline}>A drop of grace for a life in need.</Text>
+                </View>
 
-                        <View style={styles.optionsContainer}>
-                            <Text style={styles.welcomeText}>How can we help you today?</Text>
+                <View style={styles.optionsContainer}>
+                    <Text style={styles.welcomeText}>How would you like to help?</Text>
 
-                            <TouchableOpacity
-                                style={styles.optionCard}
-                                onPress={() => navigation.navigate('Login')}
-                                activeOpacity={0.9}
-                            >
-                                <LinearGradient
-                                    colors={['#ffffff', '#f8fafc']}
-                                    style={styles.cardGradient}
-                                >
-                                    <View style={styles.cardIconContainer}>
-                                        <Ionicons name="person-circle" size={40} color="#dc2626" />
-                                    </View>
-                                    <View style={styles.cardTextContainer}>
-                                        <Text style={styles.cardTitle}>Donor Login</Text>
-                                        <Text style={styles.cardSubtitle}>Access your dashboard, manage donations, and save lives.</Text>
-                                    </View>
-                                    <Ionicons name="arrow-forward" size={24} color="#dc2626" />
-                                </LinearGradient>
-                            </TouchableOpacity>
+                    <TouchableOpacity
+                        style={styles.optionCard}
+                        onPress={() => navigation.navigate('Login')}
+                        activeOpacity={0.9}
+                    >
+                        <BlurView intensity={Platform.OS === 'ios' ? 90 : 100} tint="light" style={styles.blurWrapper}>
+                            <View style={styles.cardHeader}>
+                                <View style={styles.iconCircle}>
+                                    <Ionicons name="heart" size={24} color="#dc2626" />
+                                </View>
+                                <View style={styles.cardTitleContainer}>
+                                    <Text style={styles.cardTitle}>Donor Portal</Text>
+                                    <Text style={styles.cardSubtitle}>Save lives today</Text>
+                                </View>
+                            </View>
+                            <Text style={styles.cardDesc}>Access your dashboard, manage donations, and view your impact summary.</Text>
+                            <View style={styles.cardFooter}>
+                                <Text style={styles.cardAction}>Get Started</Text>
+                                <View style={styles.arrowCircle}>
+                                    <Ionicons name="chevron-forward" size={14} color="white" />
+                                </View>
+                            </View>
+                        </BlurView>
+                    </TouchableOpacity>
 
-                            <TouchableOpacity
-                                style={styles.optionCard}
-                                onPress={() => navigation.navigate('Seeker')}
-                                activeOpacity={0.9}
-                            >
-                                <LinearGradient
-                                    colors={['#dc2626', '#991b1b']}
-                                    style={styles.cardGradient}
-                                >
-                                    <View style={[styles.cardIconContainer, { backgroundColor: 'rgba(255,255,255,0.2)' }]}>
-                                        <Ionicons name="search" size={40} color="white" />
-                                    </View>
-                                    <View style={styles.cardTextContainer}>
-                                        <Text style={[styles.cardTitle, { color: 'white' }]}>Find Blood</Text>
-                                        <Text style={[styles.cardSubtitle, { color: 'rgba(255,255,255,0.8)' }]}>Search for life-saving donors in your immediate vicinity.</Text>
-                                    </View>
-                                    <Ionicons name="arrow-forward" size={24} color="white" />
-                                </LinearGradient>
-                            </TouchableOpacity>
-                        </View>
+                    <TouchableOpacity
+                        style={styles.optionCard}
+                        onPress={() => navigation.navigate('Seeker')}
+                        activeOpacity={0.9}
+                    >
+                        <LinearGradient
+                            colors={['#ef4444', '#b91c1c']}
+                            start={{ x: 0, y: 0 }}
+                            end={{ x: 1, y: 1 }}
+                            style={styles.cardGradient}
+                        >
+                            <View style={styles.cardHeader}>
+                                <View style={[styles.iconCircle, { backgroundColor: 'rgba(255,255,255,0.2)' }]}>
+                                    <Ionicons name="search" size={24} color="white" />
+                                </View>
+                                <View style={styles.cardTitleContainer}>
+                                    <Text style={[styles.cardTitle, { color: 'white' }]}>Find Blood</Text>
+                                    <Text style={[styles.cardSubtitle, { color: 'rgba(255,255,255,0.7)' }]}>Emergency request</Text>
+                                </View>
+                            </View>
+                            <Text style={[styles.cardDesc, { color: 'rgba(255,255,255,0.9)' }]}>Instantly search for compatible donors and blood banks in your vicinity.</Text>
+                            <View style={styles.cardFooter}>
+                                <Text style={[styles.cardAction, { color: 'white' }]}>Locate Now</Text>
+                                <View style={[styles.arrowCircle, { backgroundColor: 'white' }]}>
+                                    <Ionicons name="chevron-forward" size={14} color="#dc2626" />
+                                </View>
+                            </View>
+                        </LinearGradient>
+                    </TouchableOpacity>
+                </View>
 
-                        <View style={styles.footer}>
-                            <Text style={styles.footerText}>Part of a global initiative to ensure blood availability.</Text>
-                        </View>
-                    </SafeAreaView>
-                </LinearGradient>
-            </ImageBackground>
+                <View style={styles.footer}>
+                    <Text style={styles.footerText}>Secure • Verified • Community Powered</Text>
+                </View>
+            </SafeAreaView>
         </View>
     );
 };
@@ -96,115 +106,178 @@ const SelectionScreen = ({ navigation }) => {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-    },
-    backgroundImage: {
-        flex: 1,
-        width: '100%',
-        height: '100%',
-    },
-    gradient: {
-        flex: 1,
+        backgroundColor: '#000000',
     },
     content: {
         flex: 1,
-        paddingHorizontal: 24,
-        justifyContent: 'space-between',
-        paddingVertical: 40,
+        paddingHorizontal: 28,
+        justifyContent: 'flex-start',
+        paddingTop: Platform.OS === 'ios' ? 0 : 20,
+        paddingBottom: 20,
     },
     header: {
         alignItems: 'center',
-        marginTop: height * 0.05,
+        marginTop: height * 0.02,
+        marginBottom: 30,
     },
     logoContainer: {
-        width: 100,
-        height: 100,
-        borderRadius: 30,
+        width: 80,
+        height: 80,
+        borderRadius: 24,
         overflow: 'hidden',
-        marginBottom: 20,
-        elevation: 10,
+        marginBottom: 12,
+        elevation: 15,
         shadowColor: '#dc2626',
-        shadowOffset: { width: 0, height: 5 },
-        shadowOpacity: 0.5,
-        shadowRadius: 10,
+        shadowOffset: { width: 0, height: 8 },
+        shadowOpacity: 0.4,
+        shadowRadius: 12,
+        borderWidth: 1,
+        borderColor: 'rgba(255,255,255,0.1)',
     },
     logoGradient: {
         flex: 1,
         alignItems: 'center',
         justifyContent: 'center',
     },
+    logoInnerShadow: {
+        width: '100%',
+        height: '100%',
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: 'rgba(255,255,255,0.05)',
+    },
     logoText: {
-        fontSize: 36,
-        fontWeight: 'bold',
+        fontSize: 32,
+        fontWeight: '900',
         color: 'white',
-        letterSpacing: 1,
+        letterSpacing: -1,
+    },
+    badge: {
+        backgroundColor: 'rgba(220, 38, 38, 0.2)',
+        paddingHorizontal: 12,
+        paddingVertical: 3,
+        borderRadius: 100,
+        marginTop: 4,
+        borderWidth: 1,
+        borderColor: 'rgba(220, 38, 38, 0.3)',
+    },
+    badgeText: {
+        fontSize: 8,
+        fontWeight: '900',
+        color: '#fca5a5',
+        letterSpacing: 2,
     },
     tagline: {
-        fontSize: 16,
-        color: 'rgba(255,255,255,0.8)',
+        fontSize: 14,
+        color: 'rgba(255,255,255,0.5)',
         marginTop: 10,
         textAlign: 'center',
         fontWeight: '500',
     },
     optionsContainer: {
         width: '100%',
-        marginBottom: 40,
+        gap: 16,
+        marginTop: 10,
     },
     welcomeText: {
-        fontSize: 22,
-        fontWeight: 'bold',
+        fontSize: 18,
+        fontWeight: '800',
         color: 'white',
-        marginBottom: 24,
+        marginBottom: 8,
         textAlign: 'center',
+        letterSpacing: -0.5,
+        opacity: 0.8,
     },
     optionCard: {
-        width: '100%',
-        height: 110,
         borderRadius: 24,
-        marginBottom: 16,
         overflow: 'hidden',
-        elevation: 4,
+        elevation: 8,
         shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.1,
-        shadowRadius: 4,
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.2,
+        shadowRadius: 8,
+        borderWidth: 1,
+        borderColor: 'rgba(255,255,255,0.08)',
+    },
+    blurWrapper: {
+        padding: 20,
+        backgroundColor: 'rgba(255,255,255,0.92)',
     },
     cardGradient: {
-        flex: 1,
+        padding: 20,
+    },
+    cardHeader: {
         flexDirection: 'row',
         alignItems: 'center',
-        paddingHorizontal: 20,
+        marginBottom: 10,
     },
-    cardIconContainer: {
-        width: 64,
-        height: 64,
-        borderRadius: 20,
-        backgroundColor: 'rgba(220, 38, 38, 0.1)',
+    iconCircle: {
+        width: 40,
+        height: 40,
+        borderRadius: 14,
+        backgroundColor: 'rgba(220, 38, 38, 0.08)',
         alignItems: 'center',
         justifyContent: 'center',
     },
-    cardTextContainer: {
-        flex: 1,
-        marginLeft: 16,
-        marginRight: 8,
+    cardTitleContainer: {
+        marginLeft: 14,
     },
     cardTitle: {
         fontSize: 20,
-        fontWeight: 'bold',
+        fontWeight: '900',
         color: '#1e293b',
+        letterSpacing: -0.5,
     },
     cardSubtitle: {
-        fontSize: 13,
+        fontSize: 10,
+        fontWeight: '700',
         color: '#64748b',
-        marginTop: 4,
+        textTransform: 'uppercase',
+        letterSpacing: 1,
+        marginTop: 1,
+    },
+    cardDesc: {
+        fontSize: 13,
+        color: '#475569',
         lineHeight: 18,
+        fontWeight: '500',
+    },
+    cardFooter: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginTop: 16,
+        paddingTop: 12,
+        borderTopWidth: 1,
+        borderTopColor: 'rgba(0,0,0,0.05)',
+    },
+    cardAction: {
+        fontSize: 13,
+        fontWeight: '900',
+        color: '#dc2626',
+        textTransform: 'uppercase',
+        letterSpacing: 1,
+    },
+    arrowCircle: {
+        width: 28,
+        height: 28,
+        borderRadius: 14,
+        backgroundColor: '#dc2626',
+        alignItems: 'center',
+        justifyContent: 'center',
     },
     footer: {
         alignItems: 'center',
+        marginTop: 'auto',
+        paddingBottom: 20,
     },
     footerText: {
-        fontSize: 12,
-        color: 'rgba(255,255,255,0.5)',
+        fontSize: 10,
+        color: 'rgba(255,255,255,0.25)',
         textAlign: 'center',
+        fontWeight: '900',
+        textTransform: 'uppercase',
+        letterSpacing: 1.5,
     },
 });
 

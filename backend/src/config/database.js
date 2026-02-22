@@ -9,18 +9,32 @@ const pool = mysql.createPool({
     database: process.env.DB_NAME || 'ebloodbank',
     waitForConnections: true,
     connectionLimit: 10,
+    maxIdle: 10, // max idle connections, the default value is the same as `connectionLimit`
+    idleTimeout: 60000, // idle connections timeout, in milliseconds, the default value 60000
     queueLimit: 0,
-    connectTimeout: 10000 // 10 seconds timeout for initial connection
+    enableKeepAlive: true,
+    keepAliveInitialDelay: 10000,
+    connectTimeout: 20000 // Increased timeout for initial connection
+});
+
+// IMPORTANT: Keep-alive and error handling for free-tier DB stability
+pool.on('error', (err) => {
+    console.error('Unexpected error on idle client', err);
+    if (err.code === 'PROTOCOL_CONNECTION_LOST' || err.code === 'ECONNRESET') {
+        console.log('Database connection was closed. This is normal for free-tier DBs. The pool will handle reconnection.');
+    } else {
+        throw err;
+    }
 });
 
 // Verify connection on startup
 pool.getConnection()
     .then(connection => {
-        console.log("Connected to FreeSQLDatabase");
+        console.log("Connected to FreeSQLDatabase Successfully");
         connection.release();
     })
     .catch(err => {
-        console.error("DB Connection Failed:", err);
+        console.error("DB Connection Failed on Startup:", err);
     });
 
 module.exports = pool;
