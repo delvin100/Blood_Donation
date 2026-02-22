@@ -470,7 +470,7 @@ export default function AdminDashboard() {
                                             <td className="px-6 py-4 text-center text-sm font-medium text-gray-600">{org.type}</td>
                                             <td className="px-6 py-4 text-center text-sm font-medium text-gray-600">{org.city}, {org.district}, {org.state}</td>
                                             <td className="px-6 py-4 text-center">
-                                                <Badge status={org.verified ? 'success' : 'pending'}>{org.verified ? 'Verified' : 'Pending'}</Badge>
+                                                <Badge status={org.verified ? 'success' : 'warning'}>{org.verified ? 'Verified' : 'Pending Approval'}</Badge>
                                             </td>
                                             <td className="px-6 py-4 text-center space-x-2" onClick={(e) => e.stopPropagation()}>
                                                 <div className="flex justify-center items-center gap-2">
@@ -852,10 +852,12 @@ function OrgDetailView({ org, onBack, onVerify, onDelete }) {
                     <div className="flex-1 pb-2">
                         <div className="flex flex-wrap items-center gap-4 mb-3">
                             <h2 className="text-4xl font-black text-gray-900 tracking-tight">{org.name}</h2>
-                            {org.verified && (
+                            {org.verified ? (
                                 <div className="bg-blue-500 text-white w-7 h-7 rounded-full flex items-center justify-center shadow-lg shadow-blue-500/30" title="Verified Organization">
                                     <i className="fas fa-check text-xs font-black"></i>
                                 </div>
+                            ) : (
+                                <Badge status="warning">Pending Verification</Badge>
                             )}
                         </div>
                         <div className="flex flex-wrap items-center gap-3 text-gray-500 font-bold text-sm">
@@ -1094,12 +1096,17 @@ function DashboardHome({ stats, data, setActiveTab }) {
         { name: 'Orgs', count: stats.organizations, fill: '#3b82f6' }
     ];
 
+    const pendingApprovals = useMemo(() => data.organizations.filter(o => !o.verified).length, [data.organizations]);
+
     return (
         <div className="space-y-8 animate-fade-in-up">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className={`grid grid-cols-1 ${pendingApprovals > 0 ? 'md:grid-cols-4' : 'md:grid-cols-3'} gap-6`}>
                 <StatCard title="Total Donors" value={stats.donors} icon="users" color="from-blue-500 to-blue-600" shadow="shadow-blue-500/20" />
                 <StatCard title="Partner Orgs" value={stats.organizations} icon="hospital" color="from-purple-500 to-purple-600" shadow="shadow-purple-500/20" />
                 <StatCard title="Available Units" value={stats.bloodUnits} icon="tint" color="from-red-500 to-red-600" shadow="shadow-red-500/20" />
+                {pendingApprovals > 0 && (
+                    <StatCard title="Pending Approvals" value={pendingApprovals} icon="user-clock" color="from-amber-500 to-amber-600" shadow="shadow-amber-500/20" />
+                )}
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
