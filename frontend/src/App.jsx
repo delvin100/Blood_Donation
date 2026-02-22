@@ -8,6 +8,7 @@ import DonorRegister from './pages/Donor/DonorRegister';
 import OrgLogin from './pages/Organization/OrgLogin';
 import OrgRegister from './pages/Organization/OrgRegister';
 import OrgDashboard from './pages/Organization/OrgDashboard';
+import OrgPendingApproval from './pages/Organization/OrgPendingApproval';
 import AdminLogin from './pages/Admin/AdminLogin';
 import AdminDashboard from './pages/Admin/AdminDashboard';
 import Seeker from './pages/Seeker/Seeker';
@@ -67,6 +68,7 @@ export default function App() {
         <Route path="/organization/login" element={<OrgLogin />} />
         <Route path="/organization/register" element={<OrgRegister />} />
         <Route path="/organization/dashboard" element={<OrgDashboard />} />
+        <Route path="/organization/pending-approval" element={<OrgPendingApproval />} />
 
         {/* Admin Routes */}
         <Route path="/admin" element={<Navigate to="/admin/login" replace />} />

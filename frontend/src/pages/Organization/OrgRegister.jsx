@@ -119,14 +119,18 @@ export default function OrgRegister() {
 
         try {
             const response = await axios.post('/api/organization/register', formData);
-            toast.success("Welcome aboard! Your enterprise account has been established.");
 
-            // Save authentication data to localStorage
-            localStorage.setItem('token', response.data.token);
-            localStorage.setItem('role', 'organization');
-            localStorage.setItem('user', JSON.stringify(response.data.user));
-
-            setTimeout(() => navigate('/organization/dashboard'), 1500);
+            if (response.data.token) {
+                toast.success("Welcome aboard! Your enterprise account has been established.");
+                // Save authentication data to localStorage
+                localStorage.setItem('token', response.data.token);
+                localStorage.setItem('role', 'organization');
+                localStorage.setItem('user', JSON.stringify(response.data.user));
+                setTimeout(() => navigate('/organization/dashboard'), 1500);
+            } else {
+                toast.success(response.data.message || "Registration successful! Pending admin approval.");
+                setTimeout(() => navigate('/organization/pending-approval'), 1500);
+            }
         } catch (error) {
             console.error(error);
             const msg = error.response?.data?.error || "Registration process failed. Please check your signal or inputs.";

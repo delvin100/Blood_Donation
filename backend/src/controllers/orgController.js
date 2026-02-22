@@ -60,8 +60,11 @@ exports.register = async (req, res) => {
             `INSERT INTO organizations (name, email, phone, password_hash, license_number, type, state, district, city, address, latitude, longitude, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
             [name, email, phone, hash, license_number, type, state, district, city, address, latitude, longitude]
         );
-        const token = jwt.sign({ id: result.insertId, role: 'organization' }, JWT_SECRET, { expiresIn: '7d' });
-        res.json({ token, user: { id: result.insertId, name, email, type, role: 'organization' } });
+
+        res.json({
+            message: 'Registration successful. Your account is pending admin approval. You will receive an email once verified.',
+            user: { id: result.insertId, name, email, type, role: 'organization' }
+        });
     } catch (err) {
         res.status(500).json({ error: 'Server error' });
     }
@@ -75,6 +78,11 @@ exports.login = async (req, res) => {
         const org = rows[0];
         const match = await bcrypt.compare(password, org.password_hash);
         if (!match) return res.status(400).json({ error: 'Invalid credentials.' });
+
+        if (!org.verified) {
+            return res.status(403).json({ error: 'Your account is pending admin approval. You will be able to access the dashboard once an administrator verifies your facility.' });
+        }
+
         const token = jwt.sign({ id: org.id, role: 'organization' }, JWT_SECRET, { expiresIn: '7d' });
         res.json({ token, user: { id: org.id, name: org.name, email: org.email, type: org.type, role: 'organization' } });
     } catch (err) {
@@ -85,6 +93,13 @@ exports.login = async (req, res) => {
 exports.getStats = async (req, res) => {
     try {
         const orgId = req.user.id;
+
+        // Secondary verification check
+        const [orgRows] = await pool.query('SELECT verified FROM organizations WHERE id = ?', [orgId]);
+        if (orgRows.length === 0 || !orgRows[0].verified) {
+            return res.status(403).json({ error: 'Account not verified. Please contact administrator.' });
+        }
+
         const [inventory] = await pool.query('SELECT SUM(units) as total_units FROM blood_inventory WHERE org_id = ?', [orgId]);
         const [requests] = await pool.query('SELECT COUNT(*) as active_requests FROM emergency_requests WHERE org_id = ? AND status = ?', [orgId, 'Active']);
         const [verifications] = await pool.query('SELECT COUNT(*) as verified_count FROM donor_verifications WHERE org_id = ? AND status = ?', [orgId, 'Verified']);
@@ -104,7 +119,15 @@ exports.getStats = async (req, res) => {
 
 exports.getInventory = async (req, res) => {
     try {
-        const [rows] = await pool.query('SELECT * FROM blood_inventory WHERE org_id = ?', [req.user.id]);
+        const orgId = req.user.id;
+
+        // Secondary verification check
+        const [orgRows] = await pool.query('SELECT verified FROM organizations WHERE id = ?', [orgId]);
+        if (orgRows.length === 0 || !orgRows[0].verified) {
+            return res.status(403).json({ error: 'Account not verified. Please contact administrator.' });
+        }
+
+        const [rows] = await pool.query('SELECT * FROM blood_inventory WHERE org_id = ?', [orgId]);
         res.json(rows);
     } catch (err) {
         res.status(500).json({ error: 'Server error' });
@@ -146,6 +169,10 @@ exports.getProfile = async (req, res) => {
         if (rows.length === 0) return res.status(404).json({ error: 'Organization not found' });
 
         let org = rows[0];
+
+        if (!org.verified) {
+            return res.status(403).json({ error: 'Account not verified. Please contact administrator.' });
+        }
 
         // Self-Healing: If coordinates are missing, attempt to geocode on-the-fly
         if (!org.latitude || !org.longitude) {
