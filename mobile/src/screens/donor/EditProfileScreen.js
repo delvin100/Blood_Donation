@@ -365,9 +365,9 @@ const EditProfileScreen = ({ navigation, route }) => {
                         ) : profilePic ? (
                             <Image
                                 source={{
-                                    uri: profilePic.startsWith('file') || profilePic.startsWith('content')
+                                    uri: profilePic.startsWith('file') || profilePic.startsWith('content') || profilePic.startsWith('http')
                                         ? profilePic
-                                        : `http://192.168.137.1:4000${profilePic}`
+                                        : `${apiService.defaults.baseURL.replace('/api', '')}${profilePic}`
                                 }}
                                 style={styles.profilePic}
                             />

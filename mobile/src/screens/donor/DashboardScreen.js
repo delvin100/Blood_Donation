@@ -216,7 +216,7 @@ const DashboardScreen = ({ navigation }) => {
                 >
                     {user?.profile_picture ? (
                         <Image
-                            source={{ uri: `http://192.168.137.1:4000${user.profile_picture}` }}
+                            source={{ uri: user.profile_picture.startsWith('http') ? user.profile_picture : `${apiService.defaults.baseURL.replace('/api', '')}${user.profile_picture}` }}
                             style={styles.headerProfilePic}
                         />
                     ) : (

@@ -118,7 +118,7 @@ exports.register = async (req, res) => {
         res.json({ token, user: { id: insertId, username, full_name, email, blood_type, phone, gender, donor_tag: donorTag } });
     } catch (err) {
         console.error('Registration error:', err);
-        res.status(500).json({ error: 'Server error. Please try again.' });
+        res.status(500).json({ error: 'Server error. Please try again.', details: err.message });
     }
 };
 
@@ -137,7 +137,7 @@ exports.login = async (req, res) => {
         res.json({ token, user: { id: donor.id, username: donor.username, full_name: donor.full_name, email: donor.email, blood_type: donor.blood_type, phone: donor.phone, gender: donor.gender, donor_tag: donor.donor_tag } });
     } catch (err) {
         console.error('Login error:', err);
-        res.status(500).json({ error: 'Server error. Please try again.' });
+        res.status(500).json({ error: 'Server error. Please try again.', details: err.message });
     }
 };
 

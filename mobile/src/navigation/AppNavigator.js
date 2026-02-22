@@ -6,6 +6,8 @@ import { getToken } from '../utils/storage';
 // Screens (will create these next)
 import LoginScreen from '../screens/auth/LoginScreen';
 import RegisterScreen from '../screens/auth/RegisterScreen';
+import SelectionScreen from '../screens/auth/SelectionScreen';
+import SeekerScreen from '../screens/seeker/SeekerScreen';
 import DashboardScreen from '../screens/donor/DashboardScreen';
 import EditProfileScreen from '../screens/donor/EditProfileScreen';
 import ChatbotScreen from '../screens/donor/ChatbotScreen';
@@ -37,11 +39,16 @@ const AppNavigator = () => {
 
     return (
         <NavigationContainer>
-            <Stack.Navigator screenOptions={{ headerShown: false }}>
+            <Stack.Navigator
+                screenOptions={{ headerShown: false }}
+                initialRouteName={!userToken ? 'Selection' : 'Dashboard'}
+            >
                 {!userToken ? (
                     <>
+                        <Stack.Screen name="Selection" component={SelectionScreen} />
                         <Stack.Screen name="Login" component={LoginScreen} />
                         <Stack.Screen name="Register" component={RegisterScreen} />
+                        <Stack.Screen name="Seeker" component={SeekerScreen} />
                     </>
                 ) : (
                     <>

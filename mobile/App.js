@@ -7,6 +7,8 @@ import { getToken } from './src/utils/storage';
 // Import Screens
 import LoginScreen from './src/screens/auth/LoginScreen';
 import RegisterScreen from './src/screens/auth/RegisterScreen';
+import SelectionScreen from './src/screens/auth/SelectionScreen';
+import SeekerScreen from './src/screens/seeker/SeekerScreen';
 import DashboardScreen from './src/screens/donor/DashboardScreen';
 import ChatbotScreen from './src/screens/donor/ChatbotScreen';
 import EditProfileScreen from './src/screens/donor/EditProfileScreen';
@@ -48,7 +50,7 @@ export default function App() {
     setUserToken(token);
     // Only set screen if loading or if we explicitly want to redirect
     if (currentScreen === 'Loading') {
-      setCurrentScreen(token ? 'Dashboard' : 'Login');
+      setCurrentScreen(token ? 'Dashboard' : 'Selection');
     }
   };
 
@@ -93,6 +95,8 @@ export default function App() {
     <SafeAreaProvider>
       <StatusBar style="dark" />
       <View style={{ flex: 1 }}>
+        {currentScreen === 'Selection' && <SelectionScreen navigation={navigationProxy} />}
+        {currentScreen === 'Seeker' && <SeekerScreen navigation={navigationProxy} />}
         {currentScreen === 'Login' && <LoginScreen navigation={navigationProxy} />}
         {currentScreen === 'Register' && <RegisterScreen navigation={navigationProxy} />}
         {currentScreen === 'Dashboard' && (

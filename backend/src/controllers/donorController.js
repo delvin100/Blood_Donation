@@ -57,7 +57,8 @@ exports.getStats = async (req, res) => {
             memberships
         });
     } catch (err) {
-        res.status(500).json({ error: 'Server error' });
+        console.error('getStats Error:', err);
+        res.status(500).json({ error: 'Server error', details: err.message });
     }
 };
 
@@ -73,7 +74,8 @@ exports.getReports = async (req, res) => {
         `, [req.user.id]);
         res.json(rows);
     } catch (err) {
-        res.status(500).json({ error: 'Server error' });
+        console.error('getReports Error:', err);
+        res.status(500).json({ error: 'Server error', details: err.message });
     }
 };
 
@@ -232,8 +234,8 @@ exports.getNotifications = async (req, res) => {
         );
         res.json(rows);
     } catch (err) {
-        console.error("Notif Error", err);
-        res.status(500).json({ error: 'Server error' });
+        console.error("Notifications Error:", err);
+        res.status(500).json({ error: 'Server error', details: err.message });
     }
 };
 

@@ -4,10 +4,9 @@ import { getToken } from '../utils/storage';
 const LOCAL_API_URL = 'http://192.168.137.1:5000/api'; // Update port to 5000
 const RENDER_API_URL = 'https://ebloodbank.onrender.com/api';
 
-const API_BASE_URL = __DEV__ ? LOCAL_API_URL : RENDER_API_URL;
-// TIP: If you want to test the Render URL on your mobile even in development, 
-// just comment out the line above and use:
-// const API_BASE_URL = RENDER_API_URL;
+const API_BASE_URL = RENDER_API_URL;
+// TIP: If you want to use your local backend instead, use:
+// const API_BASE_URL = __DEV__ ? LOCAL_API_URL : RENDER_API_URL;
 
 const apiService = axios.create({
     baseURL: API_BASE_URL,
