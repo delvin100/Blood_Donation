@@ -547,7 +547,7 @@ const EditProfileModal = ({ isOpen, onClose, user, onUpdate }) => {
                                 <InputField label="Date of Birth" name="dob" type="date" icon="fa-calendar-alt" value={formData.dob} onChange={handleChange} error={errors.dob} max={getMaxDate()} min={getMinDate()} />
                                 <InputField label="Blood Type" name="blood_type" options={bloodTypes} icon="fa-heartbeat" value={formData.blood_type} onChange={handleChange} error={errors.blood_type} />
                                 <InputField label="Gender" name="gender" options={genders} icon="fa-venus-mars" value={formData.gender} onChange={handleChange} error={errors.gender} />
-                                <InputField label="Email Address" name="email" type="email" icon="fa-envelope" value={formData.email} onChange={handleChange} error={errors.email} />
+                                <InputField label="Email Address" name="email" type="email" icon="fa-envelope" value={formData.email} onChange={handleChange} error={errors.email} disabled={!!user?.google_id} />
                             </div>
                         </div>
 

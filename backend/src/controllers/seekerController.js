@@ -73,9 +73,9 @@ exports.getSmartMatches = async (req, res) => {
         });
 
         // 4. Log suggestions to DB (non-blocking)
-        // 4. Log suggestions to DB (non-blocking)
         // Log top 50 matches to avoid overwhelming the database with too many inserts,
         // but return ALL matching donors to the frontend as requested.
+        const donorsToLog = scoredDonors.slice(0, 50);
         donorsToLog.forEach(donor => {
             pool.query(
                 'INSERT INTO match_outcomes (donor_id, suggested_at, outcome, suitability_score, distance_km) VALUES (?, NOW(), ?, ?, ?)',

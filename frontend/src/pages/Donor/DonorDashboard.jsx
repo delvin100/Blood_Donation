@@ -1019,33 +1019,6 @@ const Dashboard = () => {
       )
     },
 
-    'blood-drives': {
-      title: 'Events & Camps',
-      content: (
-        <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <h4 className="font-bold text-gray-700">Upcoming Events</h4>
-            <span className="text-xs font-bold text-blue-600 bg-blue-50 px-2 py-1 rounded-lg">This Month</span>
-          </div>
-          {[
-            { date: "12 Oct", title: "Mega Blood Donation Camp", loc: "City Hall, Downtown", time: "9 AM - 5 PM" },
-            { date: "25 Oct", title: "Corporate Drive", loc: "Tech Park, Sector 5", time: "10 AM - 4 PM" }
-          ].map((ev, i) => (
-            <div key={i} className="flex gap-4 bg-white p-4 rounded-xl shadow-sm border border-gray-100 hover:border-red-200 transition-colors cursor-pointer">
-              <div className="bg-red-100 text-red-600 rounded-xl w-16 flex flex-col items-center justify-center flex-shrink-0">
-                <span className="text-xs font-bold uppercase">{ev.date.split(' ')[1]}</span>
-                <span className="text-2xl font-black">{ev.date.split(' ')[0]}</span>
-              </div>
-              <div>
-                <h5 className="font-bold text-gray-900 leading-tight mb-1">{ev.title}</h5>
-                <p className="text-xs text-gray-500 flex items-center gap-1"><i className="fas fa-map-marker-alt"></i> {ev.loc}</p>
-                <p className="text-xs text-gray-500 flex items-center gap-1"><i className="fas fa-clock"></i> {ev.time}</p>
-              </div>
-            </div>
-          ))}
-        </div>
-      )
-    },
 
     'success-stories': {
       title: 'Real Heroes',
@@ -1450,7 +1423,7 @@ const Dashboard = () => {
                     items: [
                       { key: 'myths-facts', icon: 'fa-comment-slash', label: 'Myths vs Facts', color: 'violet' },
                       { key: 'success-stories', icon: 'fa-star', label: 'Success Stories', color: 'yellow' },
-                      { key: 'blood-drives', icon: 'fa-flag', label: 'Events & Drives', color: 'red' },
+
                     ]
                   },
                   {
