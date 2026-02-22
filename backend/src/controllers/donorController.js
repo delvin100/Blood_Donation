@@ -113,22 +113,19 @@ exports.uploadProfilePicture = async (req, res) => {
     try {
         if (!req.file) return res.status(400).json({ error: 'Please upload an image' });
 
-        // Direct upload to Cloudinary
-        const result = await cloudinary.uploader.upload(req.file.path, {
-            folder: 'ebloodbank/donors',
-            transformation: [{ width: 500, height: 500, crop: 'limit' }]
+        // Stream buffer directly to Cloudinary (no temp file needed)
+        const uploadToCloudinary = () => new Promise((resolve, reject) => {
+            const stream = cloudinary.uploader.upload_stream(
+                { folder: 'ebloodbank/donors', transformation: [{ width: 500, height: 500, crop: 'limit' }] },
+                (error, result) => { if (error) reject(error); else resolve(result); }
+            );
+            stream.end(req.file.buffer);
         });
 
+        const result = await uploadToCloudinary();
         const profilePicUrl = result.secure_url;
 
-        // Update database
         await pool.query('UPDATE donors SET profile_picture = ? WHERE id = ?', [profilePicUrl, req.user.id]);
-
-        // Cleanup: remove temporary local file
-        fs.unlink(req.file.path, (err) => {
-            if (err) console.error('Error deleting temp file:', err);
-        });
-
         res.json({ message: 'Picture updated', profile_picture: profilePicUrl });
         await addDonorLog(req.user.id, 'AVATAR_UPDATE', 'Profile Picture', `Updated profile picture`);
     } catch (err) {

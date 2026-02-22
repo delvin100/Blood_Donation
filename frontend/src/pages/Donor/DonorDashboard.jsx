@@ -1168,11 +1168,7 @@ const Dashboard = () => {
                       </div>
                     </div>
 
-                    {need.blood_group === user.blood_type && (
-                      <div className="px-4 py-2 bg-gradient-to-r from-red-500 to-rose-600 text-white text-xs font-black rounded-xl shadow-lg shadow-red-500/30 animate-bounce">
-                        MATCH FOUND!
-                      </div>
-                    )}
+
                   </div>
 
                   {/* Message Box */}
@@ -1794,11 +1790,8 @@ const Dashboard = () => {
                                     <span className="text-[8px] uppercase tracking-tighter opacity-70 mt-1">GROUP</span>
                                   </div>
                                   <div>
-                                    <h4 className="font-black text-gray-800 text-lg tracking-tight mb-1 flex items-center gap-2">
+                                    <h4 className="font-black text-gray-800 text-lg tracking-tight mb-1">
                                       {need.org_name}
-                                      {need.is_member > 0 && (
-                                        <span className="px-2.5 py-1 bg-blue-100 text-blue-600 text-[8px] font-black rounded-lg uppercase tracking-widest whitespace-nowrap">My Org</span>
-                                      )}
                                     </h4>
                                     <div className="flex items-center gap-2">
                                       <div className="px-2 py-0.5 bg-gray-100 rounded-md flex items-center gap-1.5">
@@ -1808,11 +1801,10 @@ const Dashboard = () => {
                                     </div>
                                   </div>
                                 </div>
-                                {need.blood_group === user.blood_type && (
+
+                                {need.is_member > 0 && (
                                   <div className="flex flex-col items-center">
-                                    <div className="px-3 py-1.5 bg-rose-600 text-white text-[10px] font-black rounded-xl shadow-lg shadow-rose-200 animate-bounce ring-4 ring-rose-50">
-                                      MATCH!
-                                    </div>
+                                    <span className="px-3 py-1.5 bg-blue-100 text-blue-600 text-[10px] font-black rounded-xl uppercase tracking-widest">My Org</span>
                                   </div>
                                 )}
                               </div>

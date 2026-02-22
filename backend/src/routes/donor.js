@@ -3,13 +3,8 @@ const router = express.Router();
 const donorController = require('../controllers/donorController');
 const authMiddleware = require('../middlewares/authMiddleware');
 const multer = require('multer');
-const path = require('path');
 
-const storage = multer.diskStorage({
-    destination: (req, file, cb) => cb(null, 'uploads/'),
-    filename: (req, file, cb) => cb(null, `profile-${req.user.id}-${Date.now()}${path.extname(file.originalname)}`)
-});
-const upload = multer({ storage });
+const upload = multer({ storage: multer.memoryStorage() });
 
 router.get('/stats', authMiddleware, donorController.getStats);
 router.get('/reports', authMiddleware, donorController.getReports);
