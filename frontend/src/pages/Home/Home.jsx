@@ -395,7 +395,7 @@ export default function Home() {
               <div id="org-search-section" className="card-gradient-4 rounded-2xl shadow-xl p-8 card-hover slide-in-up">
                 <div className="text-center">
                   <img
-                    src="https://cdn-icons-png.flaticon.com/512/3141/3141805.png"
+                    src="https://img.freepik.com/premium-vector/hospital-icon-vector-image-can-be-used-public-services_120816-40862.jpg"
                     alt="Search organizations"
                     className="w-20 h-20 rounded-full object-cover mx-auto mb-6 border-4 border-green-100"
                   />

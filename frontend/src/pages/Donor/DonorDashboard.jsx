@@ -1797,7 +1797,7 @@ const Dashboard = () => {
                                     <h4 className="font-black text-gray-800 text-lg tracking-tight mb-1 flex items-center gap-2">
                                       {need.org_name}
                                       {need.is_member > 0 && (
-                                        <span className="px-2.5 py-1 bg-blue-100 text-blue-600 text-[8px] font-black rounded-lg uppercase tracking-widest">My Org</span>
+                                        <span className="px-2.5 py-1 bg-blue-100 text-blue-600 text-[8px] font-black rounded-lg uppercase tracking-widest whitespace-nowrap">My Org</span>
                                       )}
                                     </h4>
                                     <div className="flex items-center gap-2">

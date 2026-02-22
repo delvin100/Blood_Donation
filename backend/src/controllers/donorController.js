@@ -112,7 +112,7 @@ exports.updateProfile = async (req, res) => {
 exports.uploadProfilePicture = async (req, res) => {
     try {
         if (!req.file) return res.status(400).json({ error: 'Please upload an image' });
-        const profilePicUrl = `/uploads/${req.file.filename}`;
+        const profilePicUrl = req.file.path; // Cloudinary URL
         await pool.query('UPDATE donors SET profile_picture = ? WHERE id = ?', [profilePicUrl, req.user.id]);
         res.json({ message: 'Picture updated', profile_picture: profilePicUrl });
         await addDonorLog(req.user.id, 'AVATAR_UPDATE', 'Profile Picture', `Updated profile picture`);
