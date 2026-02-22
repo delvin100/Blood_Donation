@@ -470,15 +470,17 @@ export default function AdminDashboard() {
                                             <td className="px-6 py-4 text-center text-sm font-medium text-gray-600">{org.type}</td>
                                             <td className="px-6 py-4 text-center text-sm font-medium text-gray-600">{org.city}, {org.district}, {org.state}</td>
                                             <td className="px-6 py-4 text-center">
-                                                <Badge status={org.verified ? 'success' : 'warning'}>{org.verified ? 'Verified' : 'Pending Approval'}</Badge>
+                                                <Badge status={Number(org.verified) === 1 ? 'success' : 'warning'}>
+                                                    {Number(org.verified) === 1 ? 'Verified' : 'Pending Verification'}
+                                                </Badge>
                                             </td>
                                             <td className="px-6 py-4 text-center space-x-2" onClick={(e) => e.stopPropagation()}>
                                                 <div className="flex justify-center items-center gap-2">
                                                     <button
                                                         onClick={(e) => { e.stopPropagation(); handleVerifyOrg(org.id); }}
-                                                        className={`text-xs font-bold px-3 py-1.5 rounded-lg transition-colors border ${org.verified ? 'bg-white border-red-200 text-red-600 hover:bg-red-50' : 'bg-green-500 text-white border-transparent hover:bg-green-600 shadow-md shadow-green-200'}`}
+                                                        className={`text-xs font-bold px-3 py-1.5 rounded-lg transition-colors border ${Number(org.verified) === 1 ? 'bg-white border-red-200 text-red-600 hover:bg-red-50' : 'bg-green-500 text-white border-transparent hover:bg-green-600 shadow-md shadow-green-200'}`}
                                                     >
-                                                        {org.verified ? 'Disable' : 'Enable'}
+                                                        {Number(org.verified) === 1 ? 'Disable' : 'Enable'}
                                                     </button>
                                                     <DeleteButton onClick={(e) => { e.stopPropagation(); handleDeleteOrg(org.id); }} />
                                                 </div>
@@ -821,10 +823,10 @@ function OrgDetailView({ org, onBack, onVerify, onDelete }) {
                     <button
                         onClick={onVerify}
                         className={`px-5 py-2.5 rounded-xl font-bold shadow-sm transition-all text-sm flex items-center gap-2
-                             ${org.verified ? 'bg-amber-100 text-amber-800 hover:bg-amber-200' : 'bg-green-500 text-white hover:bg-green-600 shadow-green-200'}`}
+                             ${Number(org.verified) === 1 ? 'bg-amber-100 text-amber-800 hover:bg-amber-200' : 'bg-green-500 text-white hover:bg-green-600 shadow-green-200'}`}
                     >
-                        <i className={`fas ${org.verified ? 'fa-ban' : 'fa-check'}`}></i>
-                        {org.verified ? 'Disable Access' : 'Enable Access'}
+                        <i className={`fas ${Number(org.verified) === 1 ? 'fa-ban' : 'fa-check'}`}></i>
+                        {Number(org.verified) === 1 ? 'Disable Access' : 'Enable Access'}
                     </button>
                     <button
                         onClick={onDelete}
@@ -852,7 +854,7 @@ function OrgDetailView({ org, onBack, onVerify, onDelete }) {
                     <div className="flex-1 pb-2">
                         <div className="flex flex-wrap items-center gap-4 mb-3">
                             <h2 className="text-4xl font-black text-gray-900 tracking-tight">{org.name}</h2>
-                            {org.verified ? (
+                            {Number(org.verified) === 1 ? (
                                 <div className="bg-blue-500 text-white w-7 h-7 rounded-full flex items-center justify-center shadow-lg shadow-blue-500/30" title="Verified Organization">
                                     <i className="fas fa-check text-xs font-black"></i>
                                 </div>
@@ -1096,7 +1098,7 @@ function DashboardHome({ stats, data, setActiveTab }) {
         { name: 'Orgs', count: stats.organizations, fill: '#3b82f6' }
     ];
 
-    const pendingApprovals = useMemo(() => data.organizations.filter(o => !o.verified).length, [data.organizations]);
+    const pendingApprovals = useMemo(() => data.organizations.filter(o => Number(o.verified) !== 1).length, [data.organizations]);
 
     return (
         <div className="space-y-8 animate-fade-in-up">
