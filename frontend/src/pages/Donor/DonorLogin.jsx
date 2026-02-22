@@ -34,6 +34,9 @@ export default function DonorLogin() {
 
   // Check for existing session on mount
   useEffect(() => {
+    // Pre-warm the backend server (Render cold start)
+    fetch("/api/health").catch(() => { });
+
     const token = localStorage.getItem("authToken") || sessionStorage.getItem("authToken");
     if (token) {
       window.location.href = "/dashboard";
@@ -487,7 +490,7 @@ export default function DonorLogin() {
                 aria-label="Submit login"
                 disabled={isSubmitting}
               >
-                {isSubmitting ? "Signing in..." : "Sign in"}
+                {isSubmitting ? "Authenticating..." : "Sign in"}
               </button>
             </form>
 

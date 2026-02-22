@@ -31,6 +31,9 @@ export default function DonorRegister() {
   const [passwordStrength, setPasswordStrength] = useState({ level: 0, label: "", color: "" });
 
   useEffect(() => {
+    // Pre-warm the backend server (Render cold start)
+    fetch("/api/health").catch(() => { });
+
     document.body.classList.add("register-page");
     return () => {
       document.body.classList.remove("register-page");

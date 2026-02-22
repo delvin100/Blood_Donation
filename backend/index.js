@@ -16,6 +16,7 @@ const organizationRoutes = require('./src/routes/organization');
 const adminRoutes = require('./src/routes/admin');
 const seekerRoutes = require('./src/routes/seeker');
 
+app.get('/api/health', (req, res) => res.json({ status: 'ok', timestamp: new Date() }));
 app.use('/api/home', homeRoutes);
 app.use('/api/auth', authRoutes);
 app.use('/api/donor', donorRoutes);

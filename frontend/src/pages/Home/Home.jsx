@@ -8,6 +8,9 @@ export default function Home() {
   const location = useLocation();
 
   useEffect(() => {
+    // Pre-warm the backend server (Render cold start)
+    fetch("/api/health").catch(() => { });
+
     if (location.hash) {
       const id = location.hash.substring(1);
       const element = document.getElementById(id);

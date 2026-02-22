@@ -22,6 +22,9 @@ export default function OrgLogin() {
 
     // Check for existing session on mount
     useEffect(() => {
+        // Pre-warm the backend server (Render cold start)
+        fetch("/api/health").catch(() => { });
+
         const token = localStorage.getItem('token') || sessionStorage.getItem('token');
         if (token) {
             window.location.href = '/organization/dashboard';

@@ -10,6 +10,16 @@ export default function AdminLogin() {
     const [showPassword, setShowPassword] = useState(false);
     const navigate = useNavigate();
 
+    useEffect(() => {
+        // Pre-warm the backend server (Render cold start)
+        fetch("/api/health").catch(() => { });
+
+        const token = localStorage.getItem('adminToken');
+        if (token) {
+            navigate('/admin/dashboard');
+        }
+    }, [navigate]);
+
     const handleLogin = async (e) => {
         e.preventDefault();
         setLoading(true);

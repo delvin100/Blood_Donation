@@ -29,6 +29,9 @@ export default function OrgRegister() {
     const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
     useEffect(() => {
+        // Pre-warm the backend server (Render cold start)
+        fetch("/api/health").catch(() => { });
+
         window.scrollTo(0, 0);
     }, []);
 
