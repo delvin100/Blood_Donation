@@ -471,7 +471,7 @@ export default function AdminDashboard() {
                                             <td className="px-6 py-4 text-center text-sm font-medium text-gray-600">{org.city}, {org.district}, {org.state}</td>
                                             <td className="px-6 py-4 text-center">
                                                 <Badge status={Number(org.verified) === 1 ? 'success' : 'warning'}>
-                                                    {Number(org.verified) === 1 ? 'Verified' : 'Pending Verification'}
+                                                    {Number(org.verified) === 1 ? 'Verified' : 'Pending Approval'}
                                                 </Badge>
                                             </td>
                                             <td className="px-6 py-4 text-center space-x-2" onClick={(e) => e.stopPropagation()}>
@@ -859,7 +859,7 @@ function OrgDetailView({ org, onBack, onVerify, onDelete }) {
                                     <i className="fas fa-check text-xs font-black"></i>
                                 </div>
                             ) : (
-                                <Badge status="warning">Pending Verification</Badge>
+                                <Badge status="warning">Pending Approval</Badge>
                             )}
                         </div>
                         <div className="flex flex-wrap items-center gap-3 text-gray-500 font-bold text-sm">

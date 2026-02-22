@@ -367,6 +367,10 @@ export default function OrgDashboard() {
             fetchStats();
             fetchMembers();
         } catch (err) {
+            if (err.response && err.response.status === 403) {
+                navigate('/organization/pending-approval');
+                return;
+            }
             toast.error("Failed to fetch profile details");
         } finally {
             setProfileLoading(false);

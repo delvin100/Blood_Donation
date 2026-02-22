@@ -57,7 +57,7 @@ exports.register = async (req, res) => {
 
         const hash = await bcrypt.hash(password, 10);
         const [result] = await pool.query(
-            `INSERT INTO organizations (name, email, phone, password_hash, license_number, type, state, district, city, address, latitude, longitude, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
+            `INSERT INTO organizations (name, email, phone, password_hash, license_number, type, state, district, city, address, verified, latitude, longitude, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?, NOW())`,
             [name, email, phone, hash, license_number, type, state, district, city, address, latitude, longitude]
         );
 
