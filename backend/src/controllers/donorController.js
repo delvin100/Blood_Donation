@@ -2,7 +2,7 @@ const pool = require('../config/database');
 const path = require('path');
 const fs = require('fs');
 const bcrypt = require('bcrypt');
-
+const cloudinary = require('../config/cloudinaryConfig');
 const { calculateDonorAvailability } = require('../utils/donorUtils');
 const { addDonorLog } = require('../utils/logUtils');
 const { OpenAI } = require('openai');
@@ -112,12 +112,28 @@ exports.updateProfile = async (req, res) => {
 exports.uploadProfilePicture = async (req, res) => {
     try {
         if (!req.file) return res.status(400).json({ error: 'Please upload an image' });
-        const profilePicUrl = req.file.path; // Cloudinary URL
+
+        // Direct upload to Cloudinary
+        const result = await cloudinary.uploader.upload(req.file.path, {
+            folder: 'ebloodbank/donors',
+            transformation: [{ width: 500, height: 500, crop: 'limit' }]
+        });
+
+        const profilePicUrl = result.secure_url;
+
+        // Update database
         await pool.query('UPDATE donors SET profile_picture = ? WHERE id = ?', [profilePicUrl, req.user.id]);
+
+        // Cleanup: remove temporary local file
+        fs.unlink(req.file.path, (err) => {
+            if (err) console.error('Error deleting temp file:', err);
+        });
+
         res.json({ message: 'Picture updated', profile_picture: profilePicUrl });
         await addDonorLog(req.user.id, 'AVATAR_UPDATE', 'Profile Picture', `Updated profile picture`);
     } catch (err) {
-        res.status(500).json({ error: 'Server error' });
+        console.error('Upload Error:', err);
+        res.status(500).json({ error: 'Server error during upload' });
     }
 };
 
