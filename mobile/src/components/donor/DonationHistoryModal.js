@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
+import { formatDate } from '../../utils/dateUtils';
 
 const { height } = Dimensions.get('window');
 
@@ -52,11 +53,7 @@ const DonationHistoryModal = ({ visible, onClose, donations }) => {
                                     <View style={styles.donationDetails}>
                                         <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                                             <Text style={styles.donationDate}>
-                                                {new Date(item.date).toLocaleDateString(undefined, {
-                                                    year: 'numeric',
-                                                    month: 'long',
-                                                    day: 'numeric'
-                                                })}
+                                                {formatDate(item.date)}
                                             </Text>
                                         </View>
                                         <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 2 }}>

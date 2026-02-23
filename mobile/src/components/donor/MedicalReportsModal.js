@@ -11,6 +11,7 @@ import {
     Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { formatDate } from '../../utils/dateUtils';
 import * as FileSystem from 'expo-file-system';
 import { getContentUriAsync } from 'expo-file-system/legacy';
 import * as IntentLauncher from 'expo-intent-launcher';
@@ -54,11 +55,7 @@ const MedicalReportsModal = ({ visible, onClose }) => {
             throw e;
         }
 
-        const dateStr = new Date(report.test_date).toLocaleDateString(undefined, {
-            year: 'numeric',
-            month: 'long',
-            day: 'numeric',
-        });
+        const dateStr = formatDate(report.test_date);
 
         const htmlContent = `
             <!DOCTYPE html>
@@ -331,11 +328,7 @@ const MedicalReportsModal = ({ visible, onClose }) => {
                 <View style={styles.headerText}>
                     <Text style={styles.orgName}>{item.org_name}</Text>
                     <Text style={styles.date}>
-                        {new Date(item.test_date).toLocaleDateString(undefined, {
-                            year: 'numeric',
-                            month: 'long',
-                            day: 'numeric',
-                        })}
+                        {formatDate(item.test_date)}
                     </Text>
                 </View>
             </View>

@@ -167,8 +167,36 @@ exports.forgotPassword = async (req, res) => {
             await transporter.sendMail({
                 from: `"eBloodBank" <${process.env.EMAIL_USER}>`,
                 to: email,
-                subject: 'Your Password Reset Code',
-                html: `<p>Your reset code is <b>${resetCode}</b>. It expires in 10 minutes.</p>`
+                subject: `${resetCode} is your eBloodBank reset code`,
+                html: `
+                <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: 0 auto; background-color: #f9f9f9; padding: 20px; border-radius: 10px;">
+                    <div style="text-align: center; margin-bottom: 30px;">
+                        <h1 style="color: #dc2626; margin: 0; font-size: 28px; letter-spacing: 1px;">eBloodBank</h1>
+                        <p style="color: #6b7280; margin-top: 5px; font-size: 14px;">Gift of Life, Shared by You</p>
+                    </div>
+                    
+                    <div style="background-color: #ffffff; padding: 40px; border-radius: 15px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); text-align: center;">
+                        <h2 style="color: #1f2937; margin-bottom: 20px;">Verification Code</h2>
+                        <p style="color: #4b5563; font-size: 16px; line-height: 1.5; margin-bottom: 30px;">
+                            We received a request to reset your password. Use the following 4-digit code to verify your identity.
+                        </p>
+                        
+                        <div style="background-color: #fee2e2; border: 2px dashed #dc2626; padding: 20px; border-radius: 12px; display: inline-block; margin-bottom: 30px;">
+                            <span style="font-size: 48px; font-weight: 900; color: #dc2626; letter-spacing: 15px; margin-left: 15px;">${resetCode}</span>
+                        </div>
+                        
+                        <p style="color: #9ca3af; font-size: 13px; margin-bottom: 0;">
+                            This code will expire in <b>10 minutes</b>.<br>
+                            If you didn't request this, you can safely ignore this email.
+                        </p>
+                    </div>
+                    
+                    <div style="text-align: center; margin-top: 30px; color: #9ca3af; font-size: 12px;">
+                        <p style="margin-bottom: 5px;">&copy; 2026 eBloodBank Official. All rights reserved.</p>
+                        <p>Need help? Contact us at <a href="mailto:ebloodbankofficial@gmail.com" style="color: #dc2626; text-decoration: none;">ebloodbankofficial@gmail.com</a></p>
+                    </div>
+                </div>
+                `
             });
         } else {
             console.log(`[DEV] Reset Code for ${email}: ${resetCode}`);

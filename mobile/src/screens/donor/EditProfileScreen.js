@@ -26,20 +26,20 @@ import { parseError, logError } from '../../utils/errors';
 const EditProfileScreen = ({ navigation, route }) => {
     const { user } = route.params || {};
 
-    // Helper to format date as DD-MM-YYYY
+    // Helper to format date as DD/MM/YYYY
     const formatDate = (date) => {
-        if (!date) return 'DD-MM-YYYY';
+        if (!date) return 'DD/MM/YYYY';
         const d = new Date(date);
         const day = String(d.getDate()).padStart(2, '0');
         const month = String(d.getMonth() + 1).padStart(2, '0');
         const year = d.getFullYear();
-        return `${day}-${month}-${year}`;
+        return `${day}/${month}/${year}`;
     };
 
-    // Helper to convert DD-MM-YYYY to YYYY-MM-DD for backend
+    // Helper to convert DD/MM/YYYY to YYYY-MM-DD for backend
     const convertToBackendDate = (dateStr) => {
-        if (!dateStr || !dateStr.includes('-')) return dateStr;
-        const [day, month, year] = dateStr.split('-');
+        if (!dateStr || !dateStr.includes('/')) return dateStr;
+        const [day, month, year] = dateStr.split('/');
         return `${year}-${month}-${day}`;
     };
 
@@ -54,7 +54,7 @@ const EditProfileScreen = ({ navigation, route }) => {
         email: '',
         blood_type: '',
         gender: '',
-        dob: 'DD-MM-YYYY',
+        dob: 'DD/MM/YYYY',
         phone: '',
         state: '',
         district: '',
@@ -123,15 +123,15 @@ const EditProfileScreen = ({ navigation, route }) => {
         if (!formData.district) newErrors.district = 'Required';
         if (!formData.city.trim()) newErrors.city = 'Required';
         if (!formData.username.trim()) newErrors.username = 'Required';
-        if (!formData.dob || formData.dob === 'DD-MM-YYYY' || formData.dob === '00-00-0000') {
+        if (!formData.dob || formData.dob === 'DD/MM/YYYY' || formData.dob === '00/00/0000') {
             newErrors.dob = 'Required';
         } else {
-            const dateRegex = /^\d{2}-\d{2}-\d{4}$/;
+            const dateRegex = /^\d{2}\/\d{2}\/\d{4}$/;
             if (!dateRegex.test(formData.dob)) {
-                newErrors.dob = 'Use DD-MM-YYYY';
+                newErrors.dob = 'Use DD/MM/YYYY';
             } else {
                 // Age Validation (18-65)
-                const [day, month, year] = formData.dob.split('-').map(Number);
+                const [day, month, year] = formData.dob.split('/').map(Number);
                 if (day > 0 && month > 0 && year > 0) {
                     const birthDate = new Date(year, month - 1, day);
                     const today = new Date();
@@ -188,6 +188,14 @@ const EditProfileScreen = ({ navigation, route }) => {
             Alert.alert('Error', parseError(err));
         } finally {
             setIsSubmitting(false);
+        }
+    };
+
+    const onDateChange = (event, selectedDate) => {
+        const currentDate = selectedDate || new Date();
+        setShowDatePicker(Platform.OS === 'ios');
+        if (event.type === 'set' || Platform.OS === 'ios') {
+            handleChange('dob', formatDate(currentDate));
         }
     };
 
@@ -417,7 +425,7 @@ const EditProfileScreen = ({ navigation, route }) => {
                         editable={false}
                         formData={formData} errors={errors} handleChange={handleChange} styles={styles}
                         onPress={() => {
-                            if (!formData.dob || formData.dob === 'DD-MM-YYYY' || formData.dob === '00-00-0000') handleChange('dob', '01-01-2000');
+                            if (!formData.dob || formData.dob === 'DD/MM/YYYY' || formData.dob === '00/00/0000') handleChange('dob', '01/01/2000');
                             setShowDatePicker(true);
                         }}
                     >
@@ -428,7 +436,7 @@ const EditProfileScreen = ({ navigation, route }) => {
 
                     {showDatePicker && (
                         <DateTimePicker
-                            value={formData.dob !== 'DD-MM-YYYY' ? new Date(formData.dob.split('-')[2], formData.dob.split('-')[1] - 1, formData.dob.split('-')[0]) : new Date(2000, 0, 1)}
+                            value={formData.dob !== 'DD/MM/YYYY' ? new Date(formData.dob.split('/')[2], formData.dob.split('/')[1] - 1, formData.dob.split('/')[0]) : new Date(2000, 0, 1)}
                             mode="date"
                             display={Platform.OS === 'ios' ? 'spinner' : 'default'}
                             onChange={onDateChange}

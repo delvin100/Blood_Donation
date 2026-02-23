@@ -26,6 +26,7 @@ import MyOrganizationsModal from '../../components/donor/MyOrganizationsModal';
 import NotificationsModal from '../../components/donor/NotificationsModal';
 import DonationHistoryModal from '../../components/donor/DonationHistoryModal';
 import AnalysisModal from '../../components/donor/AnalysisModal';
+import { formatDate } from '../../utils/dateUtils';
 
 const { width } = Dimensions.get('window');
 
@@ -269,7 +270,7 @@ const DashboardScreen = ({ navigation }) => {
                             <Text style={styles.statusSubtitle}>
                                 {stats.isEligible
                                     ? 'You are eligible to donate blood today!'
-                                    : `Next eligibility: ${new Date(stats.nextEligibleDate).toLocaleDateString()}`}
+                                    : `Next eligibility: ${formatDate(stats.nextEligibleDate)}`}
                             </Text>
                             {!stats.isEligible && timeLeft.days + timeLeft.hours + timeLeft.minutes + timeLeft.seconds > 0 && (
                                 <View style={styles.timerContainer}>

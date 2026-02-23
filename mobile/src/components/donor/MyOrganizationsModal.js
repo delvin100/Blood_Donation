@@ -9,6 +9,7 @@ import {
     Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { formatDate } from '../../utils/dateUtils';
 
 const MyOrganizationsModal = ({ visible, onClose, memberships = [] }) => {
     const renderItem = ({ item }) => (
@@ -30,12 +31,9 @@ const MyOrganizationsModal = ({ visible, onClose, memberships = [] }) => {
                 <View style={styles.infoRow}>
                     <Ionicons name="calendar-outline" size={14} color="#6b7280" />
                     <Text style={styles.infoText}>
-                        Joined: {new Date(item.joined_at).toLocaleDateString()}
+                        Joined: {formatDate(item.joined_at)}
                     </Text>
                 </View>
-            </View>
-            <View style={styles.roleBadge}>
-                <Text style={styles.roleText}>{item.role}</Text>
             </View>
         </View>
     );

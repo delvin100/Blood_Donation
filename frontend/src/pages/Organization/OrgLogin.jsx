@@ -103,7 +103,7 @@ export default function OrgLogin() {
                 setTimeout(() => {
                     setShowForgotModal(false);
                     setFpStep(1);
-                    setFormData(prev => ({ ...prev, email: fpEmail }));
+                    setEmail(fpEmail);
                 }, 2000);
             } catch (err) {
                 toast.error(err.response?.data?.error || "Failed to reset password.");

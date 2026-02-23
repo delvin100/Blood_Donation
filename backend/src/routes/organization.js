@@ -5,6 +5,9 @@ const authMiddleware = require('../middlewares/authMiddleware');
 
 router.post('/register', orgController.register);
 router.post('/login', orgController.login);
+router.post('/forgot-password', orgController.forgotPassword);
+router.post('/verify-reset-code', orgController.verifyResetCode);
+router.post('/reset-password', orgController.resetPassword);
 router.get('/stats', authMiddleware, orgController.getStats);
 router.get('/profile', authMiddleware, orgController.getProfile);
 router.put('/profile', authMiddleware, orgController.updateProfile);

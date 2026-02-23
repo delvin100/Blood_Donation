@@ -23,7 +23,7 @@ const CompleteProfileModal = ({ visible, onClose, onSuccess }) => {
     const [step, setStep] = useState(1);
     const [gender, setGender] = useState('');
     const [phone, setPhone] = useState('');
-    const [dob, setDob] = useState('DD-MM-YYYY');
+    const [dob, setDob] = useState('DD/MM/YYYY');
     const [bloodType, setBloodType] = useState('');
     const [state, setState] = useState('');
     const [district, setDistrict] = useState('');
@@ -38,19 +38,19 @@ const CompleteProfileModal = ({ visible, onClose, onSuccess }) => {
 
     const districts = state ? stateDistrictMapping[state] || [] : [];
 
-    // Helper to format date as DD-MM-YYYY
+    // Helper to format date as DD/MM/YYYY
     const formatDate = (date) => {
         const d = new Date(date);
         const day = String(d.getDate()).padStart(2, '0');
         const month = String(d.getMonth() + 1).padStart(2, '0');
         const year = d.getFullYear();
-        return `${day}-${month}-${year}`;
+        return `${day}/${month}/${year}`;
     };
 
-    // Helper to convert DD-MM-YYYY to YYYY-MM-DD for backend
+    // Helper to convert DD/MM/YYYY to YYYY-MM-DD for backend
     const convertToBackendDate = (dateStr) => {
-        if (!dateStr || !dateStr.includes('-')) return dateStr;
-        const [day, month, year] = dateStr.split('-');
+        if (!dateStr || !dateStr.includes('/')) return dateStr;
+        const [day, month, year] = dateStr.split('/');
         return `${year}-${month}-${day}`;
     };
 
@@ -171,7 +171,7 @@ const CompleteProfileModal = ({ visible, onClose, onSuccess }) => {
 
     const handleNext = () => {
         if (step === 1) {
-            if (!gender || !phone || !dob || dob === 'DD-MM-YYYY' || !bloodType) {
+            if (!gender || !phone || !dob || dob === 'DD/MM/YYYY' || !bloodType) {
                 setError('Please fill all highlighted fields');
                 setShowErrors(true);
                 return;
@@ -183,13 +183,13 @@ const CompleteProfileModal = ({ visible, onClose, onSuccess }) => {
                 return;
             }
 
-            const dateRegex = /^\d{2}-\d{2}-\d{4}$/;
+            const dateRegex = /^\d{2}\/\d{2}\/\d{4}$/;
             if (!dateRegex.test(dob)) {
-                setError('Please use DD-MM-YYYY format');
+                setError('Please use DD/MM/YYYY format');
                 return;
             }
 
-            const [day, month, year] = dob.split('-').map(Number);
+            const [day, month, year] = dob.split('/').map(Number);
             const birthDate = new Date(year, month - 1, day);
             const today = new Date();
             let age = today.getFullYear() - birthDate.getFullYear();
@@ -320,14 +320,14 @@ const CompleteProfileModal = ({ visible, onClose, onSuccess }) => {
                                 <Text style={styles.label}>Date of Birth</Text>
                                 <TouchableOpacity
                                     onPress={() => {
-                                        if (!dob || dob === 'DD-MM-YYYY') setDob('01-01-2000');
+                                        if (!dob || dob === 'DD/MM/YYYY') setDob('01/01/2000');
                                         setShowDatePicker(true);
                                     }}
                                     activeOpacity={0.7}
                                 >
-                                    <View style={[styles.inputWrapper, showErrors && (dob === 'DD-MM-YYYY' || !dob) && styles.inputWrapperError]} pointerEvents="none">
+                                    <View style={[styles.inputWrapper, showErrors && (dob === 'DD/MM/YYYY' || !dob) && styles.inputWrapperError]} pointerEvents="none">
                                         <Ionicons name="calendar-outline" size={20} color="#6b7280" style={styles.inputIcon} />
-                                        <TextInput style={styles.input} placeholder="DD-MM-YYYY" value={dob} editable={false} maxLength={10} />
+                                        <TextInput style={styles.input} placeholder="DD/MM/YYYY" value={dob} editable={false} maxLength={10} />
                                         <View style={styles.datePickerBtn}>
                                             <Ionicons name="chevron-down" size={20} color="#dc2626" />
                                         </View>
@@ -336,7 +336,7 @@ const CompleteProfileModal = ({ visible, onClose, onSuccess }) => {
 
                                 {showDatePicker && (
                                     <DateTimePicker
-                                        value={dob !== 'DD-MM-YYYY' ? new Date(dob.split('-')[2], dob.split('-')[1] - 1, dob.split('-')[0]) : new Date(2000, 0, 1)}
+                                        value={dob !== 'DD/MM/YYYY' ? new Date(dob.split('/')[2], dob.split('/')[1] - 1, dob.split('/')[0]) : new Date(2000, 0, 1)}
                                         mode="date"
                                         display={Platform.OS === 'ios' ? 'spinner' : 'default'}
                                         onChange={onDateChange}

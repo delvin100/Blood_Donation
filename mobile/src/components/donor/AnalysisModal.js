@@ -12,6 +12,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
+import { formatDate } from '../../utils/dateUtils';
 
 const { width } = Dimensions.get('window');
 
@@ -69,7 +70,7 @@ const AnalysisModal = ({ visible, onClose, user, stats, reports = [] }) => {
                                 <Text style={styles.barValue}>{report.hb_level}</Text>
                             </View>
                             <Text style={styles.barLabel}>
-                                {new Date(report.test_date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+                                {formatDate(report.test_date)}
                             </Text>
                         </View>
                     ))}
@@ -103,7 +104,7 @@ const AnalysisModal = ({ visible, onClose, user, stats, reports = [] }) => {
                             <View style={styles.sectionHeader}>
                                 <Text style={styles.sectionTitle}>Latest Vitals</Text>
                                 <Text style={styles.lastChecked}>
-                                    Last: {latestReport.test_date ? new Date(latestReport.test_date).toLocaleDateString() : 'N/A'}
+                                    Last: {latestReport.test_date ? formatDate(latestReport.test_date) : 'N/A'}
                                 </Text>
                             </View>
                             <View style={styles.vitalsGrid}>

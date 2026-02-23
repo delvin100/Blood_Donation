@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
     View,
     Text,
@@ -13,10 +13,11 @@ import {
     Dimensions,
     Alert,
     Image,
+    BackHandler,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import apiService from '../../api/apiService';
 import { saveToken, saveUser } from '../../utils/storage';
 import ForgotPasswordModal from '../../components/common/ForgotPasswordModal';
@@ -36,6 +37,19 @@ const LoginScreen = ({ navigation }) => {
     const [showErrors, setShowErrors] = useState(false);
     const [showForgotModal, setShowForgotModal] = useState(false);
 
+    useEffect(() => {
+        const backAction = () => {
+            navigation.navigate('Selection');
+            return true;
+        };
+
+        const backHandler = BackHandler.addEventListener(
+            'hardwareBackPress',
+            backAction
+        );
+
+        return () => backHandler.remove();
+    }, [navigation]);
 
     const handleGoogleLogin = () => {
         Alert.alert('Notice', 'Google Sign-In is currently unavailable in the mobile app.');
@@ -80,12 +94,6 @@ const LoginScreen = ({ navigation }) => {
 
     return (
         <SafeAreaView style={styles.container}>
-            <TouchableOpacity
-                onPress={() => navigation.navigate('Selection')}
-                style={styles.backButtonAbsolute}
-            >
-                <Ionicons name="arrow-back" size={28} color="#dc2626" />
-            </TouchableOpacity>
             <KeyboardAvoidingView
                 behavior={Platform.OS === 'ios' ? 'padding' : undefined}
                 style={styles.flex}
@@ -94,13 +102,25 @@ const LoginScreen = ({ navigation }) => {
                     contentContainerStyle={styles.scrollContent}
                     keyboardShouldPersistTaps="handled"
                 >
+                    <TouchableOpacity
+                        onPress={() => navigation.navigate('Selection')}
+                        style={styles.backButtonInline}
+                    >
+                        <Ionicons name="arrow-back" size={28} color="#dc2626" />
+                    </TouchableOpacity>
+
                     <View style={styles.header}>
                         <View style={styles.logoContainer}>
                             <LinearGradient
-                                colors={['#dc2626', '#991b1b']}
+                                colors={['#ef4444', '#991b1b']}
                                 style={styles.logoGradient}
                             >
-                                <Ionicons name="water" size={40} color="white" />
+                                <View style={styles.dropWrapper}>
+                                    <MaterialCommunityIcons name="water" size={60} color="white" />
+                                    <View style={styles.plusOverlay}>
+                                        <MaterialCommunityIcons name="plus-thick" size={20} color="#dc2626" />
+                                    </View>
+                                </View>
                             </LinearGradient>
                         </View>
                         <Text style={styles.eyebrow}>Donor Portal</Text>
@@ -208,22 +228,21 @@ const styles = StyleSheet.create({
         flex: 1,
         backgroundColor: '#f9fafb',
     },
-    backButtonAbsolute: {
-        position: 'absolute',
-        top: Platform.OS === 'ios' ? 60 : 40,
-        left: 20,
+    backButtonInline: {
         width: 44,
         height: 44,
         borderRadius: 22,
         alignItems: 'center',
         justifyContent: 'center',
         backgroundColor: 'white',
-        elevation: 5,
+        borderWidth: 1,
+        borderColor: '#f1f5f9',
+        marginBottom: 20,
+        elevation: 2,
         shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.25,
-        shadowRadius: 3.84,
-        zIndex: 999,
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.1,
+        shadowRadius: 2,
     },
     flex: {
         flex: 1,
@@ -231,26 +250,38 @@ const styles = StyleSheet.create({
     scrollContent: {
         flexGrow: 1,
         padding: 24,
-        justifyContent: 'center',
+        paddingTop: 20,
     },
     header: {
         alignItems: 'center',
-        marginBottom: 40,
+        marginBottom: 24,
     },
     logoContainer: {
-        width: 80,
-        height: 80,
-        borderRadius: 24,
+        width: 90,
+        height: 90,
+        borderRadius: 28,
         overflow: 'hidden',
         marginBottom: 16,
-        elevation: 8,
+        elevation: 12,
         shadowColor: '#dc2626',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.3,
-        shadowRadius: 8,
+        shadowOffset: { width: 0, height: 6 },
+        shadowOpacity: 0.35,
+        shadowRadius: 10,
     },
     logoGradient: {
         flex: 1,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    dropWrapper: {
+        alignItems: 'center',
+        justifyContent: 'center',
+        width: 60,
+        height: 60,
+    },
+    plusOverlay: {
+        position: 'absolute',
+        top: '40%',
         alignItems: 'center',
         justifyContent: 'center',
     },

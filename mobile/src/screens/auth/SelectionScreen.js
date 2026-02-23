@@ -9,7 +9,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons, FontAwesome5, MaterialCommunityIcons } from '@expo/vector-icons';
 import { BlurView } from 'expo-blur';
 
 const { width, height } = Dimensions.get('window');
@@ -25,7 +25,12 @@ const SelectionScreen = ({ navigation }) => {
                             style={styles.logoGradient}
                         >
                             <View style={styles.logoInnerShadow}>
-                                <Ionicons name="water" size={48} color="white" />
+                                <View style={styles.dropWrapper}>
+                                    <MaterialCommunityIcons name="water" size={68} color="white" />
+                                    <View style={styles.plusOverlay}>
+                                        <MaterialCommunityIcons name="plus-thick" size={22} color="#dc2626" />
+                                    </View>
+                                </View>
                             </View>
                         </LinearGradient>
                     </View>
@@ -106,7 +111,7 @@ const SelectionScreen = ({ navigation }) => {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#000000',
+        backgroundColor: '#ffffff',
     },
     content: {
         flex: 1,
@@ -129,10 +134,10 @@ const styles = StyleSheet.create({
         elevation: 15,
         shadowColor: '#dc2626',
         shadowOffset: { width: 0, height: 8 },
-        shadowOpacity: 0.4,
+        shadowOpacity: 0.2,
         shadowRadius: 12,
         borderWidth: 1,
-        borderColor: 'rgba(255,255,255,0.1)',
+        borderColor: 'rgba(220, 38, 38, 0.1)',
     },
     logoGradient: {
         flex: 1,
@@ -146,30 +151,45 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
         backgroundColor: 'rgba(255,255,255,0.05)',
     },
+    dropWrapper: {
+        alignItems: 'center',
+        justifyContent: 'center',
+        width: 68,
+        height: 68,
+    },
+    plusOverlay: {
+        position: 'absolute',
+        top: '40%',
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    plusIcon: {
+        fontWeight: 'bold',
+    },
     logoText: {
         fontSize: 32,
         fontWeight: '900',
-        color: 'white',
+        color: '#dc2626',
         letterSpacing: -1,
     },
     badge: {
-        backgroundColor: 'rgba(220, 38, 38, 0.2)',
+        backgroundColor: 'rgba(220, 38, 38, 0.1)',
         paddingHorizontal: 12,
         paddingVertical: 3,
         borderRadius: 100,
         marginTop: 4,
         borderWidth: 1,
-        borderColor: 'rgba(220, 38, 38, 0.3)',
+        borderColor: 'rgba(220, 38, 38, 0.2)',
     },
     badgeText: {
         fontSize: 8,
         fontWeight: '900',
-        color: '#fca5a5',
+        color: '#dc2626',
         letterSpacing: 2,
     },
     tagline: {
         fontSize: 14,
-        color: 'rgba(255,255,255,0.5)',
+        color: '#64748b',
         marginTop: 10,
         textAlign: 'center',
         fontWeight: '500',
@@ -182,7 +202,7 @@ const styles = StyleSheet.create({
     welcomeText: {
         fontSize: 18,
         fontWeight: '800',
-        color: 'white',
+        color: '#1e293b',
         marginBottom: 8,
         textAlign: 'center',
         letterSpacing: -0.5,
@@ -194,14 +214,14 @@ const styles = StyleSheet.create({
         elevation: 8,
         shadowColor: '#000',
         shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.2,
-        shadowRadius: 8,
+        shadowOpacity: 0.1,
+        shadowRadius: 12,
         borderWidth: 1,
-        borderColor: 'rgba(255,255,255,0.08)',
+        borderColor: '#f1f5f9',
     },
     blurWrapper: {
         padding: 20,
-        backgroundColor: 'rgba(255,255,255,0.92)',
+        backgroundColor: 'rgba(255,255,255,0.95)',
     },
     cardGradient: {
         padding: 20,
@@ -273,7 +293,7 @@ const styles = StyleSheet.create({
     },
     footerText: {
         fontSize: 10,
-        color: 'rgba(255,255,255,0.25)',
+        color: '#94a3b8',
         textAlign: 'center',
         fontWeight: '900',
         textTransform: 'uppercase',

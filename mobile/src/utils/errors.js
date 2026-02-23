@@ -24,8 +24,7 @@ export const parseError = (err) => {
 
     // Handle standard Error objects or nested messages
     if (err.message && typeof err.message === 'string') {
-        // Filter out technical messages if possible, but keep them as fallback
-        if (err.message.includes('Network Error')) return 'Network error. Please check your connection.';
+        // Filter out common technical patterns but keep the core message
         if (err.message.includes('404')) return 'Requested resource not found.';
         if (err.message.includes('500')) return 'Server error. Please try again later.';
         return err.message;
