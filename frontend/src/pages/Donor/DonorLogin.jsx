@@ -153,8 +153,17 @@ export default function DonorLogin() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email: fpEmail }),
       });
-      const data = await res.json();
-      console.log("Response:", data); // DEBUG
+
+      let data;
+      const contentType = res.headers.get("content-type");
+      if (contentType && contentType.includes("application/json")) {
+        data = await res.json();
+      } else {
+        const text = await res.text();
+        throw new Error(res.ok ? "Unexpected response format" : `Error ${res.status}: ${text.substring(0, 100)}`);
+      }
+
+      console.log("Response:", data);
       if (!res.ok) throw new Error(data.error || "Failed to send code.");
 
       setFpStep(2); // Move to Step 2
@@ -186,7 +195,16 @@ export default function DonorLogin() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email: fpEmail, code: fpCode }),
       });
-      const data = await res.json();
+
+      let data;
+      const contentType = res.headers.get("content-type");
+      if (contentType && contentType.includes("application/json")) {
+        data = await res.json();
+      } else {
+        const text = await res.text();
+        throw new Error(res.ok ? "Unexpected response format" : `Error ${res.status}: ${text.substring(0, 100)}`);
+      }
+
       if (!res.ok) throw new Error(data.error || "Invalid code.");
 
       setFpStep(3); // Move to Step 3
@@ -214,7 +232,16 @@ export default function DonorLogin() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email: fpEmail, code: fpCode, newPassword: fpNewPassword }),
       });
-      const data = await res.json();
+
+      let data;
+      const contentType = res.headers.get("content-type");
+      if (contentType && contentType.includes("application/json")) {
+        data = await res.json();
+      } else {
+        const text = await res.text();
+        throw new Error(res.ok ? "Unexpected response format" : `Error ${res.status}: ${text.substring(0, 100)}`);
+      }
+
       if (!res.ok) throw new Error(data.error || "Failed to reset password.");
 
       setFpSuccess("Password reset successfully! Redirecting...");

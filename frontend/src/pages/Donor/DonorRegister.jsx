@@ -98,7 +98,16 @@ export default function DonorRegister() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ credential: tokenResponse.access_token }),
         });
-        const data = await res.json();
+
+        let data;
+        const contentType = res.headers.get("content-type");
+        if (contentType && contentType.includes("application/json")) {
+          data = await res.json();
+        } else {
+          const text = await res.text();
+          throw new Error(res.ok ? "Unexpected response format" : `Error ${res.status}: ${text.substring(0, 100)}`);
+        }
+
         if (!res.ok) throw new Error(data.error || "Google Signup failed");
 
         if (data.token) {
@@ -298,9 +307,20 @@ export default function DonorRegister() {
         }),
       });
 
-      const data = await res.json().catch(() => ({}));
+      let data;
+      const contentType = res.headers.get("content-type");
+      if (contentType && contentType.includes("application/json")) {
+        data = await res.json();
+      } else {
+        const text = await res.text();
+        // For registration, we ignore the body if it fails JSON parse to keep the error simple 
+        // but it's better to show the status
+        console.warn("Non-JSON response during register:", text.substring(0, 100));
+        data = {};
+      }
+
       if (!res.ok) {
-        throw new Error(data.error || "Signup failed");
+        throw new Error(data.error || `Signup failed (Status: ${res.status})`);
       }
 
       // persist token if backend returns it
