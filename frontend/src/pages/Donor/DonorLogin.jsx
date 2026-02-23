@@ -160,8 +160,12 @@ export default function DonorLogin() {
       setFpStep(2); // Move to Step 2
       setFpSuccess("Verification code sent to your email.");
     } catch (err) {
-      console.error("Error in FP flow:", err); // DEBUG
-      setFpError(err.message);
+      console.error("Error in FP flow:", err);
+      // Detailed error for debugging
+      const errorMsg = err.message === 'Failed to fetch'
+        ? `Network error. Could not connect to the server. Please check your connection or wait for the server (Render) to wake up.`
+        : err.message;
+      setFpError(errorMsg);
     } finally {
       setFpLoading(false);
     }

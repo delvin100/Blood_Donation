@@ -4,7 +4,7 @@ import react from '@vitejs/plugin-react'
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '');
-  const target = env.VITE_API_BASE_URL || 'http://localhost:4000';
+  const target = env.VITE_API_BASE_URL || 'https://ebloodbank.onrender.com';
 
   return {
     plugins: [react()],
