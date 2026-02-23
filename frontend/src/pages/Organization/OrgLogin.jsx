@@ -286,7 +286,7 @@ export default function OrgLogin() {
                 <div className="fixed inset-0 bg-gray-900/60 backdrop-blur-sm flex items-center justify-center p-6 z-50">
                     <div className="bg-white w-full max-w-md rounded-[2.5rem] shadow-2xl overflow-hidden relative border border-gray-100">
                         <button
-                            onClick={() => { setShowForgotModal(false); setFpStep(1); setFpEmail(""); setFpSuccess(""); }}
+                            onClick={() => { setShowForgotModal(false); setFpEmail(""); setFpSuccess(""); }}
                             className="absolute top-6 right-6 text-gray-400 hover:text-gray-900 transition-colors"
                         >
                             <i className="fas fa-times text-xl"></i>

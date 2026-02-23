@@ -511,7 +511,7 @@ export default function DonorLogin() {
             </div>
             <h3>Reset Your Password</h3>
             <p>
-              {fpStep === 1 && "Enter your registered email to receive a secure reset link."}
+              Enter your registered email to receive a secure reset link.
             </p>
           </div>
 
@@ -521,7 +521,7 @@ export default function DonorLogin() {
               {fpSuccess}
             </div>
 
-            {fpStep === 1 && !fpSuccess && (
+            {!fpSuccess && (
               <>
                 <label className="fp-label" htmlFor="fp-email">Registered Email</label>
                 <input
