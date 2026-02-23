@@ -17,6 +17,31 @@ const adminRoutes = require('./src/routes/admin');
 const seekerRoutes = require('./src/routes/seeker');
 
 app.get('/api/health', (req, res) => res.json({ status: 'ok', timestamp: new Date() }));
+app.get('/api/debug-email-port', async (req, res) => {
+    const net = require('net');
+    const results = {};
+    const hosts = ['smtp.gmail.com', 'googlemail.com'];
+    const ports = [587, 465, 25];
+
+    for (const host of hosts) {
+        results[host] = {};
+        for (const port of ports) {
+            try {
+                await new Promise((resolve, reject) => {
+                    const socket = net.createConnection(port, host);
+                    socket.setTimeout(5000);
+                    socket.on('connect', () => { socket.destroy(); resolve(); });
+                    socket.on('timeout', () => { socket.destroy(); reject(new Error('Timeout')); });
+                    socket.on('error', (e) => { reject(e); });
+                });
+                results[host][port] = 'Connected Successfully';
+            } catch (e) {
+                results[host][port] = `Failed: ${e.message}`;
+            }
+        }
+    }
+    res.json(results);
+});
 app.use('/api/home', homeRoutes);
 app.use('/api/auth', authRoutes);
 app.use('/api/donor', donorRoutes);
