@@ -1,4 +1,5 @@
 {
+    "cleanUrls": true,
     "rewrites": [
         {
             "source": "/api/:path*",
@@ -9,7 +10,7 @@
             "destination": "https://ebloodbank.onrender.com/uploads/:path*"
         },
         {
-            "source": "/(.*)",
+            "source": "/((?!api|uploads|assets|images|favicon).*)",
             "destination": "/index.html"
         }
     ]
