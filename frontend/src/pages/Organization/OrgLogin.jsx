@@ -75,10 +75,11 @@ export default function OrgLogin() {
             setFpLoading(true);
             try {
                 await axios.post('/api/organization/forgot-password', { email: fpEmail });
-                toast.success("Reset code sent to your email.");
-                setFpStep(2);
+                toast.success("A password reset link has been sent to your email!");
+                setFpStep(1);
+                setFpEmail("");
             } catch (err) {
-                let msg = err.response?.data?.error || "Failed to send code.";
+                let msg = err.response?.data?.error || "Failed to send reset link.";
                 if (err.response?.data?.details) msg += ` Details: ${err.response.data.details}`;
                 toast.error(msg);
             } finally {

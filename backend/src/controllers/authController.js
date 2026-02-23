@@ -1,11 +1,10 @@
 const pool = require('../config/database');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
-const { Resend } = require('resend');
+const admin = require('../config/firebaseAdmin');
 const https = require('https');
 
 const JWT_SECRET = process.env.JWT_SECRET || 'secret';
-const resend = new Resend(process.env.RESEND_API_KEY);
 
 // Helper functions (moved from route)
 const findDonorByUsername = async (username) => {
@@ -98,13 +97,25 @@ exports.register = async (req, res) => {
 
         const hash = await bcrypt.hash(password, 10);
         const [result] = await pool.query(
-            `INSERT INTO donors (username, full_name, email, password_hash, blood_type, dob, phone, gender, availability, latitude, longitude, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
-            [username, full_name, email, hash, blood_type, dob, phone, gender, availability || 'Available', req.body.latitude || null, req.body.longitude || null]
+            'INSERT INTO donors (username, full_name, email, password_hash, blood_type, dob, phone, gender, availability, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())',
+            [username, full_name, email, hash, blood_type, dob, phone, gender, availability === 'on' ? 1 : 0]
         );
 
         const insertId = result.insertId;
         const donorTag = `DON-${insertId.toString().padStart(6, '0')}`;
         await pool.query('UPDATE donors SET donor_tag = ? WHERE id = ?', [donorTag, insertId]);
+
+        // Sync with Firebase
+        try {
+            await admin.auth().createUser({
+                uid: `donor_${insertId}`,
+                email: email,
+                password: password,
+                displayName: full_name,
+            });
+        } catch (fbErr) {
+            console.error('Firebase sync error:', fbErr);
+        }
 
         const token = jwt.sign({ id: insertId, username }, JWT_SECRET, { expiresIn: '7d' });
         res.json({ token, user: { id: insertId, username, full_name, email, blood_type, phone, gender, donor_tag: donorTag } });
@@ -155,49 +166,44 @@ exports.forgotPassword = async (req, res) => {
 
         await pool.query('UPDATE donors SET reset_code = ?, reset_code_expires_at = ? WHERE id = ?', [resetCode, expiresAt, donor.id]);
 
-        if (process.env.RESEND_API_KEY) {
-            await resend.emails.send({
-                from: 'eBloodBank <onboarding@resend.dev>',
-                to: [email],
-                subject: `${resetCode} is your eBloodBank reset code`,
-                html: `
-                <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: 0 auto; background-color: #f9f9f9; padding: 20px; border-radius: 10px;">
-                    <div style="text-align: center; margin-bottom: 30px;">
-                        <h1 style="color: #dc2626; margin: 0; font-size: 28px; letter-spacing: 1px;">eBloodBank</h1>
-                        <p style="color: #6b7280; margin-top: 5px; font-size: 14px;">Gift of Life, Shared by You</p>
-                    </div>
-                    
-                    <div style="background-color: #ffffff; padding: 40px; border-radius: 15px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); text-align: center;">
-                        <h2 style="color: #1f2937; margin-bottom: 20px;">Verification Code</h2>
-                        <p style="color: #4b5563; font-size: 16px; line-height: 1.5; margin-bottom: 30px;">
-                            We received a request to reset your password. Use the following 4-digit code to verify your identity.
-                        </p>
-                        
-                        <div style="background-color: #fee2e2; border: 2px dashed #dc2626; padding: 20px; border-radius: 12px; display: inline-block; margin-bottom: 30px;">
-                            <span style="font-size: 48px; font-weight: 900; color: #dc2626; letter-spacing: 15px; margin-left: 15px;">${resetCode}</span>
-                        </div>
-                        
-                        <p style="color: #9ca3af; font-size: 13px; margin-bottom: 0;">
-                            This code will expire in <b>10 minutes</b>.<br>
-                            If you didn't request this, you can safely ignore this email.
-                        </p>
-                    </div>
-                    
-                    <div style="text-align: center; margin-top: 30px; color: #9ca3af; font-size: 12px;">
-                        <p style="margin-bottom: 5px;">&copy; 2026 eBloodBank Official. All rights reserved.</p>
-                        <p>Need help? Contact us at <a href="mailto:ebloodbankofficial@gmail.com" style="color: #dc2626; text-decoration: none;">ebloodbankofficial@gmail.com</a></p>
-                    </div>
-                </div>
-                `
-            });
-        } else {
-            console.log(`[DEV] Reset Code for ${email}: ${resetCode}`);
+        // Firebase Password Reset Logic
+        // We Use the Firebase REST API to trigger a password reset email
+        // This avoids SMTP blocks as it's a simple HTTPS post
+        if (process.env.FIREBASE_WEB_API_KEY) {
+            try {
+                const postData = JSON.stringify({
+                    requestType: 'PASSWORD_RESET',
+                    email: email
+                });
+
+                const options = {
+                    hostname: 'identitytoolkit.googleapis.com',
+                    path: `/v1/accounts:sendOobCode?key=${process.env.FIREBASE_WEB_API_KEY}`,
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Content-Length': postData.length
+                    }
+                };
+
+                const req = https.request(options, (resp) => {
+                    let body = '';
+                    resp.on('data', (d) => body += d);
+                    resp.on('end', () => console.log('Firebase Reset Email sent:', body));
+                });
+                req.on('error', (e) => console.error('Firebase Reset Email Error:', e));
+                req.write(postData);
+                req.end();
+            } catch (err) {
+                console.error('Firebase trigger error:', err);
+            }
         }
-        res.json({ message: 'Reset code sent.' });
+
+        res.json({ message: 'Reset link sent via Google/Firebase.' });
     } catch (err) {
         console.error('Forgot password error:', err);
         res.status(500).json({
-            error: 'Failed to send reset email. Please try again later.',
+            error: 'Failed to send reset link. Please try again later.',
             details: err.message
         });
     }

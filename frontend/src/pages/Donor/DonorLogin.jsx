@@ -165,15 +165,15 @@ export default function DonorLogin() {
 
       console.log("Response:", data);
       if (!res.ok) {
-        let msg = data.error || "Failed to send code.";
+        let msg = data.error || "Failed to send reset link.";
         if (data.details) msg += ` Details: ${data.details}`;
         throw new Error(msg);
       }
 
-      setFpStep(2); // Move to Step 2
-      // Assuming toast.success is intended to replace setFpSuccess and toast is imported
-      // toast.success("Reset code sent to your email."); // Uncomment and import toast if needed
-      setFpSuccess("Verification code sent to your email.");
+      setFpSuccess("A password reset link has been sent to your email. Please follow the instructions in the email to set a new password.");
+      setFpStep(1); // Keep on step 1 or show a finished state
+      setFpEmail(""); // Clear email
+      toast.success("Reset link sent successfully!");
     } catch (err) {
       console.error("Error in FP flow:", err);
       // Detailed error for debugging

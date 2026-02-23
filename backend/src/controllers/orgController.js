@@ -1,15 +1,13 @@
 const pool = require('../config/database');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
-const { Resend } = require('resend');
+const admin = require('../config/firebaseAdmin');
 const { calculateDonorAvailability } = require('../utils/donorUtils');
 const { addOrgLog } = require('../utils/logUtils');
 const https = require('https');
 const { getIndiaCoordinates } = require('../utils/matchUtils');
 
-
 const JWT_SECRET = process.env.JWT_SECRET || 'secret';
-const resend = new Resend(process.env.RESEND_API_KEY);
 exports.register = async (req, res) => {
     try {
         const { name, email, phone, password, confirm_password, license_number, type, state, district, city, address } = req.body;
@@ -57,6 +55,18 @@ exports.register = async (req, res) => {
             [name, email, phone, hash, license_number, type, state, district, city, address, latitude, longitude]
         );
 
+        // Sync with Firebase
+        try {
+            await admin.auth().createUser({
+                uid: `org_${result.insertId}`,
+                email: email,
+                password: password,
+                displayName: name,
+            });
+        } catch (fbErr) {
+            console.error('Firebase sync error for org:', fbErr);
+        }
+
         res.json({
             message: 'Registration successful. Your account is pending admin approval. You will receive an email once verified.',
             user: { id: result.insertId, name, email, type, role: 'organization' }
@@ -99,47 +109,40 @@ exports.forgotPassword = async (req, res) => {
 
         await pool.query('UPDATE organizations SET reset_code = ?, reset_code_expires_at = ? WHERE id = ?', [resetCode, expiresAt, org.id]);
 
-        if (process.env.RESEND_API_KEY) {
-            await resend.emails.send({
-                from: 'eBloodBank <onboarding@resend.dev>',
-                to: [email],
-                subject: `${resetCode} is your eBloodBank reset code`,
-                html: `
-                <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: 0 auto; background-color: #f9f9f9; padding: 20px; border-radius: 10px;">
-                    <div style="text-align: center; margin-bottom: 30px;">
-                        <h1 style="color: #dc2626; margin: 0; font-size: 28px; letter-spacing: 1px;">eBloodBank</h1>
-                        <p style="color: #6b7280; margin-top: 5px; font-size: 14px;">Gift of Life, Shared by You</p>
-                    </div>
-                    
-                    <div style="background-color: #ffffff; padding: 40px; border-radius: 15px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); text-align: center;">
-                        <h2 style="color: #1f2937; margin-bottom: 20px;">Organization Verification Code</h2>
-                        <p style="color: #4b5563; font-size: 16px; line-height: 1.5; margin-bottom: 30px;">
-                            We received a request to reset your organization password. Use the following 4-digit code to verify your identity.
-                        </p>
-                        
-                        <div style="background-color: #fee2e2; border: 2px dashed #dc2626; padding: 20px; border-radius: 12px; display: inline-block; margin-bottom: 30px;">
-                            <span style="font-size: 48px; font-weight: 900; color: #dc2626; letter-spacing: 15px; margin-left: 15px;">${resetCode}</span>
-                        </div>
-                        
-                        <p style="color: #9ca3af; font-size: 13px; margin-bottom: 0;">
-                            This code will expire in <b>10 minutes</b>.<br>
-                            If you didn't request this, you can safely ignore this email.
-                        </p>
-                    </div>
-                    
-                    <div style="text-align: center; margin-top: 30px; color: #9ca3af; font-size: 12px;">
-                        <p style="margin-bottom: 5px;">&copy; 2026 eBloodBank Official. All rights reserved.</p>
-                        <p>Need help? Contact us at <a href="mailto:ebloodbankofficial@gmail.com" style="color: #dc2626; text-decoration: none;">ebloodbankofficial@gmail.com</a></p>
-                    </div>
-                </div>
-                `
-            });
+        if (process.env.FIREBASE_WEB_API_KEY) {
+            try {
+                const postData = JSON.stringify({
+                    requestType: 'PASSWORD_RESET',
+                    email: email
+                });
+
+                const options = {
+                    hostname: 'identitytoolkit.googleapis.com',
+                    path: `/v1/accounts:sendOobCode?key=${process.env.FIREBASE_WEB_API_KEY}`,
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Content-Length': postData.length
+                    }
+                };
+
+                const req = https.request(options, (resp) => {
+                    let body = '';
+                    resp.on('data', (d) => body += d);
+                    resp.on('end', () => console.log('Firebase Org Reset Email sent:', body));
+                });
+                req.on('error', (e) => console.error('Firebase Org Reset Email Error:', e));
+                req.write(postData);
+                req.end();
+            } catch (err) {
+                console.error('Firebase org trigger error:', err);
+            }
         }
-        res.json({ message: 'Reset code sent.' });
+        res.json({ message: 'Reset link sent via Google/Firebase.' });
     } catch (err) {
         console.error('Org forgot password error:', err);
         res.status(500).json({
-            error: 'Failed to send reset email. Please try again later.',
+            error: 'Failed to send reset link. Please try again later.',
             details: err.message
         });
     }
