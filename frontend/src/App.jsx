@@ -13,6 +13,7 @@ import AdminLogin from './pages/Admin/AdminLogin';
 import AdminDashboard from './pages/Admin/AdminDashboard';
 import Seeker from './pages/Seeker/Seeker';
 import OrganizationSearch from './pages/Organization/OrganizationSearch';
+import ResetPassword from './pages/ResetPassword';
 
 // Global Scroll to Top on Route Change
 function ScrollToTop() {
@@ -58,6 +59,7 @@ export default function App() {
         <Route path="/" element={<Home />} />
         <Route path="/seeker" element={<Seeker />} />
         <Route path="/organization-search" element={<OrganizationSearch />} />
+        <Route path="/reset-password" element={<ResetPassword />} />
 
         {/* Donor Routes */}
         <Route path="/dashboard" element={<DonorDashboard />} />

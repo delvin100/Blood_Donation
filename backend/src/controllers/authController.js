@@ -173,7 +173,8 @@ exports.forgotPassword = async (req, res) => {
             try {
                 const postData = JSON.stringify({
                     requestType: 'PASSWORD_RESET',
-                    email: email
+                    email: email,
+                    continueUrl: 'https://ebloodbank.vercel.app/reset-password'
                 });
 
                 const options = {
@@ -182,7 +183,11 @@ exports.forgotPassword = async (req, res) => {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
-                        'Content-Length': postData.length
+                        'Content-Length': Buffer.byteLength(JSON.stringify({
+                            requestType: 'PASSWORD_RESET',
+                            email: email,
+                            continueUrl: 'https://ebloodbank.vercel.app/reset-password'
+                        }))
                     }
                 };
 
@@ -192,7 +197,11 @@ exports.forgotPassword = async (req, res) => {
                     resp.on('end', () => console.log('Firebase Reset Email sent:', body));
                 });
                 req.on('error', (e) => console.error('Firebase Reset Email Error:', e));
-                req.write(postData);
+                req.write(JSON.stringify({
+                    requestType: 'PASSWORD_RESET',
+                    email: email,
+                    continueUrl: 'https://ebloodbank.vercel.app/reset-password'
+                }));
                 req.end();
             } catch (err) {
                 console.error('Firebase trigger error:', err);
@@ -245,6 +254,29 @@ exports.completeProfile = async (req, res) => {
         res.json({ message: 'Profile updated successfully.' });
     } catch (err) {
         res.status(500).json({ error: 'Server error.' });
+    }
+};
+
+exports.syncPassword = async (req, res) => {
+    try {
+        const { email, newPassword } = req.body;
+        if (!email || !newPassword) {
+            return res.status(400).json({ error: 'Email and new password are required.' });
+        }
+        if (newPassword.length < 8) {
+            return res.status(400).json({ error: 'Password must be at least 8 characters.' });
+        }
+
+        const donor = await findDonorByEmail(email);
+        if (!donor) return res.status(404).json({ error: 'Donor not found.' });
+
+        const hash = await bcrypt.hash(newPassword, 10);
+        await pool.query('UPDATE donors SET password_hash = ?, reset_code = NULL, reset_code_expires_at = NULL WHERE id = ?', [hash, donor.id]);
+
+        res.json({ message: 'Password synced to MySQL successfully.' });
+    } catch (err) {
+        console.error('Sync password error:', err);
+        res.status(500).json({ error: 'Failed to sync password.', details: err.message });
     }
 };
 

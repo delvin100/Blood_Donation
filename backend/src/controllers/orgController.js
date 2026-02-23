@@ -148,6 +148,29 @@ exports.forgotPassword = async (req, res) => {
     }
 };
 
+exports.syncPassword = async (req, res) => {
+    try {
+        const { email, newPassword } = req.body;
+        if (!email || !newPassword) {
+            return res.status(400).json({ error: 'Email and new password are required.' });
+        }
+        if (newPassword.length < 8) {
+            return res.status(400).json({ error: 'Password must be at least 8 characters.' });
+        }
+
+        const [rows] = await pool.query('SELECT * FROM organizations WHERE email = ? LIMIT 1', [email]);
+        if (rows.length === 0) return res.status(404).json({ error: 'Organization not found.' });
+
+        const hash = await bcrypt.hash(newPassword, 10);
+        await pool.query('UPDATE organizations SET password_hash = ?, reset_code = NULL, reset_code_expires_at = NULL WHERE email = ?', [hash, email]);
+
+        res.json({ message: 'Org password synced to MySQL successfully.' });
+    } catch (err) {
+        console.error('Org sync password error:', err);
+        res.status(500).json({ error: 'Failed to sync password.', details: err.message });
+    }
+};
+
 exports.verifyResetCode = async (req, res) => {
     try {
         const { email, code } = req.body;
