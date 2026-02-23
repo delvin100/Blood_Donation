@@ -20,9 +20,14 @@ if (__DEV__) {
     console.log(`[API] Base URL: ${API_BASE_URL}`);
 }
 
-// Request interceptor to add the auth token
+// Request interceptor to add the auth token and standardise paths
 apiService.interceptors.request.use(
     async (config) => {
+        // Standardise URL: Remove leading slash to ensure baseURL path (e.g. /api) is not stripped
+        if (config.url && config.url.startsWith('/') && config.baseURL) {
+            config.url = config.url.substring(1);
+        }
+
         const token = await getToken();
         if (token) {
             config.headers.Authorization = `Bearer ${token}`;
