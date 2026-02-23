@@ -78,7 +78,9 @@ export default function OrgLogin() {
                 toast.success("Reset code sent to your email.");
                 setFpStep(2);
             } catch (err) {
-                toast.error(err.response?.data?.error || "Failed to send code.");
+                let msg = err.response?.data?.error || "Failed to send code.";
+                if (err.response?.data?.details) msg += ` Details: ${err.response.data.details}`;
+                toast.error(msg);
             } finally {
                 setFpLoading(false);
             }
