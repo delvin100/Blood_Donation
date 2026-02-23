@@ -4,7 +4,6 @@ const authController = require('../controllers/authController');
 const authMiddleware = require('../middlewares/authMiddleware');
 
 router.post('/register', authController.register);
-router.get('/test', (req, res) => res.json({ message: 'auth route test ok' }));
 router.get('/check-username', authController.checkUsername);
 router.post('/login', authController.login);
 router.post('/google', authController.googleAuth);

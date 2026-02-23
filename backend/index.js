@@ -17,7 +17,6 @@ const adminRoutes = require('./src/routes/admin');
 const seekerRoutes = require('./src/routes/seeker');
 
 app.get('/api/health', (req, res) => res.json({ status: 'ok', timestamp: new Date() }));
-app.get('/api/version', (req, res) => res.json({ version: '1.0.3-auth-test' }));
 app.use('/api/home', homeRoutes);
 app.use('/api/auth', authRoutes);
 app.use('/api/donor', donorRoutes);

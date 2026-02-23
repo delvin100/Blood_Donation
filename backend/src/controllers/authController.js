@@ -12,7 +12,10 @@ const transporter = nodemailer.createTransport({
     auth: {
         user: process.env.EMAIL_USER,
         pass: process.env.EMAIL_PASS
-    }
+    },
+    connectionTimeout: 10000, // 10s
+    greetingTimeout: 10000,
+    socketTimeout: 20000
 });
 
 // Helper functions (moved from route)
@@ -203,7 +206,11 @@ exports.forgotPassword = async (req, res) => {
         }
         res.json({ message: 'Reset code sent.' });
     } catch (err) {
-        res.status(500).json({ error: 'Server error.' });
+        console.error('Forgot password error:', err);
+        res.status(500).json({
+            error: 'Failed to send reset email. Please try again later.',
+            details: err.message
+        });
     }
 };
 

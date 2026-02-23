@@ -94,8 +94,9 @@ exports.forgotPassword = async (req, res) => {
     try {
         const { email } = req.body;
         const [rows] = await pool.query('SELECT * FROM organizations WHERE email = ? LIMIT 1', [email]);
-        if (rows.length === 0) return res.status(404).json({ error: 'Facility email not found.' });
         const org = rows[0];
+
+        if (!org) return res.status(404).json({ error: 'Email not found.' });
 
         const resetCode = Math.floor(1000 + Math.random() * 9000).toString();
         const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
@@ -115,9 +116,9 @@ exports.forgotPassword = async (req, res) => {
                     </div>
                     
                     <div style="background-color: #ffffff; padding: 40px; border-radius: 15px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); text-align: center;">
-                        <h2 style="color: #1f2937; margin-bottom: 20px;">Facility Access Recovery</h2>
+                        <h2 style="color: #1f2937; margin-bottom: 20px;">Organization Verification Code</h2>
                         <p style="color: #4b5563; font-size: 16px; line-height: 1.5; margin-bottom: 30px;">
-                            We received a request to reset the access key for your facility. Use the following 4-digit code to verify your identity.
+                            We received a request to reset your organization password. Use the following 4-digit code to verify your identity.
                         </p>
                         
                         <div style="background-color: #fee2e2; border: 2px dashed #dc2626; padding: 20px; border-radius: 12px; display: inline-block; margin-bottom: 30px;">
