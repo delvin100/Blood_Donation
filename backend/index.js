@@ -19,25 +19,33 @@ const seekerRoutes = require('./src/routes/seeker');
 app.get('/api/health', (req, res) => res.json({ status: 'ok', timestamp: new Date() }));
 app.get('/api/debug-email-port', async (req, res) => {
     const net = require('net');
-    const results = {};
-    const hosts = ['smtp.gmail.com', 'googlemail.com'];
-    const ports = [587, 465, 25];
+    const results = {
+        env: {
+            EMAIL_USER_PRESENT: !!process.env.EMAIL_USER,
+            EMAIL_PASS_PRESENT: !!process.env.EMAIL_PASS,
+        },
+        connectivity: {}
+    };
+    const targets = [
+        { host: 'smtp.gmail.com', port: 587 },
+        { host: 'smtp.gmail.com', port: 465 },
+        { host: 'google.com', port: 443 },
+        { host: 'google.com', port: 80 }
+    ];
 
-    for (const host of hosts) {
-        results[host] = {};
-        for (const port of ports) {
-            try {
-                await new Promise((resolve, reject) => {
-                    const socket = net.createConnection(port, host);
-                    socket.setTimeout(5000);
-                    socket.on('connect', () => { socket.destroy(); resolve(); });
-                    socket.on('timeout', () => { socket.destroy(); reject(new Error('Timeout')); });
-                    socket.on('error', (e) => { reject(e); });
-                });
-                results[host][port] = 'Connected Successfully';
-            } catch (e) {
-                results[host][port] = `Failed: ${e.message}`;
-            }
+    for (const target of targets) {
+        const key = `${target.host}:${target.port}`;
+        try {
+            await new Promise((resolve, reject) => {
+                const socket = net.createConnection(target.port, target.host);
+                socket.setTimeout(5000);
+                socket.on('connect', () => { socket.destroy(); resolve(); });
+                socket.on('timeout', () => { socket.destroy(); reject(new Error('Timeout after 5s')); });
+                socket.on('error', (e) => { reject(e); });
+            });
+            results.connectivity[key] = 'OK (Connected)';
+        } catch (e) {
+            results.connectivity[key] = `Failed: ${e.message || 'Unknown Error'}`;
         }
     }
     res.json(results);
