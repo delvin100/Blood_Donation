@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { useGoogleLogin } from '@react-oauth/google';
 import CompleteProfileModal from "../../components/modals/CompleteProfileModal";
+import toast from 'react-hot-toast';
 import "../../assets/css/auth-base.css";
 import "../../assets/css/register.css";
 

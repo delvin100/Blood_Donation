@@ -104,16 +104,13 @@ exports.forgotPassword = async (req, res) => {
 
         if (!org) return res.status(404).json({ error: 'Email not found.' });
 
-        const resetCode = Math.floor(1000 + Math.random() * 9000).toString();
-        const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
-
-        await pool.query('UPDATE organizations SET reset_code = ?, reset_code_expires_at = ? WHERE id = ?', [resetCode, expiresAt, org.id]);
-
+        // Firebase Password Reset Logic
         if (process.env.FIREBASE_WEB_API_KEY) {
             try {
-                const postData = JSON.stringify({
+                const payload = JSON.stringify({
                     requestType: 'PASSWORD_RESET',
-                    email: email
+                    email: email,
+                    continueUrl: 'https://ebloodbank.vercel.app/reset-password'
                 });
 
                 const options = {
@@ -122,27 +119,38 @@ exports.forgotPassword = async (req, res) => {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
-                        'Content-Length': postData.length
+                        'Content-Length': Buffer.byteLength(payload)
                     }
                 };
 
-                const req = https.request(options, (resp) => {
-                    let body = '';
-                    resp.on('data', (d) => body += d);
-                    resp.on('end', () => console.log('Firebase Org Reset Email sent:', body));
+                await new Promise((resolve, reject) => {
+                    const fbReq = https.request(options, (resp) => {
+                        let body = '';
+                        resp.on('data', (d) => body += d);
+                        resp.on('end', () => {
+                            console.log('Firebase Org Response Status:', resp.statusCode);
+                            console.log('Firebase Org Response Body:', body);
+                            if (resp.statusCode >= 200 && resp.statusCode < 300) {
+                                resolve(JSON.parse(body));
+                            } else {
+                                reject(new Error(`Firebase error: ${body}`));
+                            }
+                        });
+                    });
+                    fbReq.on('error', (e) => reject(e));
+                    fbReq.write(payload);
+                    fbReq.end();
                 });
-                req.on('error', (e) => console.error('Firebase Org Reset Email Error:', e));
-                req.write(postData);
-                req.end();
             } catch (err) {
-                console.error('Firebase org trigger error:', err);
+                console.error('Firebase Org trigger error:', err);
+                return res.status(500).json({ error: 'Failed to trigger reset email.', details: err.message });
             }
         }
         res.json({ message: 'Reset link sent via Google/Firebase.' });
     } catch (err) {
         console.error('Org forgot password error:', err);
         res.status(500).json({
-            error: 'Failed to send reset link. Please try again later.',
+            error: 'Failed to process request.',
             details: err.message
         });
     }
