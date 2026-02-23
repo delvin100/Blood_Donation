@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
+import axios from 'axios';
 import { initializeApp, getApps } from 'firebase/app';
 import { getAuth, confirmPasswordReset, verifyPasswordResetCode } from 'firebase/auth';
 import toast from 'react-hot-toast';
+import '../assets/css/reset-password.css';
 
 // Initialize Firebase (only once)
 const firebaseConfig = {
@@ -27,21 +29,22 @@ export default function ResetPassword() {
     const [verifying, setVerifying] = useState(true);
     const [error, setError] = useState('');
     const [done, setDone] = useState(false);
-    const [userType, setUserType] = useState('donor'); // 'donor' or 'organization'
+    const [userType, setUserType] = useState(params.get('type') || 'donor');
+    const [showPass, setShowPass] = useState(false);
 
     useEffect(() => {
         if (!oobCode || mode !== 'resetPassword') {
-            setError('Invalid or expired reset link. Please request a new one.');
+            setError('Invalid or expired reset link. Please request a new one from the login page.');
             setVerifying(false);
             return;
         }
-        // Verify the code and get the email
         verifyPasswordResetCode(auth, oobCode)
             .then((emailFromCode) => {
                 setEmail(emailFromCode);
                 setVerifying(false);
             })
-            .catch(() => {
+            .catch((err) => {
+                console.error('Firebase verify code error:', err);
                 setError('This reset link has expired or already been used. Please request a new one.');
                 setVerifying(false);
             });
@@ -60,189 +63,162 @@ export default function ResetPassword() {
 
         setLoading(true);
         try {
-            // Step 1: Confirm the Firebase reset
             await confirmPasswordReset(auth, oobCode, newPassword);
 
-            // Step 2: Sync the new password to MySQL via our backend
             const endpoint = userType === 'organization'
                 ? '/api/organization/sync-password'
                 : '/api/auth/sync-password';
 
-            const res = await fetch(endpoint, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ email, newPassword }),
-            });
-
-            if (res.ok) {
-                toast.success('Password reset successfully!');
+            try {
+                await axios.post(endpoint, { email, newPassword });
+                toast.success('Security Update Successful!');
                 setDone(true);
-            } else {
-                // Firebase reset worked but MySQL sync failed — not critical
-                toast.success('Password reset in Firebase. Please contact support if login fails.');
-                setDone(true);
+            } catch (syncErr) {
+                console.error('MySQL sync error:', syncErr);
+                const msg = syncErr.response?.data?.error || 'Database synchronization failed.';
+                toast.error(`Firebase updated, but DB sync failed.`);
+                setError(`Security update partially successful. Password changed in Firebase, but database sync failed: ${msg}. Please contact support if you face login issues.`);
+                setDone(false);
             }
         } catch (err) {
-            toast.error('Failed to reset password. The link may have expired.');
-            console.error(err);
+            console.error('Final Reset Error:', err);
+            toast.error('Failed to reset password. Link may be invalid.');
         } finally {
             setLoading(false);
         }
     };
 
     return (
-        <div style={{
-            minHeight: '100vh',
-            background: 'linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            padding: '20px',
-            fontFamily: "'Segoe UI', sans-serif"
-        }}>
-            <div style={{
-                background: 'rgba(255,255,255,0.05)',
-                backdropFilter: 'blur(10px)',
-                borderRadius: '20px',
-                padding: '48px 40px',
-                maxWidth: '440px',
-                width: '100%',
-                border: '1px solid rgba(255,255,255,0.1)',
-                boxShadow: '0 25px 50px rgba(0,0,0,0.4)',
-                textAlign: 'center',
-            }}>
-                {/* Logo */}
-                <div style={{ marginBottom: '24px' }}>
-                    <span style={{ fontSize: '36px' }}>🩸</span>
-                    <h1 style={{ color: '#dc2626', margin: '8px 0 4px', fontSize: '24px', fontWeight: 700 }}>
-                        eBloodBank
-                    </h1>
-                    <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: '13px', margin: 0 }}>
-                        Gift of Life, Shared by You
-                    </p>
+        <div className="reset-container">
+            {/* Dynamic Background */}
+            <div className="reset-bg-blobs">
+                <div className="blob blob-1"></div>
+                <div className="blob blob-2"></div>
+            </div>
+
+            <div className="reset-card">
+                {/* Brand Identity */}
+                <div className="reset-logo-box">
+                    <div className="reset-heart-icon">
+                        <i className="fas fa-heartbeat"></i>
+                    </div>
+                    <h1 className="reset-title">eBloodBank</h1>
+                    <p className="reset-subtitle">Secure Access Recovery</p>
                 </div>
 
                 {verifying ? (
-                    <p style={{ color: 'rgba(255,255,255,0.7)' }}>Verifying reset link...</p>
+                    <div style={{ textAlign: 'center', padding: '40px 0' }}>
+                        <i className="fas fa-circle-notch fa-spin" style={{ fontSize: '32px', color: '#dc2626', marginBottom: '16px' }}></i>
+                        <p style={{ color: 'rgba(255,255,255,0.7)', fontWeight: 600 }}>Verifying secure token...</p>
+                    </div>
                 ) : error ? (
-                    <div>
-                        <p style={{ color: '#f87171', marginBottom: '24px' }}>{error}</p>
-                        <button
-                            onClick={() => navigate('/donor/login')}
-                            style={{
-                                background: '#dc2626', color: '#fff', border: 'none',
-                                borderRadius: '10px', padding: '12px 24px', cursor: 'pointer',
-                                fontWeight: 600, marginRight: '10px'
-                            }}
-                        >
-                            Donor Login
-                        </button>
-                        <button
-                            onClick={() => navigate('/organization/login')}
-                            style={{
-                                background: 'rgba(255,255,255,0.1)', color: '#fff', border: 'none',
-                                borderRadius: '10px', padding: '12px 24px', cursor: 'pointer',
-                                fontWeight: 600
-                            }}
-                        >
-                            Org Login
-                        </button>
+                    <div style={{ animation: 'card-appear 0.5s ease-out' }}>
+                        <div className="reset-error-msg">
+                            <i className="fas fa-exclamation-triangle" style={{ marginRight: '8px' }}></i>
+                            {error}
+                        </div>
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                            <button onClick={() => navigate('/donor/login')} className="type-btn active">Donor Portal</button>
+                            <button onClick={() => navigate('/organization/login')} className="type-btn">Org Portal</button>
+                        </div>
                     </div>
                 ) : done ? (
-                    <div>
-                        <div style={{ fontSize: '48px', marginBottom: '16px' }}>✅</div>
-                        <h2 style={{ color: '#fff', marginBottom: '8px' }}>Password Reset!</h2>
-                        <p style={{ color: 'rgba(255,255,255,0.6)', marginBottom: '24px' }}>
-                            Your password has been updated. You can now log in with your new password.
+                    <div style={{ textAlign: 'center', animation: 'card-appear 0.5s ease-out' }}>
+                        <div className="reset-success-icon">
+                            <i className="fas fa-check"></i>
+                        </div>
+                        <h2 style={{ color: '#fff', fontSize: '28px', fontWeight: 800, marginBottom: '12px' }}>Updated!</h2>
+                        <p style={{ color: 'rgba(255,255,255,0.6)', lineHeight: 1.6, marginBottom: '32px' }}>
+                            Your security credentials have been successfully updated. You can now use your new password to log in.
                         </p>
                         <button
                             onClick={() => navigate(userType === 'organization' ? '/organization/login' : '/donor/login')}
-                            style={{
-                                background: '#dc2626', color: '#fff', border: 'none',
-                                borderRadius: '10px', padding: '14px 32px', cursor: 'pointer',
-                                fontWeight: 700, fontSize: '16px'
-                            }}
+                            className="reset-btn"
                         >
-                            Go to Login →
+                            Return to Portal <i className="fas fa-arrow-right"></i>
                         </button>
                     </div>
                 ) : (
-                    <form onSubmit={handleSubmit}>
-                        <h2 style={{ color: '#fff', marginBottom: '6px', fontSize: '22px' }}>
-                            Set New Password
-                        </h2>
-                        <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: '13px', marginBottom: '28px' }}>
-                            {email}
-                        </p>
+                    <form onSubmit={handleSubmit} className="reset-form">
+                        <div style={{ marginBottom: '8px' }}>
+                            <h2 style={{ color: '#fff', fontSize: '22px', fontWeight: 800, marginBottom: '6px' }}>Reset Password</h2>
+                            <p style={{ color: 'rgba(255,255,255,0.4)', fontSize: '13px', fontWeight: 600 }}>
+                                <i className="fas fa-user-shield" style={{ marginRight: '6px' }}></i>
+                                {email}
+                            </p>
+                        </div>
 
-                        {/* Account Type Selection */}
-                        <div style={{ display: 'flex', gap: '10px', marginBottom: '20px' }}>
-                            {['donor', 'organization'].map(type => (
+                        {/* Identity Selection */}
+                        <div className="reset-type-picker">
+                            <button
+                                type="button"
+                                onClick={() => setUserType('donor')}
+                                className={`type-btn ${userType === 'donor' ? 'active' : ''}`}
+                            >
+                                <i className="fas fa-user" style={{ marginRight: '8px' }}></i> Donor
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => setUserType('organization')}
+                                className={`type-btn ${userType === 'organization' ? 'active' : ''}`}
+                            >
+                                <i className="fas fa-hospital" style={{ marginRight: '8px' }}></i> Facility
+                            </button>
+                        </div>
+
+                        <div className="reset-input-group">
+                            <label className="reset-label">New Password</label>
+                            <div className="reset-input-wrapper">
+                                <i className="fas fa-lock reset-input-icon"></i>
+                                <input
+                                    type={showPass ? "text" : "password"}
+                                    className="reset-input"
+                                    placeholder="••••••••"
+                                    value={newPassword}
+                                    onChange={e => setNewPassword(e.target.value)}
+                                    required
+                                />
                                 <button
-                                    key={type}
                                     type="button"
-                                    onClick={() => setUserType(type)}
-                                    style={{
-                                        flex: 1, padding: '10px', border: 'none', borderRadius: '10px',
-                                        cursor: 'pointer', fontWeight: 600, fontSize: '13px',
-                                        background: userType === type ? '#dc2626' : 'rgba(255,255,255,0.1)',
-                                        color: '#fff', transition: 'all 0.2s',
-                                    }}
+                                    onClick={() => setShowPass(!showPass)}
+                                    style={{ position: 'absolute', right: '20px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', color: 'rgba(255,255,255,0.3)', cursor: 'pointer' }}
                                 >
-                                    {type === 'donor' ? '🩸 Donor' : '🏥 Organization'}
+                                    <i className={`fas ${showPass ? 'fa-eye-slash' : 'fa-eye'}`}></i>
                                 </button>
-                            ))}
+                            </div>
                         </div>
 
-                        <div style={{ marginBottom: '16px', textAlign: 'left' }}>
-                            <label style={{ color: 'rgba(255,255,255,0.7)', fontSize: '13px', fontWeight: 600, display: 'block', marginBottom: '6px' }}>
-                                New Password
-                            </label>
-                            <input
-                                type="password"
-                                placeholder="Minimum 8 characters"
-                                value={newPassword}
-                                onChange={e => setNewPassword(e.target.value)}
-                                required
-                                style={{
-                                    width: '100%', padding: '12px 14px', borderRadius: '10px',
-                                    background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.15)',
-                                    color: '#fff', fontSize: '15px', outline: 'none', boxSizing: 'border-box'
-                                }}
-                            />
+                        <div className="reset-input-group">
+                            <label className="reset-label">Confirm Password</label>
+                            <div className="reset-input-wrapper">
+                                <i className="fas fa-shield-alt reset-input-icon"></i>
+                                <input
+                                    type={showPass ? "text" : "password"}
+                                    className="reset-input"
+                                    placeholder="••••••••"
+                                    value={confirmPassword}
+                                    onChange={e => setConfirmPassword(e.target.value)}
+                                    required
+                                />
+                            </div>
                         </div>
 
-                        <div style={{ marginBottom: '24px', textAlign: 'left' }}>
-                            <label style={{ color: 'rgba(255,255,255,0.7)', fontSize: '13px', fontWeight: 600, display: 'block', marginBottom: '6px' }}>
-                                Confirm Password
-                            </label>
-                            <input
-                                type="password"
-                                placeholder="Re-enter new password"
-                                value={confirmPassword}
-                                onChange={e => setConfirmPassword(e.target.value)}
-                                required
-                                style={{
-                                    width: '100%', padding: '12px 14px', borderRadius: '10px',
-                                    background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.15)',
-                                    color: '#fff', fontSize: '15px', outline: 'none', boxSizing: 'border-box'
-                                }}
-                            />
-                        </div>
-
-                        <button
-                            type="submit"
-                            disabled={loading}
-                            style={{
-                                width: '100%', padding: '14px', background: loading ? '#991b1b' : '#dc2626',
-                                color: '#fff', border: 'none', borderRadius: '12px', cursor: loading ? 'not-allowed' : 'pointer',
-                                fontWeight: 700, fontSize: '16px', transition: 'all 0.2s'
-                            }}
-                        >
-                            {loading ? 'Resetting...' : 'Reset Password'}
+                        <button type="submit" disabled={loading} className="reset-btn">
+                            {loading ? (
+                                <><i className="fas fa-spinner fa-spin"></i> Processing...</>
+                            ) : (
+                                <>Update Credentials <i className="fas fa-shield-virus"></i></>
+                            )}
                         </button>
                     </form>
                 )}
+            </div>
+
+            {/* Premium Footer Elements */}
+            <div style={{ position: 'absolute', bottom: '40px', textAlign: 'center', width: '100%', pointerEvents: 'none' }}>
+                <p style={{ color: 'rgba(255,255,255,0.2)', fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.2em' }}>
+                    Shielded by eBloodBank Security Protocol v2.4
+                </p>
             </div>
         </div>
     );

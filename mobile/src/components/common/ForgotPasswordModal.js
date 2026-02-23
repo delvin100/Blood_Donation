@@ -16,19 +16,13 @@ import apiService from '../../api/apiService';
 import { parseError, logError } from '../../utils/errors';
 
 const ForgotPasswordModal = ({ visible, onClose }) => {
-    const [step, setStep] = useState(1);
     const [email, setEmail] = useState('');
-    const [code, setCode] = useState('');
-    const [newPassword, setNewPassword] = useState('');
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState('');
     const [success, setSuccess] = useState('');
 
     const resetState = () => {
-        setStep(1);
         setEmail('');
-        setCode('');
-        setNewPassword('');
         setError('');
         setSuccess('');
     };
@@ -48,52 +42,9 @@ const ForgotPasswordModal = ({ visible, onClose }) => {
         setError('');
         try {
             await apiService.post('/auth/forgot-password', { email });
-            setStep(2);
-            setSuccess('Verification code sent to your email.');
+            setSuccess('A password reset link has been sent to your email! Please check your inbox to proceed.');
         } catch (err) {
             logError('Forgot Password Send Code', err);
-            setError(parseError(err));
-        } finally {
-            setIsLoading(false);
-        }
-    };
-
-    const handleVerifyCode = async () => {
-        if (code.length !== 4) {
-            setError('Please enter the 4-digit code.');
-            return;
-        }
-
-        setIsLoading(true);
-        setError('');
-        try {
-            await apiService.post('/auth/verify-reset-code', { email, code });
-            setStep(3);
-            setSuccess('Code verified. Set your new password.');
-        } catch (err) {
-            logError('Forgot Password Verify Code', err);
-            setError(parseError(err));
-        } finally {
-            setIsLoading(false);
-        }
-    };
-
-    const handleResetPassword = async () => {
-        if (newPassword.length < 8) {
-            setError('Password must be at least 8 characters.');
-            return;
-        }
-
-        setIsLoading(true);
-        setError('');
-        try {
-            await apiService.post('/auth/reset-password', { email, code, newPassword });
-            setSuccess('Password reset successfully! You can now login.');
-            setTimeout(() => {
-                handleClose();
-            }, 2000);
-        } catch (err) {
-            logError('Forgot Password Reset', err);
             setError(parseError(err));
         } finally {
             setIsLoading(false);
@@ -123,9 +74,7 @@ const ForgotPasswordModal = ({ visible, onClose }) => {
                             </View>
                             <Text style={styles.title}>Reset Your Password</Text>
                             <Text style={styles.subtitle}>
-                                {step === 1 && "Enter your registered email to receive a verification code."}
-                                {step === 2 && "Enter the 4-digit code sent to your email."}
-                                {step === 3 && "Create a new password for your account."}
+                                {success ? "Check your email inbox for the reset link." : "Enter your registered email to receive a secure reset link."}
                             </Text>
                         </View>
 
@@ -142,7 +91,7 @@ const ForgotPasswordModal = ({ visible, onClose }) => {
                                 </View>
                             ) : null}
 
-                            {step === 1 && (
+                            {!success && (
                                 <View style={styles.inputGroup}>
                                     <Text style={styles.label}>Registered Email</Text>
                                     <View style={styles.inputWrapper}>
@@ -162,59 +111,7 @@ const ForgotPasswordModal = ({ visible, onClose }) => {
                                         onPress={handleSendCode}
                                         disabled={isLoading}
                                     >
-                                        {isLoading ? <ActivityIndicator color="white" /> : <Text style={styles.btnText}>Send Verification Code</Text>}
-                                    </TouchableOpacity>
-                                </View>
-                            )}
-
-                            {step === 2 && (
-                                <View style={styles.inputGroup}>
-                                    <Text style={styles.label}>4-Digit Code</Text>
-                                    <View style={styles.inputWrapper}>
-                                        <Ionicons name="finger-print-outline" size={20} color="#6b7280" style={styles.inputIcon} />
-                                        <TextInput
-                                            style={styles.input}
-                                            placeholder="1234"
-                                            value={code}
-                                            onChangeText={(val) => { setCode(val.replace(/[^0-9]/g, '')); setError(''); setSuccess(''); }}
-                                            keyboardType="numeric"
-                                            maxLength={4}
-                                            disabled={isLoading}
-                                        />
-                                    </View>
-                                    <TouchableOpacity
-                                        style={[styles.btn, isLoading && styles.btnDisabled]}
-                                        onPress={handleVerifyCode}
-                                        disabled={isLoading}
-                                    >
-                                        {isLoading ? <ActivityIndicator color="white" /> : <Text style={styles.btnText}>Verify Code</Text>}
-                                    </TouchableOpacity>
-                                    <TouchableOpacity style={styles.resendBtn} onPress={() => setStep(1)}>
-                                        <Text style={styles.resendText}>Resend Code</Text>
-                                    </TouchableOpacity>
-                                </View>
-                            )}
-
-                            {step === 3 && (
-                                <View style={styles.inputGroup}>
-                                    <Text style={styles.label}>New Password</Text>
-                                    <View style={styles.inputWrapper}>
-                                        <Ionicons name="lock-closed-outline" size={20} color="#6b7280" style={styles.inputIcon} />
-                                        <TextInput
-                                            style={styles.input}
-                                            placeholder="Minimum 8 characters"
-                                            value={newPassword}
-                                            onChangeText={(val) => { setNewPassword(val); setError(''); setSuccess(''); }}
-                                            secureTextEntry
-                                            disabled={isLoading}
-                                        />
-                                    </View>
-                                    <TouchableOpacity
-                                        style={[styles.btn, isLoading && styles.btnDisabled]}
-                                        onPress={handleResetPassword}
-                                        disabled={isLoading}
-                                    >
-                                        {isLoading ? <ActivityIndicator color="white" /> : <Text style={styles.btnText}>Reset Password</Text>}
+                                        {isLoading ? <ActivityIndicator color="white" /> : <Text style={styles.btnText}>Send Reset Link</Text>}
                                     </TouchableOpacity>
                                 </View>
                             )}

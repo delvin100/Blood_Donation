@@ -101,80 +101,80 @@ exports.forgotPassword = async (req, res) => {
         const { email } = req.body;
         const [rows] = await pool.query('SELECT * FROM organizations WHERE email = ? LIMIT 1', [email]);
         const org = rows[0];
+        if (!org) return res.status(404).json({ error: 'No account found with that email address.' });
 
-        if (!org) return res.status(404).json({ error: 'Email not found.' });
+        const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+        const payload = JSON.stringify({
+            requestType: 'PASSWORD_RESET',
+            email: email,
+            continueUrl: `${frontendUrl}/reset-password?type=organization`
+        });
 
-        // Firebase Password Reset Logic
-        if (process.env.FIREBASE_WEB_API_KEY) {
-            try {
-                const payload = JSON.stringify({
-                    requestType: 'PASSWORD_RESET',
-                    email: email,
-                    continueUrl: 'https://ebloodbank.vercel.app/reset-password'
+        const options = {
+            hostname: 'identitytoolkit.googleapis.com',
+            path: `/v1/accounts:sendOobCode?key=${process.env.FIREBASE_WEB_API_KEY}`,
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(payload) }
+        };
+
+        await new Promise((resolve, reject) => {
+            const fbReq = https.request(options, (resp) => {
+                let body = '';
+                resp.on('data', (d) => body += d);
+                resp.on('end', () => {
+                    console.log('Firebase org status:', resp.statusCode, body);
+                    if (resp.statusCode >= 200 && resp.statusCode < 300) resolve();
+                    else reject(new Error(`Firebase error: ${body}`));
                 });
+            });
+            fbReq.on('error', reject);
+            fbReq.write(payload);
+            fbReq.end();
+        });
 
-                const options = {
-                    hostname: 'identitytoolkit.googleapis.com',
-                    path: `/v1/accounts:sendOobCode?key=${process.env.FIREBASE_WEB_API_KEY}`,
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Content-Length': Buffer.byteLength(payload)
-                    }
-                };
-
-                await new Promise((resolve, reject) => {
-                    const fbReq = https.request(options, (resp) => {
-                        let body = '';
-                        resp.on('data', (d) => body += d);
-                        resp.on('end', () => {
-                            console.log('Firebase Org Response Status:', resp.statusCode);
-                            console.log('Firebase Org Response Body:', body);
-                            if (resp.statusCode >= 200 && resp.statusCode < 300) {
-                                resolve(JSON.parse(body));
-                            } else {
-                                reject(new Error(`Firebase error: ${body}`));
-                            }
-                        });
-                    });
-                    fbReq.on('error', (e) => reject(e));
-                    fbReq.write(payload);
-                    fbReq.end();
-                });
-            } catch (err) {
-                console.error('Firebase Org trigger error:', err);
-                return res.status(500).json({ error: 'Failed to trigger reset email.', details: err.message });
-            }
-        }
-        res.json({ message: 'Reset link sent via Google/Firebase.' });
+        res.json({ message: 'Password reset link sent to your email.' });
     } catch (err) {
         console.error('Org forgot password error:', err);
-        res.status(500).json({
-            error: 'Failed to process request.',
-            details: err.message
-        });
+        res.status(500).json({ error: 'Failed to send reset email.', details: err.message });
     }
 };
+
 
 exports.syncPassword = async (req, res) => {
     try {
         const { email, newPassword } = req.body;
+        console.log(`[OrgSyncPassword] Attempting sync for organization: ${email}`);
+
         if (!email || !newPassword) {
+            console.warn('[OrgSyncPassword] Missing email or password');
             return res.status(400).json({ error: 'Email and new password are required.' });
         }
-        if (newPassword.length < 8) {
-            return res.status(400).json({ error: 'Password must be at least 8 characters.' });
+
+        // Case-insensitive lookup for organizations
+        const [rows] = await pool.query('SELECT * FROM organizations WHERE LOWER(email) = LOWER(?) LIMIT 1', [email]);
+        if (rows.length === 0) {
+            console.warn(`[OrgSyncPassword] Organization not found for email (case-insensitive): ${email}`);
+            return res.status(404).json({ error: 'Facility not found. Please ensure you are using the correct account type (Organization).' });
         }
 
-        const [rows] = await pool.query('SELECT * FROM organizations WHERE email = ? LIMIT 1', [email]);
-        if (rows.length === 0) return res.status(404).json({ error: 'Organization not found.' });
+        const orgId = rows[0].id;
 
+        console.log(`[OrgSyncPassword] Found org ID: ${orgId}, hashing new password...`);
         const hash = await bcrypt.hash(newPassword, 10);
-        await pool.query('UPDATE organizations SET password_hash = ?, reset_code = NULL, reset_code_expires_at = NULL WHERE email = ?', [hash, email]);
+
+        const [result] = await pool.query(
+            'UPDATE organizations SET password_hash = ?, reset_code = NULL, reset_code_expires_at = NULL WHERE id = ?',
+            [hash, orgId]
+        );
+
+        console.log(`[OrgSyncPassword] Update result: ${result.affectedRows} row(s) updated`);
+        if (result.affectedRows === 0) {
+            return res.status(500).json({ error: 'Database update failed. No records were changed.' });
+        }
 
         res.json({ message: 'Org password synced to MySQL successfully.' });
     } catch (err) {
-        console.error('Org sync password error:', err);
+        console.error('[OrgSyncPassword] Error:', err);
         res.status(500).json({ error: 'Failed to sync password.', details: err.message });
     }
 };

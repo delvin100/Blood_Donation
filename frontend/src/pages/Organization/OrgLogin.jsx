@@ -14,11 +14,9 @@ export default function OrgLogin() {
 
     // Forgot Password States
     const [showForgotModal, setShowForgotModal] = useState(false);
-    const [fpStep, setFpStep] = useState(1);
     const [fpEmail, setFpEmail] = useState("");
-    const [fpCode, setFpCode] = useState("");
-    const [fpNewPassword, setFpNewPassword] = useState("");
     const [fpLoading, setFpLoading] = useState(false);
+    const [fpSuccess, setFpSuccess] = useState("");
 
     // Check for existing session on mount
     useEffect(() => {
@@ -70,49 +68,18 @@ export default function OrgLogin() {
 
     const handleForgotSubmit = async (e) => {
         e.preventDefault();
-        if (fpStep === 1) {
-            if (!fpEmail) return toast.error("Email is required");
-            setFpLoading(true);
-            try {
-                await axios.post('/api/organization/forgot-password', { email: fpEmail });
-                toast.success("A password reset link has been sent to your email!");
-                setFpStep(1);
-                setFpEmail("");
-            } catch (err) {
-                let msg = err.response?.data?.error || "Failed to send reset link.";
-                if (err.response?.data?.details) msg += ` Details: ${err.response.data.details}`;
-                toast.error(msg);
-            } finally {
-                setFpLoading(false);
-            }
-        } else if (fpStep === 2) {
-            if (!fpCode) return toast.error("Code is required");
-            setFpLoading(true);
-            try {
-                await axios.post('/api/organization/verify-reset-code', { email: fpEmail, code: fpCode });
-                toast.success("Code verified. Enter new password.");
-                setFpStep(3);
-            } catch (err) {
-                toast.error(err.response?.data?.error || "Invalid code.");
-            } finally {
-                setFpLoading(false);
-            }
-        } else if (fpStep === 3) {
-            if (fpNewPassword.length < 8) return toast.error("Password must be 8+ characters");
-            setFpLoading(true);
-            try {
-                await axios.post('/api/organization/reset-password', { email: fpEmail, code: fpCode, newPassword: fpNewPassword });
-                toast.success("Password reset successfully! You can login now.");
-                setTimeout(() => {
-                    setShowForgotModal(false);
-                    setFpStep(1);
-                    setEmail(fpEmail);
-                }, 2000);
-            } catch (err) {
-                toast.error(err.response?.data?.error || "Failed to reset password.");
-            } finally {
-                setFpLoading(false);
-            }
+        if (!fpEmail) return toast.error("Email is required");
+        setFpLoading(true);
+        try {
+            await axios.post('/api/organization/forgot-password', { email: fpEmail });
+            setFpSuccess("A password reset link has been sent to your facility email! Please check your inbox.");
+            toast.success("Reset link sent!");
+        } catch (err) {
+            let msg = err.response?.data?.error || "Failed to send reset link.";
+            if (err.response?.data?.details) msg += ` Details: ${err.response.data.details}`;
+            toast.error(msg);
+        } finally {
+            setFpLoading(false);
         }
     };
 
@@ -319,7 +286,7 @@ export default function OrgLogin() {
                 <div className="fixed inset-0 bg-gray-900/60 backdrop-blur-sm flex items-center justify-center p-6 z-50">
                     <div className="bg-white w-full max-w-md rounded-[2.5rem] shadow-2xl overflow-hidden relative border border-gray-100">
                         <button
-                            onClick={() => { setShowForgotModal(false); setFpStep(1); }}
+                            onClick={() => { setShowForgotModal(false); setFpStep(1); setFpEmail(""); setFpSuccess(""); }}
                             className="absolute top-6 right-6 text-gray-400 hover:text-gray-900 transition-colors"
                         >
                             <i className="fas fa-times text-xl"></i>
@@ -331,76 +298,36 @@ export default function OrgLogin() {
                             </div>
                             <h3 className="text-2xl font-black text-gray-900 text-center mb-2">Recover Access Key</h3>
                             <p className="text-gray-500 text-center font-medium mb-8">
-                                {fpStep === 1 && "Enter your facility email to receive a reset code."}
-                                {fpStep === 2 && "Enter the 4-digit security code sent to your inbox."}
-                                {fpStep === 3 && "Set a new secure access key for your facility."}
+                                {fpSuccess ? fpSuccess : "Enter your facility email to receive a secure reset link."}
                             </p>
 
                             <form onSubmit={handleForgotSubmit} className="space-y-6">
-                                {fpStep === 1 && (
-                                    <div className="space-y-2">
-                                        <label className="text-xs font-black text-gray-400 uppercase tracking-widest ml-1">Facility Email</label>
-                                        <input
-                                            type="email"
-                                            value={fpEmail}
-                                            onChange={(e) => setFpEmail(e.target.value)}
-                                            className="w-full px-6 py-4 bg-gray-50 border border-gray-100 rounded-2xl focus:bg-white focus:ring-4 focus:ring-red-500/5 focus:border-red-500/30 outline-none transition-all font-bold text-gray-900"
-                                            placeholder="admin@hospital.com"
-                                            required
-                                        />
-                                    </div>
-                                )}
+                                {!fpSuccess && (
+                                    <>
+                                        <div className="space-y-2">
+                                            <label className="text-xs font-black text-gray-400 uppercase tracking-widest ml-1">Facility Email</label>
+                                            <input
+                                                type="email"
+                                                value={fpEmail}
+                                                onChange={(e) => setFpEmail(e.target.value)}
+                                                className="w-full px-6 py-4 bg-gray-50 border border-gray-100 rounded-2xl focus:bg-white focus:ring-4 focus:ring-red-500/5 focus:border-red-500/30 outline-none transition-all font-bold text-gray-900"
+                                                placeholder="admin@hospital.com"
+                                                required
+                                            />
+                                        </div>
 
-                                {fpStep === 2 && (
-                                    <div className="space-y-2">
-                                        <label className="text-xs font-black text-gray-400 uppercase tracking-widest ml-1">Verification Code</label>
-                                        <input
-                                            type="text"
-                                            maxLength="4"
-                                            value={fpCode}
-                                            onChange={(e) => setFpCode(e.target.value.replace(/\D/g, ''))}
-                                            className="w-full px-6 py-4 bg-gray-50 border border-gray-100 rounded-2xl focus:bg-white focus:ring-4 focus:ring-red-500/5 focus:border-red-500/30 outline-none transition-all font-black text-center text-3xl tracking-[1rem] text-red-600"
-                                            placeholder="••••"
-                                            required
-                                        />
-                                    </div>
-                                )}
-
-                                {fpStep === 3 && (
-                                    <div className="space-y-2">
-                                        <label className="text-xs font-black text-gray-400 uppercase tracking-widest ml-1">New Access Key</label>
-                                        <input
-                                            type="password"
-                                            value={fpNewPassword}
-                                            onChange={(e) => setFpNewPassword(e.target.value)}
-                                            className="w-full px-6 py-4 bg-gray-50 border border-gray-100 rounded-2xl focus:bg-white focus:ring-4 focus:ring-red-500/5 focus:border-red-500/30 outline-none transition-all font-bold text-gray-900"
-                                            placeholder="••••••••"
-                                            required
-                                            minLength={8}
-                                        />
-                                    </div>
-                                )}
-
-                                <button
-                                    type="submit"
-                                    disabled={fpLoading}
-                                    className="w-full bg-gray-900 hover:bg-red-600 text-white font-black py-4 rounded-2xl transition-all shadow-xl shadow-gray-200 active:scale-[0.98] disabled:opacity-50"
-                                >
-                                    {fpLoading ? (
-                                        <i className="fas fa-spinner fa-spin"></i>
-                                    ) : (
-                                        fpStep === 1 ? "Send Reset Code" : (fpStep === 2 ? "Verify Code" : "Update Access Key")
-                                    )}
-                                </button>
-
-                                {fpStep > 1 && (
-                                    <button
-                                        type="button"
-                                        onClick={() => setFpStep(fpStep - 1)}
-                                        className="w-full text-sm font-bold text-gray-400 hover:text-gray-600 transition-colors"
-                                    >
-                                        Go Back
-                                    </button>
+                                        <button
+                                            type="submit"
+                                            disabled={fpLoading}
+                                            className="w-full bg-gray-900 hover:bg-red-600 text-white font-black py-4 rounded-2xl transition-all shadow-xl shadow-gray-200 active:scale-[0.98] disabled:opacity-50"
+                                        >
+                                            {fpLoading ? (
+                                                <i className="fas fa-spinner fa-spin"></i>
+                                            ) : (
+                                                "Send Reset Link"
+                                            )}
+                                        </button>
+                                    </>
                                 )}
                             </form>
                         </div>

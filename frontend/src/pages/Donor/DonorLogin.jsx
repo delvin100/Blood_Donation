@@ -12,10 +12,7 @@ export default function DonorLogin() {
   const [showForgotModal, setShowForgotModal] = useState(false);
 
   // Forgot Password States
-  const [fpStep, setFpStep] = useState(1);
   const [fpEmail, setFpEmail] = useState("");
-  const [fpCode, setFpCode] = useState("");
-  const [fpNewPassword, setFpNewPassword] = useState("");
   const [fpError, setFpError] = useState("");
   const [fpSuccess, setFpSuccess] = useState("");
   const [fpLoading, setFpLoading] = useState(false);
@@ -138,7 +135,6 @@ export default function DonorLogin() {
   // --- Forgot Password Handlers ---
 
   const handleFpSendCode = async () => {
-    console.log("Handle FP Send Code Clicked", fpEmail); // DEBUG
     const emailErr = validateEmail(fpEmail);
     if (emailErr) {
       setFpError(emailErr);
@@ -148,115 +144,14 @@ export default function DonorLogin() {
     setFpLoading(true);
 
     try {
-      console.log("Sending request to /api/auth/forgot-password"); // DEBUG
-      const res = await fetch("/api/auth/forgot-password", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: fpEmail }),
-      });
-
-      let data;
-      const contentType = res.headers.get("content-type");
-      if (contentType && contentType.includes("application/json")) {
-        data = await res.json();
-      } else {
-        const text = await res.text();
-        throw new Error(res.ok ? "Unexpected response format" : `Error ${res.status}: ${text.substring(0, 100)}`);
-      }
-
-      console.log("Response:", data);
-      if (!res.ok) {
-        let msg = data.error || "Failed to send reset link.";
-        if (data.details) msg += ` Details: ${data.details}`;
-        throw new Error(msg);
-      }
-
-      setFpSuccess("A password reset link has been sent to your email. Please follow the instructions in the email to set a new password.");
-      setFpStep(1); // Keep on step 1 or show a finished state
-      setFpEmail(""); // Clear email
-      toast.success("Reset link sent successfully!");
+      await axios.post("/api/auth/forgot-password", { email: fpEmail });
+      setFpSuccess("A password reset link has been sent to your email! Please follow the instructions in the email to set a new password.");
+      setFpEmail("");
+      toast.success("Reset link sent!");
     } catch (err) {
       console.error("Error in FP flow:", err);
-      // Detailed error for debugging
-      const errorMsg = err.message === 'Failed to fetch'
-        ? `Network error. Could not connect to the server. Please check your connection or wait for the server (Render) to wake up.`
-        : err.message;
-      setFpError(errorMsg);
-    } finally {
-      setFpLoading(false);
-    }
-  };
-
-  const handleFpVerifyCode = async () => {
-    if (!fpCode || fpCode.length !== 4) {
-      setFpError("Please enter the 4-digit code.");
-      return;
-    }
-    setFpError("");
-    setFpSuccess("");
-    setFpLoading(true);
-
-    try {
-      const res = await fetch("/api/auth/verify-reset-code", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: fpEmail, code: fpCode }),
-      });
-
-      let data;
-      const contentType = res.headers.get("content-type");
-      if (contentType && contentType.includes("application/json")) {
-        data = await res.json();
-      } else {
-        const text = await res.text();
-        throw new Error(res.ok ? "Unexpected response format" : `Error ${res.status}: ${text.substring(0, 100)}`);
-      }
-
-      if (!res.ok) throw new Error(data.error || "Invalid code.");
-
-      setFpStep(3); // Move to Step 3
-      setFpSuccess("Code verified. Set your new password.");
-    } catch (err) {
-      setFpError(err.message);
-    } finally {
-      setFpLoading(false);
-    }
-  };
-
-  const handleFpResetComplete = async () => {
-    const passErr = validatePassword(fpNewPassword);
-    if (passErr) {
-      setFpError(passErr);
-      return;
-    }
-    setFpError("");
-    setFpSuccess("");
-    setFpLoading(true);
-
-    try {
-      const res = await fetch("/api/auth/reset-password", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: fpEmail, code: fpCode, newPassword: fpNewPassword }),
-      });
-
-      let data;
-      const contentType = res.headers.get("content-type");
-      if (contentType && contentType.includes("application/json")) {
-        data = await res.json();
-      } else {
-        const text = await res.text();
-        throw new Error(res.ok ? "Unexpected response format" : `Error ${res.status}: ${text.substring(0, 100)}`);
-      }
-
-      if (!res.ok) throw new Error(data.error || "Failed to reset password.");
-
-      setFpSuccess("Password reset successfully! Redirecting...");
-      setTimeout(() => {
-        closeForgotModal();
-      }, 2000);
-    } catch (err) {
-      setFpError(err.message);
+      const msg = err.response?.data?.error || "Failed to send reset link.";
+      setFpError(msg);
     } finally {
       setFpLoading(false);
     }
@@ -618,9 +513,7 @@ export default function DonorLogin() {
             </div>
             <h3>Reset Your Password</h3>
             <p>
-              {fpStep === 1 && "Enter your registered email to receive a verification code."}
-              {fpStep === 2 && "Enter the 4-digit code sent to your email."}
-              {fpStep === 3 && "Create a new password for your account."}
+              {fpStep === 1 && "Enter your registered email to receive a secure reset link."}
             </p>
           </div>
 
@@ -630,8 +523,7 @@ export default function DonorLogin() {
               {fpSuccess}
             </div>
 
-            {/* Step 1: Email */}
-            {fpStep === 1 && (
+            {fpStep === 1 && !fpSuccess && (
               <>
                 <label className="fp-label" htmlFor="fp-email">Registered Email</label>
                 <input
@@ -653,66 +545,7 @@ export default function DonorLogin() {
                   onClick={handleFpSendCode}
                   disabled={fpLoading}
                 >
-                  {fpLoading ? "Sending Code..." : "Send Verification Code"}
-                </button>
-              </>
-            )}
-
-            {/* Step 2: Code */}
-            {fpStep === 2 && (
-              <>
-                <label className="fp-label" htmlFor="fp-code">4-Digit Code</label>
-                <input
-                  id="fp-code"
-                  className={`fp-input ${fpError ? "error-input" : ""}`}
-                  type="text"
-                  maxLength="4"
-                  placeholder="1234"
-                  value={fpCode}
-                  onChange={(e) => {
-                    setFpCode(e.target.value.replace(/[^0-9]/g, ""));
-                    setFpError("");
-                  }}
-                  disabled={fpLoading}
-                />
-                <button
-                  className="fp-btn"
-                  type="button"
-                  onClick={handleFpVerifyCode}
-                  disabled={fpLoading}
-                >
-                  {fpLoading ? "Verifying..." : "Verify Code"}
-                </button>
-                <div className="fp-resend">
-                  <button type="button" className="text-btn" onClick={() => setFpStep(1)}>Resend Code</button>
-                </div>
-              </>
-            )}
-
-            {/* Step 3: New Password */}
-            {fpStep === 3 && (
-              <>
-                <label className="fp-label" htmlFor="fp-new-pass">New Password</label>
-                <input
-                  id="fp-new-pass"
-                  className={`fp-input ${fpError ? "error-input" : ""}`}
-                  type="password"
-                  placeholder="At least 8 characters"
-                  minLength="8"
-                  value={fpNewPassword}
-                  onChange={(e) => {
-                    setFpNewPassword(e.target.value);
-                    setFpError("");
-                  }}
-                  disabled={fpLoading}
-                />
-                <button
-                  className="fp-btn"
-                  type="button"
-                  onClick={handleFpResetComplete}
-                  disabled={fpLoading}
-                >
-                  {fpLoading ? "Resetting..." : "Reset Password"}
+                  {fpLoading ? "Sending Link..." : "Send Reset Link"}
                 </button>
               </>
             )}
