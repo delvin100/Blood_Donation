@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { useGoogleLogin } from '@react-oauth/google';
 import CompleteProfileModal from "../../components/modals/CompleteProfileModal";
 import toast from 'react-hot-toast';
+import axios from "axios";
 import "../../assets/css/auth-base.css";
 import "../../assets/css/register.css";
 
@@ -74,10 +75,7 @@ export default function DonorLogin() {
 
   const openForgotModal = (e) => {
     e.preventDefault();
-    setFpStep(1);
     setFpEmail("");
-    setFpCode("");
-    setFpNewPassword("");
     setFpError("");
     setFpSuccess("");
     setShowForgotModal(true);
