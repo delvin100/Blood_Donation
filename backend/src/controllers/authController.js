@@ -1,24 +1,11 @@
 const pool = require('../config/database');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
-const nodemailer = require('nodemailer');
+const { Resend } = require('resend');
 const https = require('https');
 
 const JWT_SECRET = process.env.JWT_SECRET || 'secret';
-
-// Configure Nodemailer
-const transporter = nodemailer.createTransport({
-    host: 'smtp.gmail.com',
-    port: 587,
-    secure: false, // true for 465, false for other ports
-    auth: {
-        user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASS
-    },
-    connectionTimeout: 10000, // 10s
-    greetingTimeout: 10000,
-    socketTimeout: 20000
-});
+const resend = new Resend(process.env.RESEND_API_KEY);
 
 // Helper functions (moved from route)
 const findDonorByUsername = async (username) => {
@@ -168,10 +155,10 @@ exports.forgotPassword = async (req, res) => {
 
         await pool.query('UPDATE donors SET reset_code = ?, reset_code_expires_at = ? WHERE id = ?', [resetCode, expiresAt, donor.id]);
 
-        if (process.env.EMAIL_USER && process.env.EMAIL_PASS) {
-            await transporter.sendMail({
-                from: `"eBloodBank" <${process.env.EMAIL_USER}>`,
-                to: email,
+        if (process.env.RESEND_API_KEY) {
+            await resend.emails.send({
+                from: 'eBloodBank <onboarding@resend.dev>',
+                to: [email],
                 subject: `${resetCode} is your eBloodBank reset code`,
                 html: `
                 <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: 0 auto; background-color: #f9f9f9; padding: 20px; border-radius: 10px;">

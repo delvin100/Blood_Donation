@@ -1,7 +1,7 @@
 const pool = require('../config/database');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
-const nodemailer = require('nodemailer');
+const { Resend } = require('resend');
 const { calculateDonorAvailability } = require('../utils/donorUtils');
 const { addOrgLog } = require('../utils/logUtils');
 const https = require('https');
@@ -9,19 +9,7 @@ const { getIndiaCoordinates } = require('../utils/matchUtils');
 
 
 const JWT_SECRET = process.env.JWT_SECRET || 'secret';
-// Configure Nodemailer
-const transporter = nodemailer.createTransport({
-    host: 'smtp.gmail.com',
-    port: 587,
-    secure: false,
-    auth: {
-        user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASS
-    },
-    connectionTimeout: 10000,
-    greetingTimeout: 10000,
-    socketTimeout: 20000
-});
+const resend = new Resend(process.env.RESEND_API_KEY);
 exports.register = async (req, res) => {
     try {
         const { name, email, phone, password, confirm_password, license_number, type, state, district, city, address } = req.body;
@@ -111,10 +99,10 @@ exports.forgotPassword = async (req, res) => {
 
         await pool.query('UPDATE organizations SET reset_code = ?, reset_code_expires_at = ? WHERE id = ?', [resetCode, expiresAt, org.id]);
 
-        if (process.env.EMAIL_USER && process.env.EMAIL_PASS) {
-            await transporter.sendMail({
-                from: `"eBloodBank" <${process.env.EMAIL_USER}>`,
-                to: email,
+        if (process.env.RESEND_API_KEY) {
+            await resend.emails.send({
+                from: 'eBloodBank <onboarding@resend.dev>',
+                to: [email],
                 subject: `${resetCode} is your eBloodBank reset code`,
                 html: `
                 <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: 0 auto; background-color: #f9f9f9; padding: 20px; border-radius: 10px;">
@@ -149,7 +137,11 @@ exports.forgotPassword = async (req, res) => {
         }
         res.json({ message: 'Reset code sent.' });
     } catch (err) {
-        res.status(500).json({ error: 'Server error' });
+        console.error('Org forgot password error:', err);
+        res.status(500).json({
+            error: 'Failed to send reset email. Please try again later.',
+            details: err.message
+        });
     }
 };
 
