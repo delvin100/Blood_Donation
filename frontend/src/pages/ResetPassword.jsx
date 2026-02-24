@@ -29,8 +29,8 @@ export default function ResetPassword() {
     const [verifying, setVerifying] = useState(true);
     const [error, setError] = useState('');
     const [done, setDone] = useState(false);
-    const [userType, setUserType] = useState(params.get('type') || 'donor');
-    const [showPass, setShowPass] = useState(false);
+    const isFallback = params.get('fallback') === 'true';
+    const emailParam = params.get('email');
 
     useEffect(() => {
         if (!oobCode || mode !== 'resetPassword') {
@@ -38,6 +38,20 @@ export default function ResetPassword() {
             setVerifying(false);
             return;
         }
+
+        if (isFallback) {
+            // Use fallback logic (MySQL custom codes)
+            if (emailParam) {
+                setEmail(emailParam);
+                setVerifying(false);
+            } else {
+                setError('Invalid recovery link. Missing email parameter.');
+                setVerifying(false);
+            }
+            return;
+        }
+
+        // Standard Firebase logic
         verifyPasswordResetCode(auth, oobCode)
             .then((emailFromCode) => {
                 setEmail(emailFromCode);
@@ -48,7 +62,7 @@ export default function ResetPassword() {
                 setError('This reset link has expired or already been used. Please request a new one.');
                 setVerifying(false);
             });
-    }, [oobCode, mode]);
+    }, [oobCode, mode, isFallback, emailParam]);
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -63,26 +77,44 @@ export default function ResetPassword() {
 
         setLoading(true);
         try {
-            await confirmPasswordReset(auth, oobCode, newPassword);
+            if (isFallback) {
+                // Custom Reset Logic (Direct to MySQL)
+                const resetEndpoint = userType === 'organization'
+                    ? '/api/organization/reset-password'
+                    : '/api/auth/reset-password';
 
-            const endpoint = userType === 'organization'
-                ? '/api/organization/sync-password'
-                : '/api/auth/sync-password';
+                await axios.post(resetEndpoint, {
+                    email,
+                    code: oobCode,
+                    newPassword
+                });
 
-            try {
-                await axios.post(endpoint, { email, newPassword });
-                toast.success('Security Update Successful!');
+                toast.success('Password Updated Successfully!');
                 setDone(true);
-            } catch (syncErr) {
-                console.error('MySQL sync error:', syncErr);
-                const msg = syncErr.response?.data?.error || 'Database synchronization failed.';
-                toast.error(`Firebase updated, but DB sync failed.`);
-                setError(`Security update partially successful. Password changed in Firebase, but database sync failed: ${msg}. Please contact support if you face login issues.`);
-                setDone(false);
+            } else {
+                // Firebase Reset + Sync Logic
+                await confirmPasswordReset(auth, oobCode, newPassword);
+
+                const syncEndpoint = userType === 'organization'
+                    ? '/api/organization/sync-password'
+                    : '/api/auth/sync-password';
+
+                try {
+                    await axios.post(syncEndpoint, { email, newPassword });
+                    toast.success('Security Update Successful!');
+                    setDone(true);
+                } catch (syncErr) {
+                    console.error('MySQL sync error:', syncErr);
+                    const msg = syncErr.response?.data?.error || 'Database synchronization failed.';
+                    toast.error(`Firebase updated, but DB sync failed.`);
+                    setError(`Security update partially successful. Password changed in Firebase, but database sync failed: ${msg}. Please contact support if you face login issues.`);
+                    setDone(false);
+                }
             }
         } catch (err) {
             console.error('Final Reset Error:', err);
-            toast.error('Failed to reset password. Link may be invalid.');
+            const errMsg = err.response?.data?.error || 'Failed to reset password. Link may be invalid.';
+            toast.error(errMsg);
         } finally {
             setLoading(false);
         }

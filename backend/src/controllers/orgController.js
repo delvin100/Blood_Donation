@@ -2,6 +2,7 @@ const pool = require('../config/database');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const admin = require('../config/firebaseAdmin');
+const emailService = require('../utils/emailService');
 const { calculateDonorAvailability } = require('../utils/donorUtils');
 const { addOrgLog } = require('../utils/logUtils');
 const https = require('https');
@@ -117,22 +118,44 @@ exports.forgotPassword = async (req, res) => {
             headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(payload) }
         };
 
-        await new Promise((resolve, reject) => {
-            const fbReq = https.request(options, (resp) => {
-                let body = '';
-                resp.on('data', (d) => body += d);
-                resp.on('end', () => {
-                    console.log('Firebase org status:', resp.statusCode, body);
-                    if (resp.statusCode >= 200 && resp.statusCode < 300) resolve();
-                    else reject(new Error(`Firebase error: ${body}`));
+        try {
+            await new Promise((resolve, reject) => {
+                const fbReq = https.request(options, (resp) => {
+                    let body = '';
+                    resp.on('data', (d) => body += d);
+                    resp.on('end', () => {
+                        console.log('Firebase org status:', resp.statusCode, body);
+                        if (resp.statusCode >= 200 && resp.statusCode < 300) resolve();
+                        else reject(new Error(`Firebase error: ${body}`));
+                    });
                 });
+                fbReq.on('error', reject);
+                fbReq.write(payload);
+                fbReq.end();
             });
-            fbReq.on('error', reject);
-            fbReq.write(payload);
-            fbReq.end();
-        });
+            return res.json({ message: 'Password reset link sent to your email.' });
+        } catch (fbErr) {
+            console.warn('Firebase org reset failed, falling back to NodeMailer:', fbErr.message);
 
-        res.json({ message: 'Password reset link sent to your email.' });
+            // Generate custom reset code
+            const resetCode = Math.floor(100000 + Math.random() * 900000).toString();
+            const expires = new Date(Date.now() + 3600000); // 1 hour
+
+            await pool.query(
+                'UPDATE organizations SET reset_code = ?, reset_code_expires_at = ? WHERE id = ?',
+                [resetCode, expires, org.id]
+            );
+
+            // Create custom reset link
+            const resetLink = `${frontendUrl}/reset-password?type=organization&oobCode=${resetCode}&mode=resetPassword&fallback=true&email=${encodeURIComponent(email)}`;
+
+            await emailService.sendResetEmail(email, resetLink, org.org_name);
+
+            return res.json({
+                message: 'Password reset link sent to your email (via Recovery Service).',
+                isFallback: true
+            });
+        }
     } catch (err) {
         console.error('Org forgot password error:', err);
         res.status(500).json({ error: 'Failed to send reset email.', details: err.message });
