@@ -4,8 +4,8 @@ import { getToken } from '../utils/storage';
 const LOCAL_API_URL = 'http://192.168.137.1:4000/api/';
 const RENDER_API_URL = 'https://ebloodbank.onrender.com/api/';
 
-// Enforced Production Mode to bypass local networking/firewall issues
-// Automatically switch between local and production based on environment
+// Automatically switch between local and production
+// When building the APK (non-dev), it will use RENDER_API_URL
 const API_BASE_URL = __DEV__ ? LOCAL_API_URL : RENDER_API_URL;
 
 const apiService = axios.create({
