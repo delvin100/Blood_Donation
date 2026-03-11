@@ -2,7 +2,6 @@
   "expo": {
     "name": "mobile",
     "slug": "mobile",
-    "owner": "delvin100",
     "scheme": "ebloodbank",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -22,21 +21,24 @@
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-      "edgeToEdgeEnabled": false
+      "edgeToEdgeEnabled": false,
+      "permissions": [
+        "android.permission.RECORD_AUDIO",
+        "android.permission.ACCESS_COARSE_LOCATION",
+        "android.permission.ACCESS_FINE_LOCATION"
+      ]
     },
     "web": {
       "favicon": "./assets/favicon.png"
     },
-    "extra": {
-      "eas": {
-        "projectId": "0dfb4277-df4c-4d39-bebe-51b3c3f3513f"
-      }
-    },
     "plugins": [
-      "expo-web-browser",
-      "@react-native-community/datetimepicker",
       "expo-image-picker",
       "expo-location"
-    ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "0fbe63a6-1581-4cb7-9b6a-fd852cebf101"
+      }
+    }
   }
 }
