@@ -579,7 +579,7 @@ exports.getNotifications = async (req, res) => {
         }
 
         const [rows] = await pool.query(
-            'SELECT * FROM notifications WHERE recipient_id = ? AND recipient_type = "Organization" AND is_dismissed = FALSE ORDER BY created_at DESC',
+            'SELECT * FROM notifications WHERE recipient_id = ? AND recipient_type = \'Organization\' AND is_dismissed = FALSE ORDER BY created_at DESC',
             [orgId]
         );
         res.json(rows);

@@ -32,7 +32,7 @@ exports.getStats = async (req, res) => {
         `, [donorId]);
 
         const [unreadNotifications] = await pool.query(
-            'SELECT COUNT(*) as count FROM notifications WHERE recipient_id = ? AND recipient_type = "Donor" AND is_read = FALSE AND is_dismissed = FALSE',
+            'SELECT COUNT(*) as count FROM notifications WHERE recipient_id = ? AND recipient_type = \'Donor\' AND is_read = FALSE AND is_dismissed = FALSE',
             [donorId]
         );
 
@@ -233,7 +233,7 @@ exports.getNotifications = async (req, res) => {
 
         // 2. Fetch Notifications (excluding dismissed)
         const [rows] = await pool.query(
-            'SELECT * FROM notifications WHERE recipient_id = ? AND recipient_type = "Donor" AND is_dismissed = FALSE ORDER BY created_at DESC',
+            'SELECT * FROM notifications WHERE recipient_id = ? AND recipient_type = \'Donor\' AND is_dismissed = FALSE ORDER BY created_at DESC',
             [donorId]
         );
         res.json(rows);
@@ -259,7 +259,7 @@ exports.markAsRead = async (req, res) => {
 exports.markAllRead = async (req, res) => {
     try {
         await pool.query(
-            'UPDATE notifications SET is_read = TRUE WHERE recipient_id = ? AND recipient_type = "Donor" AND is_dismissed = FALSE',
+            'UPDATE notifications SET is_read = TRUE WHERE recipient_id = ? AND recipient_type = \'Donor\' AND is_dismissed = FALSE',
             [req.user.id]
         );
         res.json({ message: 'All marked as read' });
@@ -290,7 +290,7 @@ exports.deleteNotification = async (req, res) => {
 exports.clearAllNotifications = async (req, res) => {
     try {
         await pool.query(
-            'UPDATE notifications SET is_dismissed = TRUE, is_read = TRUE WHERE recipient_id = ? AND recipient_type = "Donor"',
+            'UPDATE notifications SET is_dismissed = TRUE, is_read = TRUE WHERE recipient_id = ? AND recipient_type = \'Donor\'',
             [req.user.id]
         );
         res.json({ message: 'All notifications cleared' });

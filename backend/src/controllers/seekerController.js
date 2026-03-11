@@ -94,7 +94,7 @@ exports.getSmartMatches = async (req, res) => {
 exports.getDonors = async (req, res) => {
     try {
         const { blood_type, state, district, city } = req.query;
-        let sql = 'SELECT id, username, full_name, phone, email, blood_type, state, district, city FROM donors WHERE availability = "Available" AND (id NOT IN (SELECT donor_id FROM donations WHERE date > DATE_SUB(NOW(), INTERVAL 90 DAY)))';
+        let sql = 'SELECT id, username, full_name, phone, email, blood_type, state, district, city FROM donors WHERE availability = \'Available\' AND (id NOT IN (SELECT donor_id FROM donations WHERE date > DATE_SUB(NOW(), INTERVAL 90 DAY)))';
         const params = [];
 
         if (blood_type) {
@@ -137,7 +137,7 @@ exports.getDonors = async (req, res) => {
 
 exports.getFeaturedDonors = async (req, res) => {
     try {
-        const [rows] = await pool.query('SELECT id, full_name, username, blood_type, city, district, state FROM donors WHERE availability = "Available" AND (id NOT IN (SELECT donor_id FROM donations WHERE date > DATE_SUB(NOW(), INTERVAL 90 DAY))) ORDER BY created_at DESC LIMIT 8');
+        const [rows] = await pool.query('SELECT id, full_name, username, blood_type, city, district, state FROM donors WHERE availability = \'Available\' AND (id NOT IN (SELECT donor_id FROM donations WHERE date > DATE_SUB(NOW(), INTERVAL 90 DAY))) ORDER BY created_at DESC LIMIT 8');
         res.json(rows.map(r => ({
             id: r.id,
             name: r.full_name || r.username,
