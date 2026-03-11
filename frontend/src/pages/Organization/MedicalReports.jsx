@@ -351,6 +351,7 @@ const MedicalReports = ({ selectedDonor, onClose, orgDetails, refreshData }) => 
                                             <div className="space-y-2">
                                                 <label className="text-xs font-black text-slate-400 uppercase tracking-widest ml-1">Hemoglobin (Hb)</label>
                                                 <input
+                                                    id="hb-level-input"
                                                     type="number" step="0.1" min="7" max="18" value={reportForm.hb_level}
                                                     onChange={e => setReportForm({ ...reportForm, hb_level: e.target.value })}
                                                     className={`w-full bg-slate-50 border-2 ${formErrors.hb_level ? 'border-red-400 ring-4 ring-red-50' : 'border-slate-100'} rounded-2xl px-6 py-4 font-bold text-slate-900 focus:bg-white focus:border-indigo-600 outline-none transition-all`}
@@ -362,6 +363,7 @@ const MedicalReports = ({ selectedDonor, onClose, orgDetails, refreshData }) => 
                                             <div className="space-y-2">
                                                 <label className="text-xs font-black text-slate-400 uppercase tracking-widest ml-1">B. Pressure</label>
                                                 <input
+                                                    id="blood-pressure-input"
                                                     type="text"
                                                     pattern="[0-9]{2,3}/[0-9]{2,3}"
                                                     value={reportForm.blood_pressure}
@@ -377,6 +379,7 @@ const MedicalReports = ({ selectedDonor, onClose, orgDetails, refreshData }) => 
                                             <div className="space-y-2">
                                                 <label className="text-xs font-black text-slate-400 uppercase tracking-widest ml-1">Units (Blood)</label>
                                                 <input
+                                                    id="units-donated-input"
                                                     type="number" step="1" min="0" max="1" value={reportForm.units_donated}
                                                     onKeyDown={(e) => {
                                                         const allowedKeys = ['0', '1', 'Backspace', 'Delete', 'Tab', 'ArrowLeft', 'ArrowRight', 'Enter'];
@@ -398,6 +401,7 @@ const MedicalReports = ({ selectedDonor, onClose, orgDetails, refreshData }) => 
                                             <div className="space-y-2">
                                                 <label className="text-xs font-black text-slate-400 uppercase tracking-widest ml-1">Weight (kg)</label>
                                                 <input
+                                                    id="weight-input"
                                                     type="number" min="30" max="200" value={reportForm.weight}
                                                     onChange={e => setReportForm({ ...reportForm, weight: e.target.value })}
                                                     className={`w-full bg-slate-50 border-2 ${formErrors.weight ? 'border-red-400 ring-4 ring-red-50' : 'border-slate-100'} rounded-2xl px-6 py-4 font-bold text-slate-900 focus:bg-white focus:border-indigo-600 outline-none transition-all`}
@@ -413,6 +417,7 @@ const MedicalReports = ({ selectedDonor, onClose, orgDetails, refreshData }) => 
                                             <div className="space-y-2">
                                                 <label className="text-xs font-black text-slate-400 uppercase tracking-widest ml-1">Pulse Rate</label>
                                                 <input
+                                                    id="pulse-rate-input"
                                                     type="number" min="40" max="140" value={reportForm.pulse_rate}
                                                     onChange={e => setReportForm({ ...reportForm, pulse_rate: e.target.value })}
                                                     className={`w-full bg-slate-50 border-2 ${formErrors.pulse_rate ? 'border-red-400 ring-4 ring-red-50' : 'border-slate-100'} rounded-2xl px-5 py-4 font-bold text-slate-900 focus:bg-white focus:border-indigo-600 outline-none transition-all`}
@@ -424,6 +429,7 @@ const MedicalReports = ({ selectedDonor, onClose, orgDetails, refreshData }) => 
                                             <div className="space-y-2">
                                                 <label className="text-xs font-black text-slate-400 uppercase tracking-widest ml-1">Temperature</label>
                                                 <input
+                                                    id="temperature-input"
                                                     type="number" step="0.1" min="35" max="40" value={reportForm.temperature}
                                                     onChange={e => setReportForm({ ...reportForm, temperature: e.target.value })}
                                                     className={`w-full bg-slate-50 border-2 ${formErrors.temperature ? 'border-red-400 ring-4 ring-red-50' : 'border-slate-100'} rounded-2xl px-5 py-4 font-bold text-slate-900 focus:bg-white focus:border-indigo-600 outline-none transition-all`}
@@ -480,6 +486,7 @@ const MedicalReports = ({ selectedDonor, onClose, orgDetails, refreshData }) => 
                                         <div className="space-y-2">
                                             <label className="text-xs font-black text-slate-400 uppercase tracking-widest ml-1">Clinical Observations</label>
                                             <textarea
+                                                id="notes-input"
                                                 value={reportForm.notes}
                                                 onChange={e => setReportForm({ ...reportForm, notes: e.target.value })}
                                                 className="w-full bg-slate-50 border-2 border-slate-100 rounded-2xl px-6 py-4 font-bold text-slate-900 focus:bg-white focus:border-indigo-600 outline-none transition-all min-h-[120px]"
@@ -489,6 +496,7 @@ const MedicalReports = ({ selectedDonor, onClose, orgDetails, refreshData }) => 
 
                                         {!showConfirmation ? (
                                             <button
+                                                id="submit-medical-report"
                                                 type="submit"
                                                 className="w-full py-6 rounded-[2rem] font-black text-lg transition-all flex items-center justify-center gap-4 group shadow-xl bg-slate-900 text-white hover:bg-black hover:shadow-indigo-500/20"
                                             >
@@ -500,6 +508,7 @@ const MedicalReports = ({ selectedDonor, onClose, orgDetails, refreshData }) => 
                                                 <p className="text-center text-xs font-black text-slate-400 uppercase tracking-widest mb-2">Confirm Collection Status</p>
                                                 <div className="flex flex-col sm:flex-row gap-4">
                                                     <button
+                                                        id="mark-eligible-button"
                                                         type="button"
                                                         disabled={isSubmitting}
                                                         onClick={() => {
@@ -518,6 +527,7 @@ const MedicalReports = ({ selectedDonor, onClose, orgDetails, refreshData }) => 
                                                         Mark Eligible
                                                     </button>
                                                     <button
+                                                        id="mark-ineligible-button"
                                                         type="button"
                                                         disabled={isSubmitting}
                                                         onClick={() => confirmSubmission(false)}

@@ -1,73 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
+import { stateDistrictMapping, cityToDistrictMapping, bloodGroups } from '../../utils/locationData';
 
-const stateDistrictMapping = {
-  "Andhra Pradesh": ["Anantapur", "Chittoor", "East Godavari", "Guntur", "Krishna", "Kurnool", "Prakasam", "Srikakulam", "Visakhapatnam", "Vizianagaram", "West Godavari", "YSR Kadapa"],
-  "Arunachal Pradesh": ["Anjaw", "Changlang", "Dibang Valley", "East Kameng", "East Siang", "Kamle", "Kra Daadi", "Kurung Kumey", "Lepa Rada", "Lohit", "Longding", "Lower Dibang Valley", "Lower Siang", "Lower Subansiri", "Namsai", "Pakke Kessang", "Papum Pare", "Shi Yomi", "Siang", "Tawang", "Tirap", "Upper Siang", "Upper Subansiri", "West Kameng", "West Siang"],
-  "Assam": ["Baksa", "Barpeta", "Biswanath", "Bongaigaon", "Cachar", "Charaideo", "Chirang", "Darrang", "Dhemaji", "Dhubri", "Dibrugarh", "Goalpara", "Golaghat", "Hailakandi", "Hojai", "Jorhat", "Kamrup", "Kamrup Metropolitan", "Karbi Anglong", "Karimganj", "Kokrajhar", "Lakhimpur", "Majuli", "Morigaon", "Nagaon", "Nalbari", "Dima Hasao", "Sivasagar", "Sonitpur", "South Salmara-Mankachar", "Tinsukia", "Udalguri", "West Karbi Anglong"],
-  "Bihar": ["Araria", "Arwal", "Aurangabad", "Banka", "Begusarai", "Bhagalpur", "Bhojpur", "Buxar", "Darbhanga", "East Champaran", "Gaya", "Gopalganj", "Jamui", "Jehanabad", "Kaimur", "Katihar", "Khagaria", "Kishanganj", "Lakhisarai", "Madhepura", "Madhubani", "Munger", "Muzaffarpur", "Nalanda", "Nawada", "Patna", "Purnia", "Rohtas", "Saharsa", "Samastipur", "Saran", "Sheikhpura", "Sheohar", "Sitamarhi", "Siwan", "Supaul", "Vaishali", "West Champaran"],
-  "Chhattisgarh": ["Balod", "Baloda Bazar", "Balrampur", "Bastar", "Bemetara", "Bijapur", "Bilaspur", "Dantewada", "Dhamtari", "Durg", "Gariaband", "Janjgir Champa", "Jashpur", "Kabirdham", "Kanker", "Kondagaon", "Korba", "Koriya", "Mahasamund", "Mungeli", "Narayanpur", "Raigarh", "Raipur", "Rajnandgaon", "Sukma", "Surajpur", "Surguja"],
-  "Goa": ["North Goa", "South Goa"],
-  "Gujarat": ["Ahmedabad", "Amreli", "Anand", "Aravalli", "Banaskantha", "Bharuch", "Bhavnagar", "Botad", "Chhota Udaipur", "Dahod", "Dang", "Devbhoomi Dwarka", "Gandhinagar", "Gir Somnath", "Jamnagar", "Junagadh", "Kheda", "Kutch", "Mahisagar", "Mehsana", "Morbi", "Narmada", "Navsari", "Panchmahal", "Patan", "Porbandar", "Rajkot", "Sabarkantha", "Surat", "Surendranagar", "Tapi", "Vadodara", "Valsad"],
-  "Haryana": ["Ambala", "Bhiwani", "Charkhi Dadri", "Faridabad", "Fatehabad", "Gurugram", "Hisar", "Jhajjar", "Jind", "Kaithal", "Karnal", "Kurukshetra", "Mahendragarh", "Nuh", "Palwal", "Panchkula", "Panipat", "Rewari", "Rohtak", "Sirsa", "Sonipat", "Yamunanagar"],
-  "Himachal Pradesh": ["Bilaspur", "Chamba", "Hamirpur", "Kangra", "Kinnaur", "Kullu", "Lahaul and Spiti", "Mandi", "Shimla", "Sirmaur", "Solan", "Una"],
-  "Jharkhand": ["Bokaro", "Chatra", "Deoghar", "Dhanbad", "Dumka", "East Singhbhum", "Garhwa", "Giridih", "Godda", "Gumla", "Hazaribagh", "Jamtara", "Khunti", "Koderma", "Latehar", "Lohardaga", "Pakur", "Palamu", "Ramgarh", "Ranchi", "Sahibganj", "Seraikela Kharsawan", "Simdega", "West Singhbhum"],
-  "Karnataka": ["Bagalkot", "Ballari", "Belagavi", "Bengaluru Rural", "Bengaluru Urban", "Bidar", "Chamarajanagar", "Chikballapur", "Chikkamagaluru", "Chitradurga", "Dakshina Kannada", "Davanagere", "Dharwad", "Gadag", "Hassan", "Haveri", "Kalaburagi", "Kodagu", "Kolar", "Koppal", "Mandya", "Mysuru", "Raichur", "Ramanagara", "Shivamogga", "Tumakuru", "Udupi", "Uttara Kannada", "Vijayapura", "Yadgir"],
-  "Kerala": ["Alappuzha", "Ernakulam", "Idukki", "Kannur", "Kasaragod", "Kollam", "Kottayam", "Kozhikode", "Malappuram", "Palakkad", "Pathanamthitta", "Thiruvananthapuram", "Thrissur", "Wayanad"],
-  "Madhya Pradesh": ["Agar Malwa", "Alirajpur", "Anuppur", "Ashoknagar", "Balaghat", "Barwani", "Betul", "Bhind", "Bhopal", "Burhanpur", "Chhatarpur", "Chhindwara", "Damoh", "Datia", "Dewas", "Dhar", "Dindori", "Guna", "Gwalior", "Harda", "Hoshangabad", "Indore", "Jabalpur", "Jhabua", "Katni", "Khandwa", "Khargone", "Mandla", "Mandsaur", "Morena", "Narsinghpur", "Neemuch", "Niwari", "Panna", "Raisen", "Rajgarh", "Ratlam", "Rewa", "Sagar", "Satna", "Sehore", "Seoni", "Shahdol", "Shajapur", "Sheopur", "Shivpuri", "Sidhi", "Singrauli", "Tikamgarh", "Ujjain", "Umaria", "Vidisha"],
-  "Maharashtra": ["Ahmednagar", "Akola", "Amravati", "Aurangabad", "Beed", "Bhandara", "Buldhana", "Chandrapur", "Dhule", "Gadchiroli", "Gondia", "Hingoli", "Jalgaon", "Jalna", "Kolhapur", "Latur", "Mumbai City", "Mumbai Suburban", "Nagpur", "Nanded", "Nandurbar", "Nashik", "Osmanabad", "Palghar", "Parbhani", "Pune", "Raigad", "Ratnagiri", "Sangli", "Satara", "Sindhudurg", "Solapur", "Thane", "Wardha", "Washim", "Yavatmal"],
-  "Manipur": ["Bishnupur", "Chandel", "Churachandpur", "Imphal East", "Imphal West", "Jiribam", "Kakching", "Kamjong", "Kangpokpi", "Noney", "Pherzawl", "Senapati", "Tamenglong", "Tengnoupal", "Thoubal", "Ukhrul"],
-  "Meghalaya": ["East Garo Hills", "East Jaintia Hills", "East Khasi Hills", "North Garo Hills", "Ri Bhoi", "South Garo Hills", "South West Garo Hills", "South West Khasi Hills", "West Garo Hills", "West Jaintia Hills", "West Khasi Hills"],
-  "Mizoram": ["Aizawl", "Champhai", "Hnahthial", "Kolasib", "Khawzawl", "Lawngtlai", "Lunglei", "Mamit", "Saiha", "Saitual", "Serchhip"],
-  "Nagaland": ["Dimapur", "Kiphire", "Kohima", "Longleng", "Mokokchung", "Mon", "Peren", "Phek", "Tuensang", "Wokha", "Zunheboto"],
-  "Odisha": ["Angul", "Balangir", "Balasore", "Bargarh", "Bhadrak", "Boudh", "Cuttack", "Deogarh", "Dhenkanal", "Gajapati", "Ganjam", "Jagatsinghpur", "Jajpur", "Jharsuguda", "Kalahandi", "Kandhamal", "Kendrapara", "Kendujhar", "Khordha", "Koraput", "Malkangiri", "Mayurbhanj", "Nabarangpur", "Nayagarh", "Nuapada", "Puri", "Rayagada", "Sambalpur", "Subarnapur", "Sundargarh"],
-  "Punjab": ["Amritsar", "Barnala", "Bathinda", "Faridkot", "Fatehgarh Sahib", "Fazilka", "Ferozepur", "Gurdaspur", "Hoshiarpur", "Jalandhar", "Kapurthala", "Ludhiana", "Mansa", "Moga", "Muktsar", "Nawanshahr", "Pathankot", "Patiala", "Rupnagar", "Sangrur", "Tarn Taran"],
-  "Rajasthan": ["Ajmer", "Alwar", "Banswara", "Baran", "Barmer", "Bharatpur", "Bhilwara", "Bikaner", "Bundi", "Chittorgarh", "Churu", "Dausa", "Dholpur", "Dungarpur", "Hanumangarh", "Jaipur", "Jaisalmer", "Jalore", "Jhalawar", "Jhunjhunu", "Jodhpur", "Karauli", "Kota", "Nagaur", "Pali", "Pratapgarh", "Rajsamand", "Sawai Madhopur", "Sikar", "Sirohi", "Sri Ganganagar", "Tonk", "Udaipur"],
-  "Sikkim": ["East Sikkim", "North Sikkim", "South Sikkim", "West Sikkim"],
-  "Tamil Nadu": ["Ariyalur", "Chengalpattu", "Chennai", "Coimbatore", "Cuddalore", "Dharmapuri", "Dindigul", "Erode", "Kallakurichi", "Kanchipuram", "Kanyakumari", "Karur", "Krishnagiri", "Madurai", "Mayiladuthurai", "Nagapattinam", "Namakkal", "Nilgiris", "Perambalur", "Pudukkottai", "Ramanathapuram", "Ranipet", "Salem", "Sivaganga", "Tenkasi", "Thanjavur", "Theni", "Thoothukudi", "Tiruchirappalli", "Tirunelveli", "Tirupathur", "Tiruppur", "Tiruvallur", "Tiruvannamalai", "Tiruvarur", "Vellore", "Viluppuram", "Virudhunagar"],
-  "Telangana": ["Adilabad", "Bhadradri Kothagudem", "Hyderabad", "Jagtial", "Jangaon", "Jayashankar Bhupalpally", "Jogulamba Gadwal", "Kamareddy", "Karimnagar", "Khammam", "Komaram Bheem Asifabad", "Mahabubabad", "Mahabubnagar", "Mancherial", "Medak", "Medchal Malkajgiri", "Mulugu", "Nagarkurnool", "Nalgonda", "Narayanpet", "Nirmal", "Nizamabad", "Peddapalli", "Rajanna Sircilla", "Rangareddy", "Sangareddy", "Siddipet", "Suryapet", "Vikarabad", "Wanaparthy", "Warangal Rural", "Warangal Urban", "Yadadri Bhuvanagiri"],
-  "Tripura": ["Dhalai", "Gomati", "Khowai", "North Tripura", "Sepahijala", "South Tripura", "Unakoti", "West Tripura"],
-  "Uttar Pradesh": ["Agra", "Aligarh", "Ambedkar Nagar", "Amethi", "Amroha", "Auraiya", "Ayodhya", "Azamgarh", "Baghpat", "Bahraich", "Ballia", "Balrampur", "Banda", "Barabanki", "Bareilly", "Basti", "Bhadohi", "Bijnor", "Budaun", "Bulandshahr", "Chandauli", "Chitrakoot", "Deoria", "Etah", "Etawah", "Farrukhabad", "Fatehpur", "Firozabad", "Gautam Buddha Nagar", "Ghaziabad", "Ghazipur", "Gonda", "Gorakhpur", "Hamirpur", "Hapur", "Hardoi", "Hathras", "Jalaun", "Jaunpur", "Jhansi", "Kannauj", "Kanpur Dehat", "Kanpur Nagar", "Kasganj", "Kaushambi", "Kheri", "Kushinagar", "Lalitpur", "Lucknow", "Maharajganj", "Mahoba", "Mainpuri", "Mathura", "Mau", "Meerut", "Mirzapur", "Moradabad", "Muzaffarnagar", "Pilibhit", "Pratapgarh", "Prayagraj", "Raebareli", "Rampur", "Saharanpur", "Sambhal", "Sant Kabir Nagar", "Shahjahanpur", "Shamli", "Shravasti", "Siddharthnagar", "Sitapur", "Sonbhadra", "Sultanpur", "Unnao", "Varanasi"],
-  "Uttarakhand": ["Almora", "Bageshwar", "Chamoli", "Champawat", "Dehradun", "Haridwar", "Nainital", "Pauri Garhwal", "Pithoragarh", "Rudraprayag", "Tehri Garhwal", "Udham Singh Nagar", "Uttarkashi"],
-  "West Bengal": ["Alipurduar", "Bankura", "Birbhum", "Cooch Behar", "Dakshin Dinajpur", "Darjeeling", "Hooghly", "Howrah", "Jalpaiguri", "Jhargram", "Kalimpong", "Kolkata", "Malda", "Murshidabad", "Nadia", "North 24 Parganas", "Paschim Bardhaman", "Paschim Medinipur", "Purba Bardhaman", "Purba Medinipur", "Purulia", "South 24 Parganas", "Uttar Dinajpur"],
-  "Andaman and Nicobar Islands": ["Nicobar", "North and Middle Andaman", "South Andaman"],
-  "Chandigarh": ["Chandigarh"],
-  "Dadra and Nagar Haveli and Daman and Diu": ["Dadra and Nagar Haveli", "Daman", "Diu"],
-  "Delhi": ["Central Delhi", "East Delhi", "New Delhi", "North Delhi", "North East Delhi", "North West Delhi", "Shahdara", "South Delhi", "South East Delhi", "South West Delhi", "West Delhi"],
-  "Jammu and Kashmir": ["Anantnag", "Bandipora", "Baramulla", "Budgam", "Doda", "Ganderbal", "Jammu", "Kathua", "Kishtwar", "Kulgam", "Kupwara", "Poonch", "Pulwama", "Rajouri", "Ramban", "Reasi", "Samba", "Shopian", "Srinagar", "Udhampur"],
-  "Ladakh": ["Kargil", "Leh"],
-  "Lakshadweep": ["Lakshadweep"],
-  "Puducherry": ["Karaikal", "Mahe", "Puducherry", "Yanam"]
-};
+// Location data imported from centralized utility
 
-// Blood Groups List
-const bloodGroups = [
-  "A+", "A-", "A1+", "A1-", "A1B+", "A1B-",
-  "A2+", "A2-", "A2B+", "A2B-", "AB+", "AB-",
-  "B+", "B-", "Bombay Blood Group", "INRA", "O+", "O-"
-];
-
-// City to District mapping for better location accuracy
-const cityToDistrictMapping = {
-  // Kerala
-  'Kochi': 'Ernakulam',
-  'Cochin': 'Ernakulam',
-  'Thiruvananthapuram': 'Thiruvananthapuram',
-  'Trivandrum': 'Thiruvananthapuram',
-  'Kozhikode': 'Kozhikode',
-  'Calicut': 'Kozhikode',
-  'Thrissur': 'Thrissur',
-  'Trichur': 'Thrissur',
-  'Kollam': 'Kollam',
-  'Quilon': 'Kollam',
-  'Kannur': 'Kannur',
-  'Cannanore': 'Kannur',
-  'Palakkad': 'Palakkad',
-  'Palghat': 'Palakkad',
-  'Alappuzha': 'Alappuzha',
-  'Alleppey': 'Alappuzha',
-  'Kottayam': 'Kottayam',
-  'Malappuram': 'Malappuram',
-  // Add more mappings as needed
+const normalizeString = (str) => {
+  return str ? str.toLowerCase().replace(/[^a-z0-9]/g, '') : '';
 };
 
 export default function CompleteProfileModal({ onClose, onSuccess, user }) {
@@ -87,6 +24,8 @@ export default function CompleteProfileModal({ onClose, onSuccess, user }) {
   const [city, setCity] = useState('');
   const [latitude, setLatitude] = useState(null);
   const [longitude, setLongitude] = useState(null);
+  const ignoreGeocodeRef = useRef(false);
+  const pendingDistrictRef = useRef(null);
 
   // Error state should be an object for inline errors
   const [errors, setErrors] = useState({});
@@ -95,8 +34,28 @@ export default function CompleteProfileModal({ onClose, onSuccess, user }) {
   const [showSuccessOverlay, setShowSuccessOverlay] = useState(false);
 
   // Location fetching states
-  const [isFetchingLocation, setIsFetchingLocation] = useState(false);
   const [locationError, setLocationError] = useState('');
+
+  // DEBUG LOGS for Phase 5
+  useEffect(() => {
+    console.log("CompleteProfileModal State Update:", { state, district, city, latitude, longitude });
+  }, [state, district, city, latitude, longitude]);
+
+  // Apply GPS-detected district AFTER the state's district options are rendered in the DOM
+  useEffect(() => {
+    if (state && pendingDistrictRef.current) {
+      const districts = stateDistrictMapping[state] || [];
+      const pending = pendingDistrictRef.current;
+      pendingDistrictRef.current = null;
+      // Check the value is actually a valid option for this state
+      if (districts.includes(pending)) {
+        setDistrict(pending);
+        console.log(`Applied pending district: ${pending} for state: ${state}`);
+      } else {
+        console.warn(`Pending district "${pending}" not found in options for state "${state}"`);
+      }
+    }
+  }, [state]);
 
   // Calculate 18 years ago from today in YYYY-MM-DD format
   const getMaxDate = () => {
@@ -186,7 +145,8 @@ export default function CompleteProfileModal({ onClose, onSuccess, user }) {
             locationData = {
               state: addr.state,
               district: addr.state_district || addr.county || addr.district,
-              city: addr.city || addr.town || addr.village || addr.suburb || addr.municipality
+              city: addr.city || addr.town || addr.village || addr.suburb || addr.municipality,
+              fullAddress: addr
             };
           }
         }
@@ -208,7 +168,8 @@ export default function CompleteProfileModal({ onClose, onSuccess, user }) {
             locationData = {
               state: bigData.principalSubdivision,
               district: bigData.localityInfo?.administrative?.[2]?.name || bigData.locality,
-              city: bigData.city || bigData.locality
+              city: bigData.city || bigData.locality,
+              fullAddress: bigData.localityInfo?.administrative?.reduce((acc, curr) => ({ ...acc, [curr.order]: curr.name }), {}) || {}
             };
           }
         } catch (err) {
@@ -220,15 +181,31 @@ export default function CompleteProfileModal({ onClose, onSuccess, user }) {
         throw new Error('Unable to determine location from coordinates');
       }
 
-      // Clean and match state
-      let matchedState = null;
       const stateKeys = Object.keys(stateDistrictMapping);
 
-      for (const stateKey of stateKeys) {
-        if (stateKey.toLowerCase().includes(locationData.state.toLowerCase()) ||
-          locationData.state.toLowerCase().includes(stateKey.toLowerCase())) {
-          matchedState = stateKey;
-          break;
+      // Helper: Find state match
+      const findStateMatch = (input) => {
+        if (!input) return null;
+        const normalizedInput = normalizeString(input);
+        return stateKeys.find(s => {
+          const normalizedS = normalizeString(s);
+          return normalizedS === normalizedInput ||
+            normalizedS.includes(normalizedInput) ||
+            normalizedInput.includes(normalizedS);
+        });
+      };
+
+      // 1. Primary state match
+      let matchedState = findStateMatch(locationData.state);
+
+      // 2. Deep state scan
+      if (!matchedState && locationData.fullAddress) {
+        for (const key in locationData.fullAddress) {
+          const val = locationData.fullAddress[key];
+          if (typeof val === 'string') {
+            matchedState = findStateMatch(val);
+            if (matchedState) break;
+          }
         }
       }
 
@@ -236,59 +213,76 @@ export default function CompleteProfileModal({ onClose, onSuccess, user }) {
         throw new Error(`State "${locationData.state}" not found in our database`);
       }
 
-      // Match district
       let matchedDistrict = null;
       const districts = stateDistrictMapping[matchedState] || [];
 
-      // First try exact match
-      for (const dist of districts) {
-        if (dist.toLowerCase() === locationData.district?.toLowerCase()) {
-          matchedDistrict = dist;
-          break;
+      const findDistrictMatch = (searchStr) => {
+        if (!searchStr) return null;
+        const normalizedSearch = normalizeString(searchStr);
+        return districts.find(d => {
+          const normalizedDist = normalizeString(d);
+          return normalizedDist === normalizedSearch ||
+            normalizedDist.includes(normalizedSearch) ||
+            normalizedSearch.includes(normalizedDist);
+        });
+      };
+
+      // 1. Try primary district field
+      matchedDistrict = findDistrictMatch(locationData.district);
+
+      // 2. Try city fallback
+      if (!matchedDistrict && locationData.city) {
+        const searchCity = locationData.city;
+        const normalizedSearchCity = normalizeString(searchCity);
+        const cityKey = Object.keys(cityToDistrictMapping).find(
+          city => normalizeString(city) === normalizedSearchCity
+        );
+        if (cityKey) {
+          matchedDistrict = cityToDistrictMapping[cityKey];
+        } else {
+          matchedDistrict = findDistrictMatch(searchCity);
         }
       }
 
-      // If no exact match, try partial match
-      if (!matchedDistrict && locationData.district) {
-        for (const dist of districts) {
-          if (dist.toLowerCase().includes(locationData.district.toLowerCase()) ||
-            locationData.district.toLowerCase().includes(dist.toLowerCase())) {
-            matchedDistrict = dist;
-            break;
+      // 3. Deep scan
+      if (!matchedDistrict && locationData.fullAddress) {
+        for (const key in locationData.fullAddress) {
+          const val = locationData.fullAddress[key];
+          if (typeof val === 'string') {
+            // Skip state match
+            if (normalizeString(val) === normalizeString(locationData.state)) continue;
+            matchedDistrict = findDistrictMatch(val);
+            if (matchedDistrict) break;
           }
         }
       }
 
-      // Check city-to-district mapping
-      if (!matchedDistrict && locationData.city) {
-        const cityKey = Object.keys(cityToDistrictMapping).find(
-          city => city.toLowerCase() === locationData.city.toLowerCase()
-        );
-        if (cityKey) {
-          matchedDistrict = cityToDistrictMapping[cityKey];
+      // Auto-fill the form
+      ignoreGeocodeRef.current = true;
+      // Handle district assignment: 
+      // If the state remains the same, we can set the district directly.
+      if (matchedDistrict) {
+        if (matchedState === state) {
+          setDistrict(matchedDistrict);
+          console.log(`Applied district "${matchedDistrict}" directly (state unchanged)`);
+        } else {
+          console.log(`Queuing district "${matchedDistrict}" for state "${matchedState}"`);
+          pendingDistrictRef.current = matchedDistrict;
         }
       }
 
-      // Auto-fill the form
       setState(matchedState);
+      if (locationData.city) setCity(locationData.city);
       setLatitude(latitude);
       setLongitude(longitude);
-
-      if (matchedDistrict) {
-        setDistrict(matchedDistrict);
-      }
-
-      if (locationData.city) {
-        setCity(locationData.city);
-      }
 
       // Clear any errors
       setErrors({});
 
-      console.log('Location set:', {
-        state: matchedState,
-        district: matchedDistrict,
-        city: locationData.city
+      console.log('Location detection results (Phase 5):', {
+        detected: { state: locationData.state, district: locationData.district, city: locationData.city },
+        matched: { state: matchedState, district: matchedDistrict },
+        batchedUpdate: true
       });
 
     } catch (err) {

@@ -150,13 +150,21 @@ const CompleteProfileModal = ({ visible, onClose, onSuccess }) => {
                         }
                     }
 
+                    if (!matchedDist && detectedCity) {
+                        const cityLower = detectedCity.toLowerCase();
+                        const mappingKey = Object.keys(cityToDistrictMapping).find(k => k.toLowerCase() === cityLower);
+                        if (mappingKey) {
+                            matchedDist = cityToDistrictMapping[mappingKey];
+                        }
+                    }
+
+                    setState(matchedState);
+                    setCity(detectedCity || city);
+                    setDistrict(''); // Reset first
+
                     if (matchedDist) {
-                        // Using a timeout to ensure state is settled before setting district
-                        setTimeout(() => setDistrict(matchedDist), 500);
-                    } else if (cityToDistrictMapping[detectedCity]) {
-                        // Use city mapping as last resort
-                        const fallbackDist = cityToDistrictMapping[detectedCity];
-                        setTimeout(() => setDistrict(fallbackDist), 500);
+                        // Crucial timeout for native Picker to populate items before selecting one
+                        setTimeout(() => setDistrict(matchedDist), 600);
                     }
                 } else {
                     setError('Could not auto-detect state. Please select manually.');

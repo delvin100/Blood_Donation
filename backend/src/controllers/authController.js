@@ -3,7 +3,10 @@ const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const admin = require('../config/firebaseAdmin');
 const https = require('https');
-const emailService = require('../utils/emailService');
+const { OAuth2Client } = require('google-auth-library');
+const sendEmail = require('../utils/emailUtils');
+
+const client = new OAuth2Client(process.env.GOOGLE_WEB_CLIENT_ID);
 
 const JWT_SECRET = process.env.JWT_SECRET || 'secret';
 
@@ -156,99 +159,6 @@ exports.checkUsername = async (req, res) => {
     }
 };
 
-exports.forgotPassword = async (req, res) => {
-    try {
-        const { email } = req.body;
-        const donor = await findDonorByEmail(email);
-        if (!donor) return res.status(404).json({ error: 'No account found with that email address.' });
-
-        const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
-        const payload = JSON.stringify({
-            requestType: 'PASSWORD_RESET',
-            email: email,
-            continueUrl: `${frontendUrl}/reset-password?type=donor`
-        });
-
-        const options = {
-            hostname: 'identitytoolkit.googleapis.com',
-            path: `/v1/accounts:sendOobCode?key=${process.env.FIREBASE_WEB_API_KEY}`,
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(payload) }
-        };
-
-        try {
-            await new Promise((resolve, reject) => {
-                const fbReq = https.request(options, (resp) => {
-                    let body = '';
-                    resp.on('data', (d) => body += d);
-                    resp.on('end', () => {
-                        console.log('Firebase status:', resp.statusCode, body);
-                        if (resp.statusCode >= 200 && resp.statusCode < 300) resolve();
-                        else reject(new Error(`Firebase error: ${body}`));
-                    });
-                });
-                fbReq.on('error', reject);
-                fbReq.write(payload);
-                fbReq.end();
-            });
-            return res.json({ message: 'Password reset link sent to your email.' });
-        } catch (fbErr) {
-            console.warn('Firebase reset failed, falling back to NodeMailer:', fbErr.message);
-
-            // Generate custom reset code
-            const resetCode = Math.floor(100000 + Math.random() * 900000).toString(); // 6 digit code
-            const expires = new Date(Date.now() + 3600000); // 1 hour
-
-            await pool.query(
-                'UPDATE donors SET reset_code = ?, reset_code_expires_at = ? WHERE id = ?',
-                [resetCode, expires, donor.id]
-            );
-
-            // Create custom reset link
-            const resetLink = `${frontendUrl}/reset-password?type=donor&oobCode=${resetCode}&mode=resetPassword&fallback=true&email=${encodeURIComponent(email)}`;
-
-            await emailService.sendResetEmail(email, resetLink, donor.full_name);
-
-            return res.json({
-                message: 'Password reset link sent to your email (via Recovery Service).',
-                isFallback: true
-            });
-        }
-    } catch (err) {
-        console.error('Forgot password error:', err);
-        res.status(500).json({ error: 'Failed to send reset email.', details: err.message });
-    }
-};
-
-
-exports.verifyResetCode = async (req, res) => {
-    try {
-        const { email, code } = req.body;
-        const donor = await findDonorByEmail(email);
-        if (!donor || donor.reset_code !== code || new Date() > new Date(donor.reset_code_expires_at)) {
-            return res.status(400).json({ error: 'Invalid or expired code.' });
-        }
-        res.json({ message: 'Code verified.', valid: true });
-    } catch (err) {
-        res.status(500).json({ error: 'Server error.' });
-    }
-};
-
-exports.resetPassword = async (req, res) => {
-    try {
-        const { email, code, newPassword } = req.body;
-        const donor = await findDonorByEmail(email);
-        if (!donor || donor.reset_code !== code || new Date() > new Date(donor.reset_code_expires_at)) {
-            return res.status(400).json({ error: 'Invalid or expired request.' });
-        }
-        const hash = await bcrypt.hash(newPassword, 10);
-        await pool.query('UPDATE donors SET password_hash = ?, reset_code = NULL, reset_code_expires_at = NULL WHERE id = ?', [hash, donor.id]);
-        res.json({ message: 'Password reset successfully.' });
-    } catch (err) {
-        res.status(500).json({ error: 'Server error.' });
-    }
-};
-
 exports.completeProfile = async (req, res) => {
     try {
         const { bloodGroup, gender, phoneNumber, dob, state, district, city, latitude, longitude } = req.body;
@@ -260,66 +170,193 @@ exports.completeProfile = async (req, res) => {
     }
 };
 
-exports.syncPassword = async (req, res) => {
-    try {
-        const { email, newPassword } = req.body;
-        console.log(`[SyncPassword] Attempting sync for donor: ${email}`);
-
-        if (!email || !newPassword) {
-            console.warn('[SyncPassword] Missing email or password');
-            return res.status(400).json({ error: 'Email and new password are required.' });
-        }
-
-        // Find donor using case-insensitive lookup (already handled in findDonorByEmail now)
-        const donor = await findDonorByEmail(email);
-        if (!donor) {
-            console.warn(`[SyncPassword] Donor not found for email (checked case-insensitively): ${email}`);
-            return res.status(404).json({ error: 'Account not found. Please ensure you reset the password for the correct account type (Donor).' });
-        }
-
-        console.log(`[SyncPassword] Found donor ID: ${donor.id}, hashing new password...`);
-        const hash = await bcrypt.hash(newPassword, 10);
-
-        const [result] = await pool.query(
-            'UPDATE donors SET password_hash = ?, reset_code = NULL, reset_code_expires_at = NULL WHERE id = ?',
-            [hash, donor.id]
-        );
-
-        console.log(`[SyncPassword] Update result: ${result.affectedRows} row(s) updated`);
-        if (result.affectedRows === 0) {
-            return res.status(500).json({ error: 'Database update failed. No records were changed.' });
-        }
-
-        res.json({ message: 'Password synced to MySQL successfully.' });
-    } catch (err) {
-        console.error('[SyncPassword] Error:', err);
-        res.status(500).json({ error: 'Failed to sync password.', details: err.message });
-    }
-};
-
 exports.googleAuth = async (req, res) => {
     try {
-        const { credential } = req.body;
-        const payload = await getGoogleUserInfo(credential);
+        const { idToken, accessToken } = req.body;
+        let payload;
+
+        if (idToken) {
+            // Verify ID Token (preferred for mobile/web)
+            const ticket = await client.verifyIdToken({
+                idToken: idToken,
+                audience: [
+                    process.env.GOOGLE_WEB_CLIENT_ID,
+                    process.env.GOOGLE_ANDROID_CLIENT_ID,
+                    process.env.GOOGLE_IOS_CLIENT_ID
+                ].filter(Boolean),
+            });
+            payload = ticket.getPayload();
+        } else if (accessToken) {
+            // Fallback to access token if provided
+            payload = await getGoogleUserInfo(accessToken);
+        } else {
+            return res.status(400).json({ error: 'No Google credentials provided.' });
+        }
+
         const { sub: googleId, email, name, picture } = payload;
 
         let [rows] = await pool.query('SELECT * FROM donors WHERE google_id = ? OR email = ? LIMIT 1', [googleId, email]);
         let donor = rows[0];
 
         if (!donor) {
-            const [result] = await pool.query('INSERT INTO donors (google_id, full_name, email, profile_picture, created_at) VALUES (?, ?, ?, ?, NOW())', [googleId, name, email, picture]);
-            const donorTag = `DON-${result.insertId.toString().padStart(6, '0')}`;
-            await pool.query('UPDATE donors SET donor_tag = ? WHERE id = ?', [donorTag, result.insertId]);
-            [rows] = await pool.query('SELECT * FROM donors WHERE id = ?', [result.insertId]);
+            // Register new donor
+            const [result] = await pool.query(
+                'INSERT INTO donors (google_id, full_name, email, profile_picture, created_at) VALUES (?, ?, ?, ?, NOW())',
+                [googleId, name, email, picture]
+            );
+            const insertId = result.insertId;
+            const donorTag = `DON-${insertId.toString().padStart(6, '0')}`;
+            await pool.query('UPDATE donors SET donor_tag = ? WHERE id = ?', [donorTag, insertId]);
+
+            // Sync with Firebase (consistent with register method)
+            try {
+                // For Google users, we might not have a password, so we use a placeholder or leave it blank
+                // Firebase allows creating users without passwords if they are meant to be federated
+                await admin.auth().createUser({
+                    uid: `donor_${insertId}`,
+                    email: email,
+                    displayName: name,
+                    photoURL: picture
+                });
+            } catch (fbErr) {
+                console.error('Firebase sync error for Google user:', fbErr);
+            }
+
+            [rows] = await pool.query('SELECT * FROM donors WHERE id = ?', [insertId]);
             donor = rows[0];
         } else if (!donor.google_id) {
-            await pool.query('UPDATE donors SET google_id = ? WHERE id = ?', [googleId, donor.id]);
+            // Link existing account
+            await pool.query('UPDATE donors SET google_id = ?, profile_picture = COALESCE(profile_picture, ?) WHERE id = ?', [googleId, picture, donor.id]);
+            donor.google_id = googleId;
+            donor.profile_picture = donor.profile_picture || picture;
         }
 
         const token = jwt.sign({ id: donor.id, username: donor.username || email }, JWT_SECRET, { expiresIn: '7d' });
         res.json({ token, user: donor });
     } catch (err) {
         console.error('Google Auth Error:', err);
-        res.status(500).json({ error: 'Google auth failed.' });
+        res.status(500).json({ error: 'Google auth failed.', details: err.message });
+    }
+};
+
+exports.forgotPassword = async (req, res) => {
+    try {
+        const { email } = req.body;
+        if (!email) return res.status(400).json({ error: 'Email is required' });
+
+        const donor = await findDonorByEmail(email);
+        if (!donor) return res.status(404).json({ error: 'No account found with this email' });
+
+        // Check if it's a Google sign-in user
+        if (donor.google_id) {
+            return res.status(400).json({
+                error: 'Account linked with Google. Please use "Sign in with Google" instead of password recovery.'
+            });
+        }
+
+        // Generate 4-digit OTP
+        const resetCode = Math.floor(1000 + Math.random() * 9000).toString();
+        const expiry = new Date(Date.now() + 15 * 60000); // 15 mins
+
+        await pool.query(
+            'UPDATE donors SET reset_code = ?, reset_code_expires_at = ? WHERE id = ?',
+            [resetCode, expiry, donor.id]
+        );
+
+
+        const html = `
+            <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 500px; margin: 0 auto; padding: 40px; background-color: #ffffff; border-radius: 16px; box-shadow: 0 4px 24px rgba(0,0,0,0.06); border: 1px solid #f1f1f1;">
+                <div style="text-align: center; margin-bottom: 30px;">
+                    <div style="display: inline-block; padding: 12px; background-color: #fef2f2; border-radius: 12px;">
+                        <span style="font-size: 32px;">❤️</span>
+                    </div>
+                </div>
+                <h2 style="color: #1a1a1a; text-align: center; margin-bottom: 10px; font-weight: 800;">Password Reset</h2>
+                <p style="color: #666; text-align: center; font-size: 14px; line-height: 1.6;">Hello <strong>${donor.full_name}</strong>, use the verification code below to reset your eBloodBank account password.</p>
+                
+                <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 24px; text-align: center; margin: 30px 0;">
+                    <div style="font-size: 14px; color: #64748b; margin-bottom: 8px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em;">Your OTP Code</div>
+                    <div style="font-size: 42px; font-weight: 900; color: #dc2626; letter-spacing: 12px; margin-left: 12px;">${resetCode}</div>
+                </div>
+
+
+
+                <div style="margin-top: 40px; padding-top: 24px; border-top: 1px solid #f1f1f1; text-align: center;">
+                    <p style="color: #94a3b8; font-size: 12px;">This code expires in 15 minutes. If you didn't request this code, you can safely ignore this email.</p>
+                </div>
+            </div>
+        `;
+
+        await sendEmail({
+            email: donor.email,
+            subject: 'Password Reset Request - eBloodBank',
+            html
+        });
+
+        res.json({ message: 'Verification code sent to your email' });
+    } catch (err) {
+        console.error('Forgot password error:', err);
+        res.status(500).json({ error: 'Failed to process request' });
+    }
+};
+
+exports.verifyOTP = async (req, res) => {
+    try {
+        const { email, code } = req.body;
+        if (!email || !code) return res.status(400).json({ error: 'Email and code are required' });
+
+        const [rows] = await pool.query(
+            'SELECT id FROM donors WHERE LOWER(email) = LOWER(?) AND reset_code = ? AND reset_code_expires_at > NOW()',
+            [email, code]
+        );
+
+        if (rows.length === 0) {
+            return res.status(400).json({ error: 'Invalid or expired verification code' });
+        }
+
+        res.json({ message: 'OTP verified successfully' });
+    } catch (err) {
+        console.error('OTP verification error:', err);
+        res.status(500).json({ error: 'Failed to verify code' });
+    }
+};
+
+exports.resetPassword = async (req, res) => {
+    try {
+        const { email, code, newPassword } = req.body;
+        if (!email || !code || !newPassword) {
+            return res.status(400).json({ error: 'Missing required fields' });
+        }
+
+        const [rows] = await pool.query(
+            'SELECT * FROM donors WHERE LOWER(email) = LOWER(?) AND reset_code = ? AND reset_code_expires_at > NOW()',
+            [email, code]
+        );
+
+        if (rows.length === 0) {
+            return res.status(400).json({ error: 'Invalid or expired reset code' });
+        }
+
+        const donor = rows[0];
+        const hash = await bcrypt.hash(newPassword, 10);
+
+        await pool.query(
+            'UPDATE donors SET password_hash = ?, reset_code = NULL, reset_code_expires_at = NULL WHERE id = ?',
+            [hash, donor.id]
+        );
+
+        // Sync with Firebase if uid is known
+        try {
+            await admin.auth().updateUser(`donor_${donor.id}`, {
+                password: newPassword
+            });
+        } catch (fbErr) {
+            console.error('Firebase password sync error:', fbErr);
+        }
+
+        res.json({ message: 'Password has been reset successfully' });
+    } catch (err) {
+        console.error('Reset password error:', err);
+        res.status(500).json({ error: 'Failed to reset password' });
     }
 };

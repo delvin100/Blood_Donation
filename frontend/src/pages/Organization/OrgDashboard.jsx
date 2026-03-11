@@ -6,6 +6,7 @@ import { jsPDF } from 'jspdf';
 import MedicalReports from './MedicalReports';
 import BackToTop from '../../components/common/BackToTop';
 import ModernModal from '../../components/common/ModernModal';
+import { stateDistrictMapping, cityToDistrictMapping, bloodGroups } from '../../utils/locationData';
 import {
     LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area,
     BarChart, Bar, Cell
@@ -14,11 +15,9 @@ import {
 // --- Constants ---
 const getAuthToken = () => localStorage.getItem('token') || sessionStorage.getItem('token');
 
-const BLOOD_GROUPS = [
-    "A+", "A-", "A1+", "A1-", "A1B+", "A1B-",
-    "A2+", "A2-", "A2B+", "A2B-", "AB+", "AB-",
-    "B+", "B-", "Bombay Blood Group", "INRA", "O+", "O-"
-];
+// Location and blood group data imported from ../../utils/locationData
+const BLOOD_GROUPS = bloodGroups;
+
 
 // --- High Performance Search Component ---
 const DonorSearch = React.memo(({ onSelect, verifying }) => {
@@ -73,6 +72,7 @@ const DonorSearch = React.memo(({ onSelect, verifying }) => {
             <div className="flex gap-4">
                 <div className="relative flex-1">
                     <input
+                        id="donor-search-input"
                         type="text"
                         className="w-full px-6 py-4 bg-gray-50 border-none rounded-2xl font-bold text-gray-900 outline-none focus:ring-2 focus:ring-blue-500/20 transition-all"
                         placeholder="Search Email or Phone..."
@@ -96,6 +96,7 @@ const DonorSearch = React.memo(({ onSelect, verifying }) => {
                     </div>
                 </div>
                 <button
+                    id="donor-search-submit"
                     onClick={() => query.length >= 1 && setShowResults(true)}
                     disabled={verifying}
                     className="px-8 py-4 bg-blue-600 text-white font-bold rounded-2xl hover:bg-blue-700 transition-colors shadow-lg shadow-blue-500/30 active:scale-95"
@@ -119,6 +120,7 @@ const DonorSearch = React.memo(({ onSelect, verifying }) => {
                     <div className="max-h-64 overflow-y-auto scrollbar-thin">
                         {liveResults.map(donor => (
                             <button
+                                id={`donor-search-result-${donor.id}`}
                                 key={donor.id}
                                 onClick={() => handleSelect(donor)}
                                 className="w-full p-4 flex items-center justify-between hover:bg-blue-50 transition-colors border-b last:border-0 border-gray-50 group text-left"
@@ -163,6 +165,7 @@ export default function OrgDashboard() {
     const [notifications, setNotifications] = useState([]);
     const [showNotifications, setShowNotifications] = useState(false);
     const notificationsRef = useRef(null);
+    const pendingDistrictRef = useRef(null);
     const [sidebarOpen, setSidebarOpen] = useState(true);
     const [user, setUser] = useState(null);
     const [stats, setStats] = useState({ total_units: 0, active_requests: 0, verified_count: 0 });
@@ -252,6 +255,22 @@ export default function OrgDashboard() {
         fetchOrgProfile();
         fetchNotifications();
     }, []);
+
+    // Apply GPS-detected district AFTER the state's district options are rendered in the DOM
+    useEffect(() => {
+        if (editForm.state && pendingDistrictRef.current) {
+            const districts = stateDistrictMapping[editForm.state] || [];
+            const pending = pendingDistrictRef.current;
+            pendingDistrictRef.current = null;
+            // Check the value is actually a valid option for this state
+            if (districts.includes(pending)) {
+                setEditForm(prev => ({ ...prev, district: pending }));
+                console.log(`Applied pending district: ${pending} for state: ${editForm.state}`);
+            } else {
+                console.warn(`Pending district "${pending}" not found in options for state "${editForm.state}"`);
+            }
+        }
+    }, [editForm.state]);
 
     // Close notifications when clicking outside
     useEffect(() => {
@@ -399,6 +418,137 @@ export default function OrgDashboard() {
         } catch (err) {
             toast.error(err.response?.data?.error || "Failed to update profile");
         }
+    };
+
+    const handleAutoFetchLocation = () => {
+        if (!navigator.geolocation) {
+            toast.error("Geolocation is not supported by your browser.");
+            return;
+        }
+
+        const toastId = toast.loading("Accessing satellite data...");
+
+        navigator.geolocation.getCurrentPosition(async (position) => {
+            try {
+                const { latitude, longitude } = position.coords;
+
+                let locationData = null;
+
+                // Try Nominatim
+                try {
+                    const nominatimResponse = await fetch(
+                        `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&addressdetails=1`,
+                        {
+                            headers: {
+                                "User-Agent": "BloodDonationApp/1.0"
+                            }
+                        }
+                    );
+
+                    if (nominatimResponse.ok) {
+                        const nominatimData = await nominatimResponse.json();
+                        if (nominatimData.address) {
+                            const addr = nominatimData.address;
+                            locationData = {
+                                state: addr.state,
+                                district: addr.state_district || addr.county || addr.district,
+                                city: addr.city || addr.town || addr.village || addr.suburb || addr.municipality
+                            };
+                        }
+                    }
+                } catch (err) {
+                    console.warn("Nominatim failed:", err);
+                }
+
+                // Try BigDataCloud fallback
+                if (!locationData) {
+                    try {
+                        const bigDataResponse = await fetch(
+                            `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${latitude}&longitude=${longitude}&localityLanguage=en`
+                        );
+
+                        if (bigDataResponse.ok) {
+                            const bigData = await bigDataResponse.json();
+                            locationData = {
+                                state: bigData.principalSubdivision,
+                                district: bigData.localityInfo?.administrative?.[2]?.name || bigData.locality,
+                                city: bigData.city || bigData.locality
+                            };
+                        }
+                    } catch (err) {
+                        console.warn("BigDataCloud failed:", err);
+                    }
+                }
+
+                if (!locationData || !locationData.state) {
+                    throw new Error("Unable to determine location from coordinates");
+                }
+
+                // Match State
+                let matchedState = null;
+                const stateKeys = Object.keys(stateDistrictMapping);
+                for (const stateKey of stateKeys) {
+                    if (stateKey.toLowerCase().includes(locationData.state.toLowerCase()) ||
+                        locationData.state.toLowerCase().includes(stateKey.toLowerCase())) {
+                        matchedState = stateKey;
+                        break;
+                    }
+                }
+
+                if (!matchedState) {
+                    throw new Error(`State "${locationData.state}" not recognized`);
+                }
+
+                // Match District
+                let matchedDistrict = null;
+                const districts = stateDistrictMapping[matchedState] || [];
+                if (locationData.district) {
+                    const searchDist = locationData.district.toLowerCase();
+                    matchedDistrict = districts.find(d => d.toLowerCase() === searchDist) ||
+                        districts.find(d => d.toLowerCase().includes(searchDist) || searchDist.includes(d.toLowerCase()));
+                }
+
+                // City Fallback
+                if (!matchedDistrict && locationData.city) {
+                    const cityKey = Object.keys(cityToDistrictMapping).find(
+                        city => city.toLowerCase() === locationData.city.toLowerCase()
+                    );
+                    if (cityKey) {
+                        matchedDistrict = cityToDistrictMapping[cityKey];
+                    }
+                }
+
+                // Unify setEditForm calls to ensure state consistency and avoid race conditions
+                setEditForm(prev => {
+                    const newData = {
+                        ...prev,
+                        state: matchedState,
+                        city: locationData.city || prev.city,
+                        latitude: latitude,
+                        longitude: longitude
+                    };
+
+                    // Apply district immediately if state hasn't changed
+                    if (matchedDistrict) {
+                        if (matchedState === prev.state) {
+                            newData.district = matchedDistrict;
+                            console.log(`Phase 6: State Unchanged (${matchedState}), applied district: ${matchedDistrict}`);
+                        } else {
+                            console.log(`Phase 6: Queuing district: ${matchedDistrict} for state: ${matchedState}`);
+                            pendingDistrictRef.current = matchedDistrict;
+                        }
+                    }
+                    return newData;
+                });
+
+                toast.success("Location updated!", { id: toastId });
+
+            } catch (err) {
+                toast.error(err.message || "Failed to fetch precise location", { id: toastId });
+            }
+        }, (err) => {
+            toast.error("Location access denied or unavailable", { id: toastId });
+        });
     };
 
     const handleManualGeocode = async () => {
@@ -1073,6 +1223,7 @@ export default function OrgDashboard() {
                 <nav className="flex-1 py-8 px-4 space-y-2 overflow-y-auto">
                     {navItems.map((item) => (
                         <button
+                            id={`nav-${item.id}`}
                             key={item.id}
                             onClick={() => setActiveTab(item.id)}
                             className={`w-full flex items-center p-4 rounded-2xl transition-all duration-200 group
@@ -1750,6 +1901,8 @@ export default function OrgDashboard() {
                                                                 <i className="fas fa-tint text-lg"></i>
                                                             </div>
                                                             <select
+                                                                id="emergency-blood-group"
+                                                                name="blood_group"
                                                                 className="w-full pl-20 pr-10 py-6 bg-gray-50 border-none rounded-[2rem] font-bold text-gray-900 outline-none focus:ring-4 focus:ring-red-500/10 transition-all appearance-none shadow-inner"
                                                                 value={requestForm.blood_group}
                                                                 onChange={e => setRequestForm({ ...requestForm, blood_group: e.target.value })}
@@ -1770,6 +1923,8 @@ export default function OrgDashboard() {
                                                                 <i className="fas fa-vials text-lg"></i>
                                                             </div>
                                                             <input
+                                                                id="emergency-units"
+                                                                name="units_required"
                                                                 type="number"
                                                                 min="1"
                                                                 placeholder="e.g. 5"
@@ -1792,7 +1947,11 @@ export default function OrgDashboard() {
                                                     ></textarea>
                                                 </div>
 
-                                                <button type="submit" className="group w-full bg-gray-900 hover:bg-black text-white py-8 rounded-[2.5rem] font-black transition-all shadow-2xl shadow-gray-400/30 flex items-center justify-center gap-4 relative overflow-hidden active:scale-[0.98]">
+                                                <button
+                                                    id="broadcast-submit"
+                                                    type="submit"
+                                                    className="group w-full bg-gray-900 hover:bg-black text-white py-8 rounded-[2.5rem] font-black transition-all shadow-2xl shadow-gray-400/30 flex items-center justify-center gap-4 relative overflow-hidden active:scale-[0.98]"
+                                                >
                                                     <div className="absolute inset-0 bg-gradient-to-r from-red-600 to-red-500 opacity-0 group-hover:opacity-100 transition-opacity"></div>
                                                     <span className="relative z-10 flex items-center gap-4 text-sm uppercase tracking-[0.2em]">
                                                         <i className="fas fa-broadcast-tower"></i>
@@ -2243,6 +2402,16 @@ export default function OrgDashboard() {
                                                                             rows="2"
                                                                         />
                                                                     </div>
+                                                                    <div className="col-span-2">
+                                                                        <button
+                                                                            type="button"
+                                                                            onClick={handleAutoFetchLocation}
+                                                                            className="w-full py-4 bg-red-600/20 hover:bg-red-600/40 text-red-500 rounded-2xl font-black text-[10px] uppercase tracking-widest transition-all flex items-center justify-center gap-2 border border-red-500/20"
+                                                                        >
+                                                                            <i className="fas fa-location-crosshairs"></i>
+                                                                            Auto-Fetch Precise Location
+                                                                        </button>
+                                                                    </div>
                                                                     <div>
                                                                         <label className="text-[10px] font-black text-gray-400 uppercase mb-1 block">City</label>
                                                                         <input
@@ -2251,7 +2420,7 @@ export default function OrgDashboard() {
                                                                             onChange={(e) => setEditForm({ ...editForm, city: e.target.value })}
                                                                             onBlur={handleManualGeocode}
                                                                             placeholder="City"
-                                                                            className="w-full px-5 py-3.5 bg-gray-50 border border-gray-100 rounded-2xl focus:ring-4 focus:ring-red-500/5 focus:border-red-500/30 outline-none transition-all font-bold text-gray-900"
+                                                                            className="w-full bg-white/10 border border-white/20 rounded-xl px-4 py-2 font-bold text-white focus:border-red-500 outline-none transition-all text-sm"
                                                                         />
                                                                     </div>
                                                                     <div>

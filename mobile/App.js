@@ -29,8 +29,8 @@ export default function App() {
         return false; // Exit app if on main screens
       }
 
-      // Navigate back to Dashboard from sub-screens
-      if (['EditProfile', 'Chatbot', 'Analysis', 'Register'].includes(currentScreen)) {
+      // Navigate back to Dashboard or Selection from sub-screens
+      if (['EditProfile', 'Chatbot', 'Analysis', 'Register', 'Seeker'].includes(currentScreen)) {
         navigationProxy.goBack();
         return true;
       }
@@ -88,7 +88,13 @@ export default function App() {
       if (params?.stats) setStatsData(params.stats);
       if (params?.reports) setReportsData(params.reports);
     },
-    goBack: () => navigate(userToken ? 'Dashboard' : 'Login'),
+    goBack: () => {
+      if (currentScreen === 'Seeker' || currentScreen === 'Register') {
+        navigate('Selection');
+      } else {
+        navigate(userToken ? 'Dashboard' : 'Login');
+      }
+    },
   };
 
   return (

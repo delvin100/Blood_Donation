@@ -1,3 +1,8 @@
+/**
+ * Centralized location and blood group data for the eBloodBank application.
+ * Shared across multiple components to ensure consistency.
+ */
+
 export const stateDistrictMapping = {
     "Andhra Pradesh": ["Anantapur", "Chittoor", "East Godavari", "Guntur", "Krishna", "Kurnool", "Prakasam", "Srikakulam", "Visakhapatnam", "Vizianagaram", "West Godavari", "YSR Kadapa"],
     "Arunachal Pradesh": ["Anjaw", "Changlang", "Dibang Valley", "East Kameng", "East Siang", "Kamle", "Kra Daadi", "Kurung Kumey", "Lepa Rada", "Lohit", "Longding", "Lower Dibang Valley", "Lower Siang", "Lower Subansiri", "Namsai", "Pakke Kessang", "Papum Pare", "Shi Yomi", "Siang", "Tawang", "Tirap", "Upper Siang", "Upper Subansiri", "West Kameng", "West Siang"],
@@ -5,7 +10,7 @@ export const stateDistrictMapping = {
     "Bihar": ["Araria", "Arwal", "Aurangabad", "Banka", "Begusarai", "Bhagalpur", "Bhojpur", "Buxar", "Darbhanga", "East Champaran", "Gaya", "Gopalganj", "Jamui", "Jehanabad", "Kaimur", "Katihar", "Khagaria", "Kishanganj", "Lakhisarai", "Madhepura", "Madhubani", "Munger", "Muzaffarpur", "Nalanda", "Nawada", "Patna", "Purnia", "Rohtas", "Saharsa", "Samastipur", "Saran", "Sheikhpura", "Sheohar", "Sitamarhi", "Siwan", "Supaul", "Vaishali", "West Champaran"],
     "Chhattisgarh": ["Balod", "Baloda Bazar", "Balrampur", "Bastar", "Bemetara", "Bijapur", "Bilaspur", "Dantewada", "Dhamtari", "Durg", "Gariaband", "Janjgir Champa", "Jashpur", "Kabirdham", "Kanker", "Kondagaon", "Korba", "Koriya", "Mahasamund", "Mungeli", "Narayanpur", "Raigarh", "Raipur", "Rajnandgaon", "Sukma", "Surajpur", "Surguja"],
     "Goa": ["North Goa", "South Goa"],
-    "Gujarat": ["Ahmedabad", "Amreli", "Anand", "Aravalli", "Banaskantha", "Bharuch", "Bhavnagar", "Botad", "Chhota Udaipur", "Dahod", "Dang", "Devbhoomi Dwarka", "Gandhinagar", "Gir Somnath", "Jamnagar", "Junagadh", "Kheda", "Kutch", "Mahisagar", "Mehsana", "Morbi", "Narmada", "Navsari", "Panchmahal", "Patan", "Porbandar", "Rajkot", "Sabarkantha", "Surat", "Surendranagar", "Tapi", "Vadodara", "Valsad"],
+    "Gujarat": ["Ahmedabad", "Amreli", "Anand", "Aravalli", "Banaskantha", "Bharuch", "Bhavnagar", "Botad", "Chhota Udaipur", "Dahod", "Dang", "Devbhoomi Dwarka", "Gandhinagar", "Gir Somnath", "Jamnagar", "Junagadh", "Kheda", "Kutch", "Mahisagar", "Mehsana", "Morbi", "Narmada", "Navsari", "Panchmahal", "Patan", "Porborder", "Rajkot", "Sabarkantha", "Surat", "Surendranagar", "Tapi", "Vadodara", "Valsad"],
     "Haryana": ["Ambala", "Bhiwani", "Charkhi Dadri", "Faridabad", "Fatehabad", "Gurugram", "Hisar", "Jhajjar", "Jind", "Kaithal", "Karnal", "Kurukshetra", "Mahendragarh", "Nuh", "Palwal", "Panchkula", "Panipat", "Rewari", "Rohtak", "Sirsa", "Sonipat", "Yamunanagar"],
     "Himachal Pradesh": ["Bilaspur", "Chamba", "Hamirpur", "Kangra", "Kinnaur", "Kullu", "Lahaul and Spiti", "Mandi", "Shimla", "Sirmaur", "Solan", "Una"],
     "Jharkhand": ["Bokaro", "Chatra", "Deoghar", "Dhanbad", "Dumka", "East Singhbhum", "Garhwa", "Giridih", "Godda", "Gumla", "Hazaribagh", "Jamtara", "Khunti", "Koderma", "Latehar", "Lohardaga", "Pakur", "Palamu", "Ramgarh", "Ranchi", "Sahibganj", "Seraikela Kharsawan", "Simdega", "West Singhbhum"],
@@ -16,7 +21,7 @@ export const stateDistrictMapping = {
     "Manipur": ["Bishnupur", "Chandel", "Churachandpur", "Imphal East", "Imphal West", "Jiribam", "Kakching", "Kamjong", "Kangpokpi", "Noney", "Pherzawl", "Senapati", "Tamenglong", "Tengnoupal", "Thoubal", "Ukhrul"],
     "Meghalaya": ["East Garo Hills", "East Jaintia Hills", "East Khasi Hills", "North Garo Hills", "Ri Bhoi", "South Garo Hills", "South West Garo Hills", "South West Khasi Hills", "West Garo Hills", "West Jaintia Hills", "West Khasi Hills"],
     "Mizoram": ["Aizawl", "Champhai", "Hnahthial", "Kolasib", "Khawzawl", "Lawngtlai", "Lunglei", "Mamit", "Saiha", "Saitual", "Serchhip"],
-    "Nagaland": ["Dimapur", "Kiphire", "Kohima", "Longleng", "Mokokchung", "Mon", "Peren", "Phek", "Tuensang", "Wokha", "Zunheboto"],
+    "Nagaland": ["Dimapur", "Kiphire", "Kohima", "Longleng", "Mokokchung", "Mon", "Peren", "Phek", "Tuensang", "Wokha", "Zuneboto"],
     "Odisha": ["Angul", "Balangir", "Balasore", "Bargarh", "Bhadrak", "Boudh", "Cuttack", "Deogarh", "Dhenkanal", "Gajapati", "Ganjam", "Jagatsinghpur", "Jajpur", "Jharsuguda", "Kalahandi", "Kandhamal", "Kendrapara", "Kendujhar", "Khordha", "Koraput", "Malkangiri", "Mayurbhanj", "Nabarangpur", "Nayagarh", "Nuapada", "Puri", "Rayagada", "Sambalpur", "Subarnapur", "Sundargarh"],
     "Punjab": ["Amritsar", "Barnala", "Bathinda", "Faridkot", "Fatehgarh Sahib", "Fazilka", "Ferozepur", "Gurdaspur", "Hoshiarpur", "Jalandhar", "Kapurthala", "Ludhiana", "Mansa", "Moga", "Muktsar", "Nawanshahr", "Pathankot", "Patiala", "Rupnagar", "Sangrur", "Tarn Taran"],
     "Rajasthan": ["Ajmer", "Alwar", "Banswara", "Baran", "Barmer", "Bharatpur", "Bhilwara", "Bikaner", "Bundi", "Chittorgarh", "Churu", "Dausa", "Dholpur", "Dungarpur", "Hanumangarh", "Jaipur", "Jaisalmer", "Jalore", "Jhalawar", "Jhunjhunu", "Jodhpur", "Karauli", "Kota", "Nagaur", "Pali", "Pratapgarh", "Rajsamand", "Sawai Madhopur", "Sikar", "Sirohi", "Sri Ganganagar", "Tonk", "Udaipur"],
@@ -35,67 +40,6 @@ export const stateDistrictMapping = {
     "Ladakh": ["Kargil", "Leh"],
     "Lakshadweep": ["Lakshadweep"],
     "Puducherry": ["Karaikal", "Mahe", "Puducherry", "Yanam"]
-};
-
-export const bloodGroups = [
-    "O+", "O-", "A+", "A-", "B+", "B-", "AB+", "AB-",
-    "A1+", "A1-", "A2+", "A2-", "A1B+", "A1B-", "A2B+", "A2B-",
-    "Bombay Blood Group", "INRA"
-];
-
-
-export const districtAliases = {
-    // Variations -> Canonical Name in stateDistrictMapping
-    "Bangalore Urban": "Bengaluru Urban",
-    "Bangalore Rural": "Bengaluru Rural",
-    "Bengaluru": "Bengaluru Urban",
-    "Bangalore": "Bengaluru Urban",
-    "Belgaum": "Belagavi",
-    "Bellary": "Ballari",
-    "Bijapur": "Vijayapura",
-    "Chikmagalur": "Chikkamagaluru",
-    "Gulbarga": "Kalaburagi",
-    "Mysore": "Mysuru",
-    "Shimoga": "Shivamogga",
-    "Tumkur": "Tumakuru",
-    "Alleppey": "Alappuzha",
-    "Cannanore": "Kannur",
-    "Cochin": "Ernakulam",
-    "Kochi": "Ernakulam",
-    "Quilon": "Kollam",
-    "Palghat": "Palakkad",
-    "Trichur": "Thrissur",
-    "Trivandrum": "Thiruvananthapuram",
-    "Madras": "Chennai",
-    "Chingleput": "Chengalpattu",
-    "Kancheepuram": "Kanchipuram",
-    "Thiruvallur": "Tiruvallur",
-    "Trichy": "Tiruchirappalli",
-    "Tuticorin": "Thoothukudi",
-    "Tirunelveli": "Tirunelveli",
-    "Villupuram": "Viluppuram",
-    "Virudhunagar": "Virudhunagar",
-    "Calcutta": "Kolkata",
-    "Burdwan": "Purba Bardhaman", // Simplified
-    "Midnapore": "Paschim Medinipur", // Simplified
-    "Bombay": "Mumbai City",
-    "Poona": "Pune",
-    "Gurgaon": "Gurugram",
-    "Mewat": "Nuh",
-    "Allahabad": "Prayagraj",
-    "Faizabad": "Ayodhya",
-    "Cawnpore": "Kanpur Nagar",
-    "Baroda": "Vadodara",
-    "Broach": "Bharuch",
-    "Bulsar": "Valsad",
-    "Dohad": "Dahod",
-    "Kachchh": "Kutch",
-    "Mehsana": "Mahesana",
-    "Panch Mahals": "Panchmahal",
-    "Sabar Kantha": "Sabarkantha",
-    "The Dangs": "Dang",
-    "Banara": "Varanasi",
-    "Kashi": "Varanasi"
 };
 
 export const cityToDistrictMapping = {
@@ -117,61 +61,33 @@ export const cityToDistrictMapping = {
     'Alappuzha': 'Alappuzha',
     'Alleppey': 'Alappuzha',
     'Kottayam': 'Kottayam',
-    'Kanjirappally': 'Kottayam',
-    'Kanjirapply': 'Kottayam',
-    'Koovapally': 'Kottayam',
-    'Koovappally': 'Kottayam',
     'Malappuram': 'Malappuram',
     'Pathanamthitta': 'Pathanamthitta',
     'Chunkappara': 'Pathanamthitta',
     'Mallappally': 'Pathanamthitta',
-    // Maharashtra
-    'Mumbai': 'Mumbai City',
-    'Pune': 'Pune',
-    'Nagpur': 'Nagpur',
-    'Thane': 'Thane',
-    'Nashik': 'Nashik',
-    // Tamil Nadu
-    'Chennai': 'Chennai',
-    'Coimbatore': 'Coimbatore',
-    'Madurai': 'Madurai',
-    'Tiruchirappalli': 'Tiruchirappalli',
-    'Trichy': 'Tiruchirappalli',
-    'Salem': 'Salem',
-    'Erode': 'Erode',
-    'Tiruppur': 'Tiruppur',
-    'Vellore': 'Vellore',
-    'Thoothukudi': 'Thoothukudi',
-    'Tuticorin': 'Thoothukudi',
-    'Nagercoil': 'Kanyakumari',
-    'Thanjavur': 'Thanjavur',
-    'Dindigul': 'Dindigul',
-    'Cuddalore': 'Cuddalore',
-    'Kanchipuram': 'Kanchipuram',
-    'Tirunelveli': 'Tirunelveli',
-    'Karur': 'Karur',
-    'Neyveli': 'Cuddalore',
-    'Hosur': 'Krishnagiri',
-    'Avadi': 'Tiruvallur',
-    'Tambaram': 'Chengalpattu',
-    'Ambattur': 'Chennai',
-    // Karnataka
-    'Bengaluru': 'Bengaluru Urban',
+    'Adoor': 'Pathanamthitta',
+    'Thiruvalla': 'Pathanamthitta',
+    'Ranni': 'Pathanamthitta',
+    'Konni': 'Pathanamthitta',
+    // Karnataka fallbacks
     'Bangalore': 'Bengaluru Urban',
-    'Mysuru': 'Mysuru',
+    'Bengaluru': 'Bengaluru Urban',
     'Mysore': 'Mysuru',
-    'Hubli': 'Dharwad',
-    'Dharwad': 'Dharwad',
-    'Mangaluru': 'Dakshina Kannada',
     'Mangalore': 'Dakshina Kannada',
-    'Belagavi': 'Belagavi',
+    'Hubli': 'Dharwad',
     'Belgaum': 'Belagavi',
-    'Ballari': 'Ballari',
-    'Bellary': 'Ballari',
-    'Vijayapura': 'Vijayapura',
-    'Bijapur': 'Vijayapura',
-    'Shivamogga': 'Shivamogga',
-    'Shimoga': 'Shivamogga',
-    'Tumakuru': 'Tumakuru',
-    'Tumkur': 'Tumakuru'
+    'Gulbarga': 'Kalaburagi',
+    // Tamil Nadu fallbacks
+    'Madras': 'Chennai',
+    'Trichy': 'Tiruchirappalli',
+    'Tanjore': 'Thanjavur',
+    'Tuticorin': 'Thoothukudi',
+    'Nilgiris': 'Nilgiris',
+    'Ooty': 'Nilgiris',
 };
+
+export const bloodGroups = [
+    "A+", "A-", "A1+", "A1-", "A1B+", "A1B-",
+    "A2+", "A2-", "A2B+", "A2B-", "AB+", "AB-",
+    "B+", "B-", "Bombay Blood Group", "INRA", "O+", "O-"
+];

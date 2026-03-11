@@ -15,115 +15,120 @@ import { BlurView } from 'expo-blur';
 const { width, height } = Dimensions.get('window');
 
 const DonorDetailsModal = ({ visible, donor, onClose }) => {
-    if (!donor) return null;
+    // Keep internal state of the last shown donor to avoid flicker on close/open
+    const [displayDonor, setDisplayDonor] = React.useState(donor);
+
+    React.useEffect(() => {
+        if (donor) setDisplayDonor(donor);
+    }, [donor]);
 
     const handleCall = () => {
-        Linking.openURL(`tel:${donor.phone}`);
+        if (displayDonor) Linking.openURL(`tel:${displayDonor.phone}`);
     };
 
     const handleWhatsApp = () => {
-        const message = `Hello ${donor.name}, I found your contact on eBloodBank. We are in need of ${donor.blood_group} blood. Are you available to help?`;
-        Linking.openURL(`whatsapp://send?phone=${donor.phone}&text=${encodeURIComponent(message)}`);
+        if (!displayDonor) return;
+        const message = `Hello ${displayDonor.name}, I found your contact on eBloodBank. We are in need of ${displayDonor.blood_group} blood. Are you available to help?`;
+        Linking.openURL(`whatsapp://send?phone=${displayDonor.phone}&text=${encodeURIComponent(message)}`);
     };
 
     return (
         <Modal
-            animationType="slide"
+            animationType="none"
             transparent={true}
             visible={visible}
             onRequestClose={onClose}
         >
             <View style={styles.modalOverlay}>
-                <BlurView intensity={20} style={StyleSheet.absoluteFill} />
                 <View style={styles.modalContent}>
-                    <View style={styles.header}>
-                        <View style={styles.bloodBadge}>
-                            <Text style={styles.bloodType}>{donor.blood_group}</Text>
-                        </View>
-                        <TouchableOpacity onPress={onClose} style={styles.closeButton}>
-                            <Ionicons name="close" size={24} color="#64748b" />
-                        </TouchableOpacity>
-                    </View>
-
-                    <ScrollView showsVerticalScrollIndicator={false}>
-                        <View style={styles.infoSection}>
-                            <Text style={styles.donorName}>{donor.name}</Text>
-                            <View style={styles.verifiedBadge}>
-                                <Ionicons name="checkmark-circle" size={16} color="#059669" />
-                                <Text style={styles.verifiedText}>Verified Donor</Text>
-                            </View>
-                        </View>
-
-                        <View style={styles.statsRow}>
-                            <View style={styles.statBox}>
-                                <Text style={styles.statValue}>{donor.compatibility_score}%</Text>
-                                <Text style={styles.statLabel}>Match</Text>
-                            </View>
-                            <View style={styles.statBox}>
-                                <Text style={styles.statValue}>{donor.suitability_score}</Text>
-                                <Text style={styles.statLabel}>Score</Text>
-                            </View>
-                            <View style={styles.statBox}>
-                                <Text style={[styles.statValue, { color: '#dc2626' }]}>
-                                    {Math.round(donor.ai_confidence * 100)}%
-                                </Text>
-                                <Text style={styles.statLabel}>AI Chance</Text>
-                            </View>
-                        </View>
-
-                        <View style={styles.detailCard}>
-                            <View style={styles.detailItem}>
-                                <View style={[styles.iconBox, { backgroundColor: '#eff6ff' }]}>
-                                    <Ionicons name="location" size={20} color="#2563eb" />
+                    {displayDonor && (
+                        <>
+                            <View style={styles.header}>
+                                <View style={styles.bloodBadge}>
+                                    <Text style={styles.bloodType}>{displayDonor.blood_group}</Text>
                                 </View>
-                                <View style={styles.detailText}>
-                                    <Text style={styles.detailLabel}>Location</Text>
-                                    <Text style={styles.detailValue}>{donor.city}, {donor.district}</Text>
-                                    <Text style={styles.detailSubValue}>{donor.state}</Text>
-                                </View>
+                                <TouchableOpacity onPress={onClose} style={styles.closeButton}>
+                                    <Ionicons name="close" size={24} color="#64748b" />
+                                </TouchableOpacity>
                             </View>
 
-                            <View style={styles.detailItem}>
-                                <View style={[styles.iconBox, { backgroundColor: '#fef2f2' }]}>
-                                    <Ionicons name="navigate" size={20} color="#dc2626" />
+                            <ScrollView showsVerticalScrollIndicator={false}>
+                                <View style={styles.infoSection}>
+                                    <Text style={styles.donorName}>{displayDonor.name}</Text>
                                 </View>
-                                <View style={styles.detailText}>
-                                    <Text style={styles.detailLabel}>Distance</Text>
-                                    <Text style={styles.detailValue}>
-                                        {(donor.distance === null || donor.distance === Infinity) ? 'Not available' : `${donor.distance} km away`}
+
+                                <View style={styles.statsRow}>
+                                    <View style={styles.statBox}>
+                                        <Text style={styles.statValue}>{displayDonor.compatibility_score}%</Text>
+                                        <Text style={styles.statLabel}>Match</Text>
+                                    </View>
+                                    <View style={styles.statBox}>
+                                        <Text style={styles.statValue}>{displayDonor.suitability_score}</Text>
+                                        <Text style={styles.statLabel}>Score</Text>
+                                    </View>
+                                    <View style={styles.statBox}>
+                                        <Text style={[styles.statValue, { color: '#dc2626' }]}>
+                                            {Math.round(displayDonor.ai_confidence * 100)}%
+                                        </Text>
+                                        <Text style={styles.statLabel}>AI Chance</Text>
+                                    </View>
+                                </View>
+
+                                <View style={styles.detailCard}>
+                                    <View style={styles.detailItem}>
+                                        <View style={[styles.iconBox, { backgroundColor: '#eff6ff' }]}>
+                                            <Ionicons name="location" size={20} color="#2563eb" />
+                                        </View>
+                                        <View style={styles.detailText}>
+                                            <Text style={styles.detailLabel}>Location</Text>
+                                            <Text style={styles.detailValue}>{displayDonor.city}, {displayDonor.district}</Text>
+                                            <Text style={styles.detailSubValue}>{displayDonor.state}</Text>
+                                        </View>
+                                    </View>
+
+                                    <View style={styles.detailItem}>
+                                        <View style={[styles.iconBox, { backgroundColor: '#fef2f2' }]}>
+                                            <Ionicons name="navigate" size={20} color="#dc2626" />
+                                        </View>
+                                        <View style={styles.detailText}>
+                                            <Text style={styles.detailLabel}>Distance</Text>
+                                            <Text style={styles.detailValue}>
+                                                {(displayDonor.distance === null || displayDonor.distance === Infinity) ? 'Not available' : `${displayDonor.distance} km away`}
+                                            </Text>
+                                        </View>
+                                    </View>
+
+                                    <View style={styles.detailItem}>
+                                        <View style={[styles.iconBox, { backgroundColor: '#f0fdf4' }]}>
+                                            <Ionicons name="calendar" size={20} color="#16a34a" />
+                                        </View>
+                                        <View style={styles.detailText}>
+                                            <Text style={styles.detailLabel}>Availability</Text>
+                                            <Text style={styles.detailValue}>Available Now</Text>
+                                        </View>
+                                    </View>
+                                </View>
+
+                                <View style={styles.noticeBox}>
+                                    <Ionicons name="information-circle" size={20} color="#94a3b8" />
+                                    <Text style={styles.noticeText}>
+                                        This donor has consented to be contacted for emergency blood requirements. Please be respectful during communication.
                                     </Text>
                                 </View>
+                            </ScrollView>
+
+                            <View style={styles.actionButtons}>
+                                <TouchableOpacity style={styles.whatsappButton} onPress={handleWhatsApp}>
+                                    <Ionicons name="logo-whatsapp" size={20} color="white" />
+                                    <Text style={styles.buttonText}>WhatsApp</Text>
+                                </TouchableOpacity>
+                                <TouchableOpacity style={styles.callButton} onPress={handleCall}>
+                                    <Ionicons name="call" size={20} color="white" />
+                                    <Text style={styles.buttonText}>Call</Text>
+                                </TouchableOpacity>
                             </View>
-
-                            <View style={styles.detailItem}>
-                                <View style={[styles.iconBox, { backgroundColor: '#f0fdf4' }]}>
-                                    <Ionicons name="calendar" size={20} color="#16a34a" />
-                                </View>
-                                <View style={styles.detailText}>
-                                    <Text style={styles.detailLabel}>Availability</Text>
-                                    <Text style={styles.detailValue}>Available Now</Text>
-                                </View>
-                            </View>
-                        </View>
-
-                        <View style={styles.noticeBox}>
-                            <Ionicons name="information-circle" size={20} color="#94a3b8" />
-                            <Text style={styles.noticeText}>
-                                This donor has consented to be contacted for emergency blood requirements. Please be respectful during communication.
-                            </Text>
-                        </View>
-                    </ScrollView>
-
-                    <View style={styles.actionButtons}>
-                        <TouchableOpacity style={styles.whatsappButton} onPress={handleWhatsApp}>
-                            <Ionicons name="logo-whatsapp" size={20} color="white" />
-                            <Text style={styles.buttonText}>WhatsApp</Text>
-                        </TouchableOpacity>
-                        <TouchableOpacity style={styles.callButton} onPress={handleCall}>
-                            <Ionicons name="call" size={20} color="white" />
-                            <Text style={styles.buttonText}>Call Hero</Text>
-                        </TouchableOpacity>
-                    </View>
+                        </>
+                    )}
                 </View>
             </View>
         </Modal>
@@ -133,15 +138,13 @@ const DonorDetailsModal = ({ visible, donor, onClose }) => {
 const styles = StyleSheet.create({
     modalOverlay: {
         flex: 1,
-        justifyContent: 'flex-end',
-        backgroundColor: 'rgba(0,0,0,0.5)',
+        backgroundColor: 'white',
     },
     modalContent: {
+        flex: 1,
         backgroundColor: 'white',
-        borderTopLeftRadius: 32,
-        borderTopRightRadius: 32,
         padding: 24,
-        maxHeight: height * 0.85,
+        paddingTop: 60,
         width: '100%',
     },
     header: {

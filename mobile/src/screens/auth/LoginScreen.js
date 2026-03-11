@@ -18,11 +18,16 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
+import * as WebBrowser from 'expo-web-browser';
+import * as Google from 'expo-auth-session/providers/google';
+import * as AuthSession from 'expo-auth-session';
 import apiService from '../../api/apiService';
 import { saveToken, saveUser } from '../../utils/storage';
 import ForgotPasswordModal from '../../components/common/ForgotPasswordModal';
 import GoogleIcon from '../../components/common/GoogleIcon';
 import { parseError, logError } from '../../utils/errors';
+
+WebBrowser.maybeCompleteAuthSession();
 
 
 
@@ -36,6 +41,14 @@ const LoginScreen = ({ navigation }) => {
     const [error, setError] = useState('');
     const [showErrors, setShowErrors] = useState(false);
     const [showForgotModal, setShowForgotModal] = useState(false);
+
+    const handleGoogleLogin = () => {
+        Alert.alert(
+            'Coming Soon',
+            'Google sign in will be available soon!',
+            [{ text: 'OK' }]
+        );
+    };
 
     useEffect(() => {
         const backAction = () => {
@@ -51,9 +64,32 @@ const LoginScreen = ({ navigation }) => {
         return () => backHandler.remove();
     }, [navigation]);
 
-    const handleGoogleLogin = () => {
-        Alert.alert('Notice', 'Google Sign-In is currently unavailable in the mobile app.');
+    const handleBackendAuth = async (accessToken) => {
+        try {
+            setIsLoading(true);
+            setError('');
+            console.log('Exchanging Google access token with backend...');
+            const res = await apiService.post('/auth/google', {
+                accessToken
+            });
+
+            console.log('Backend Google Auth Response:', res.data);
+            const { token, user } = res.data;
+
+            await saveToken(token);
+            await saveUser(user);
+
+            navigation.navigate('Dashboard');
+        } catch (err) {
+            logError('Google Backend Auth Error', err);
+            setError(parseError(err));
+        } finally {
+            setIsLoading(false);
+        }
     };
+
+
+
 
     const handleLogin = async () => {
         if (!username || !password) {

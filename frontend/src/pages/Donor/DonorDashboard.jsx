@@ -453,6 +453,7 @@ const Dashboard = () => {
                       </div>
                     </div>
                     <button
+                      id={`download-report-${report.id}`}
                       onClick={() => generateReportPDF(report)}
                       className="px-4 py-2 bg-white border border-gray-200 text-gray-600 text-xs font-bold rounded-lg hover:bg-blue-600 hover:text-white hover:border-blue-600 transition-all shadow-sm"
                     >
@@ -1460,6 +1461,7 @@ const Dashboard = () => {
                             </div>
                           ) : (
                             <button
+                              id={`nav-${item.key}`}
                               onClick={() => item.isHome ? setActiveInfo(null) : openInfo(item.key)}
                               className={`w-full text-left group flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200 ${item.isHome && !activeInfo ? 'bg-red-50' : 'hover:bg-gray-50'
                                 } ${item.urgent ? 'bg-red-50 hover:bg-red-100' : ''}`}
@@ -1566,7 +1568,7 @@ const Dashboard = () => {
                       <h1 className="text-3xl font-black text-gray-800 uppercase">Hello, {user?.full_name || 'Donor'}</h1>
                       <p className="text-gray-500 font-bold mt-2 text-base tracking-wide">Great to have you here saving lives!</p>
                     </div>
-                    <button onClick={handleLogout} className="bg-red-600 hover:bg-red-700 text-white px-8 py-3.5 rounded-full font-black text-sm transition-all shadow-xl hover:shadow-red-200 transform hover:-translate-y-1 flex items-center gap-2">
+                    <button id="donor-logout" onClick={handleLogout} className="bg-red-600 hover:bg-red-700 text-white px-8 py-3.5 rounded-full font-black text-sm transition-all shadow-xl hover:shadow-red-200 transform hover:-translate-y-1 flex items-center gap-2">
                       <i className="fas fa-power-off"></i>
                       <span>Logout</span>
                     </button>

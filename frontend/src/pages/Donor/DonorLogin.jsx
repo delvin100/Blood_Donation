@@ -17,6 +17,10 @@ export default function DonorLogin() {
   const [fpError, setFpError] = useState("");
   const [fpSuccess, setFpSuccess] = useState("");
   const [fpLoading, setFpLoading] = useState(false);
+  const [fpStep, setFpStep] = useState(1);
+  const [fpOtp, setFpOtp] = useState(['', '', '', '']);
+  const [fpNewPass, setFpNewPass] = useState("");
+  const [fpConfirmPass, setFpConfirmPass] = useState("");
 
   const [loginError, setLoginError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -143,12 +147,89 @@ export default function DonorLogin() {
 
     try {
       await axios.post("/api/auth/forgot-password", { email: fpEmail });
-      setFpSuccess("A password reset link has been sent to your email! Please follow the instructions in the email to set a new password.");
-      setFpEmail("");
-      toast.success("Reset link sent!");
+      setFpSuccess("Code sent! Check your inbox.");
+      toast.success("Verification code sent!");
+      setFpStep(2); // Move to OTP entry step
     } catch (err) {
       console.error("Error in FP flow:", err);
-      const msg = err.response?.data?.error || "Failed to send reset link.";
+      const msg = err.response?.data?.error || "Failed to send code.";
+      setFpError(msg);
+    } finally {
+      setFpLoading(false);
+    }
+  };
+
+  const handleFpVerifyOtp = async () => {
+    const otpCode = fpOtp.join("");
+    if (otpCode.length !== 4) {
+      setFpError("Please enter the 4-digit code.");
+      return;
+    }
+    setFpLoading(true);
+    setFpError("");
+    try {
+      await axios.post("/api/auth/verify-otp", {
+        email: fpEmail,
+        code: otpCode
+      });
+      toast.success("OTP verified!");
+      setFpStep(3); // Move to Password reset step
+    } catch (err) {
+      console.error("OTP verification error:", err);
+      const msg = err.response?.data?.error || "Invalid or expired code.";
+      setFpError(msg);
+
+      // Clear OTP and focus first box if invalid
+      if (msg.includes("Invalid or expired")) {
+        setFpOtp(['', '', '', '']);
+        setTimeout(() => {
+          const firstInput = document.getElementById('modal-otp-0');
+          if (firstInput) firstInput.focus();
+        }, 10);
+      }
+    } finally {
+      setFpLoading(false);
+    }
+  };
+
+  const handleFpResetPassword = async () => {
+    const otpCode = fpOtp.join("");
+    if (otpCode.length !== 4) {
+      setFpError("Please enter the 4-digit code.");
+      return;
+    }
+    if (fpNewPass.length < 8) {
+      setFpError("Password must be at least 8 characters.");
+      return;
+    }
+    if (fpNewPass !== fpConfirmPass) {
+      setFpError("Passwords do not match.");
+      return;
+    }
+
+    setFpLoading(true);
+    setFpError("");
+    try {
+      await axios.post("/api/auth/reset-password", {
+        email: fpEmail,
+        code: otpCode,
+        newPassword: fpNewPass
+      });
+      toast.success("Password reset successfully!");
+      setFpSuccess("Success! You can now sign in with your new password.");
+
+      // Delay closing modal and resetting states
+      setTimeout(() => {
+        closeForgotModal();
+        // Reset steps for next time
+        setFpStep(1);
+        setFpOtp(['', '', '', '']);
+        setFpNewPass("");
+        setFpConfirmPass("");
+      }, 3000);
+    } catch (err) {
+      console.error("Reset password error:", err);
+      const msg = err.response?.data?.error || "Invalid code or reset failed.";
       setFpError(msg);
     } finally {
       setFpLoading(false);
@@ -163,42 +244,30 @@ export default function DonorLogin() {
   const googleLogin = useGoogleLogin({
     onSuccess: async (tokenResponse) => {
       try {
-        setIsSubmitting(true);
-        setLoginError("");
         const res = await fetch("/api/auth/google", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ credential: tokenResponse.access_token }),
+          body: JSON.stringify({ accessToken: tokenResponse.access_token }),
         });
+
         const data = await res.json();
-        if (!res.ok) throw new Error(data.error || "Google Login failed");
+        if (!res.ok) throw new Error(data.error || "Google auth failed");
 
         if (data.token) {
-          // Clear any existing tokens first to avoid conflicts
-          localStorage.removeItem("authToken");
-          sessionStorage.removeItem("authToken");
-
-          if (rememberMe) {
-            localStorage.setItem("authToken", data.token);
-          } else {
-            sessionStorage.setItem("authToken", data.token);
-          }
+          localStorage.setItem("authToken", data.token);
         }
 
-        if (data.user && data.user.blood_type) {
-          window.location.href = "/dashboard";
-        } else {
+        if (!data.user.blood_type || !data.user.dob || !data.user.state) {
           setGoogleUser(data.user);
           setShowCompleteProfileModal(true);
+        } else {
+          window.location.href = "/dashboard";
         }
       } catch (err) {
-        setLoginError(err.message);
-        setIsSubmitting(false);
+        toast.error(err.message);
       }
     },
-    onError: () => {
-      setLoginError("Google Login Failed");
-    }
+    onError: () => toast.error("Google login failed")
   });
 
   const handleLogin = async (event) => {
@@ -416,6 +485,7 @@ export default function DonorLogin() {
               </div>
 
               <button
+                id="donor-login-submit"
                 type="submit"
                 className="btn btn-primary"
                 aria-label="Submit login"
@@ -494,7 +564,6 @@ export default function DonorLogin() {
         role="dialog"
         aria-modal="true"
         aria-label="Forgot password"
-        onClick={(e) => e.target === e.currentTarget && closeForgotModal()}
       >
         <div className="fp-card">
           <button className="fp-close" aria-label="Close" onClick={closeForgotModal}>
@@ -511,40 +580,170 @@ export default function DonorLogin() {
             </div>
             <h3>Reset Your Password</h3>
             <p>
-              Enter your registered email to receive a secure reset link.
+              Enter your registered email to receive a secure 4-digit OTP code.
             </p>
           </div>
 
           <div className="fp-body">
-            {/* Success Message Banner */}
-            <div className={`fp-success ${fpSuccess ? "show" : ""}`} role="status">
-              {fpSuccess}
-            </div>
+            {/* Success Message Banner (Only for final success) */}
+            {fpStep === 2 && !fpError && (!fpSuccess || !fpSuccess.includes("Success!")) && (
+              <div className="fp-success show" role="status" style={{ marginBottom: '15px' }}>
+                Verification code sent to your email.
+              </div>
+            )}
 
-            {!fpSuccess && (
+            {fpSuccess && fpSuccess.includes("Success!") && (
+              <div className="fp-success show" role="status">
+                {fpSuccess}
+              </div>
+            )}
+
+            {!fpSuccess.includes("Success!") && (
               <>
-                <label className="fp-label" htmlFor="fp-email">Registered Email</label>
-                <input
-                  id="fp-email"
-                  className={`fp-input ${fpError ? "error-input" : ""}`}
-                  type="email"
-                  placeholder="you@example.com"
-                  autoComplete="email"
-                  value={fpEmail}
-                  onChange={(e) => {
-                    setFpEmail(e.target.value);
-                    setFpError("");
-                  }}
-                  disabled={fpLoading}
-                />
-                <button
-                  className="fp-btn"
-                  type="button"
-                  onClick={handleFpSendCode}
-                  disabled={fpLoading}
-                >
-                  {fpLoading ? "Sending Link..." : "Send Reset Link"}
-                </button>
+                {/* Step 1: Email Entry */}
+                {fpStep === 1 && (
+                  <>
+                    <label className="fp-label" htmlFor="fp-email">Registered Email</label>
+                    <input
+                      id="fp-email"
+                      className={`fp-input ${fpError ? "error-input" : ""}`}
+                      type="email"
+                      placeholder="you@example.com"
+                      autoComplete="email"
+                      value={fpEmail}
+                      onChange={(e) => {
+                        setFpEmail(e.target.value);
+                        setFpError("");
+                      }}
+                      disabled={fpLoading}
+                    />
+                    <button
+                      className="fp-btn"
+                      type="button"
+                      onClick={handleFpSendCode}
+                      disabled={fpLoading}
+                    >
+                      {fpLoading ? "Sending Code..." : "Send OTP Code"}
+                    </button>
+                  </>
+                )}
+
+                {/* Step 2: OTP Verification */}
+                {fpStep === 2 && (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
+                    <div>
+                      <label className="fp-label">4-Digit Security Code</label>
+                      <div style={{ display: 'flex', gap: '10px', justifyContent: 'center', marginTop: '10px' }}>
+                        {fpOtp.map((digit, idx) => (
+                          <input
+                            key={idx}
+                            id={`modal-otp-${idx}`}
+                            type="text"
+                            maxLength="1"
+                            value={digit}
+                            disabled={idx > 0 && !fpOtp[idx - 1]}
+                            onChange={(e) => {
+                              const val = e.target.value.replace(/\D/g, '');
+                              const newOtp = [...fpOtp];
+                              newOtp[idx] = val;
+                              setFpOtp(newOtp);
+                              if (val && idx < 3) {
+                                setTimeout(() => {
+                                  const nextInput = document.getElementById(`modal-otp-${idx + 1}`);
+                                  if (nextInput) nextInput.focus();
+                                }, 10);
+                              }
+                            }}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Backspace') {
+                                if (!fpOtp[idx] && idx > 0) {
+                                  const newOtp = [...fpOtp];
+                                  newOtp[idx - 1] = '';
+                                  setFpOtp(newOtp);
+                                  document.getElementById(`modal-otp-${idx - 1}`).focus();
+                                } else {
+                                  const newOtp = [...fpOtp];
+                                  newOtp[idx] = '';
+                                  setFpOtp(newOtp);
+                                }
+                              }
+                            }}
+                            style={{
+                              width: '45px',
+                              height: '55px',
+                              textAlign: 'center',
+                              fontSize: '24px',
+                              fontWeight: '800',
+                              borderRadius: '10px',
+                              border: '2px solid #e5e7eb',
+                              outline: 'none',
+                              color: '#111827',
+                              backgroundColor: (idx > 0 && !fpOtp[idx - 1]) ? '#f3f4f6' : 'white',
+                              cursor: (idx > 0 && !fpOtp[idx - 1]) ? 'not-allowed' : 'text'
+                            }}
+                          />
+                        ))}
+                      </div>
+                    </div>
+
+                    <button
+                      className="fp-btn"
+                      type="button"
+                      onClick={handleFpVerifyOtp}
+                      disabled={fpLoading || fpOtp.join("").length !== 4}
+                    >
+                      {fpLoading ? "Verifying..." : "Verify OTP"}
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => { setFpStep(1); setFpError(""); setFpOtp(['', '', '', '']); }}
+                      style={{ background: 'none', border: 'none', color: '#666', fontSize: '13px', fontWeight: 600, cursor: 'pointer' }}
+                    >
+                      Back to Email
+                    </button>
+                  </div>
+                )}
+
+                {/* Step 3: New Password Entry */}
+                {fpStep === 3 && !fpSuccess.includes("Success!") && (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
+                    <div>
+                      <label className="fp-label" htmlFor="fp-new-pass">New Password</label>
+                      <input
+                        id="fp-new-pass"
+                        className="fp-input"
+                        type="password"
+                        placeholder="••••••••"
+                        value={fpNewPass}
+                        onChange={(e) => setFpNewPass(e.target.value)}
+                        disabled={fpLoading}
+                      />
+                    </div>
+
+                    <div>
+                      <label className="fp-label" htmlFor="fp-confirm-pass">Confirm Password</label>
+                      <input
+                        id="fp-confirm-pass"
+                        className="fp-input"
+                        type="password"
+                        placeholder="••••••••"
+                        value={fpConfirmPass}
+                        onChange={(e) => setFpConfirmPass(e.target.value)}
+                        disabled={fpLoading}
+                      />
+                    </div>
+
+                    <button
+                      className="fp-btn"
+                      type="button"
+                      onClick={handleFpResetPassword}
+                      disabled={fpLoading}
+                    >
+                      {fpLoading ? "Resetting..." : "Reset Password"}
+                    </button>
+                  </div>
+                )}
               </>
             )}
 

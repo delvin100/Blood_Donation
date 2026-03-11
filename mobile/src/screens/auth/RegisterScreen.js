@@ -17,10 +17,15 @@ import DateTimePicker from '@react-native-community/datetimepicker';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
+import * as WebBrowser from 'expo-web-browser';
+import * as Google from 'expo-auth-session/providers/google';
+import * as AuthSession from 'expo-auth-session';
 import apiService from '../../api/apiService';
 import { saveToken, saveUser } from '../../utils/storage';
 import GoogleIcon from '../../components/common/GoogleIcon';
 import { parseError, logError } from '../../utils/errors';
+
+WebBrowser.maybeCompleteAuthSession();
 
 
 
@@ -35,6 +40,14 @@ const RegisterScreen = ({ navigation }) => {
 
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState('');
+
+    const handleGoogleLogin = () => {
+        Alert.alert(
+            'Coming Soon',
+            'Google sign up will be available soon!',
+            [{ text: 'OK' }]
+        );
+    };
 
     useEffect(() => {
         const backAction = () => {
@@ -62,9 +75,32 @@ const RegisterScreen = ({ navigation }) => {
         confirmPassword: ''
     });
 
-    const handleGoogleLogin = () => {
-        Alert.alert('Notice', 'Google Sign-Up is currently unavailable in the mobile app.');
+    const handleBackendAuth = async (accessToken) => {
+        try {
+            setIsLoading(true);
+            setError('');
+            console.log('Exchanging Google access token with backend...');
+            const res = await apiService.post('/auth/google', {
+                accessToken
+            });
+
+            console.log('Backend Google Auth Response:', res.data);
+            const { token, user } = res.data;
+
+            await saveToken(token);
+            await saveUser(user);
+
+            navigation.navigate('Dashboard');
+        } catch (err) {
+            logError('Google Backend Auth Error', err);
+            setError(parseError(err));
+        } finally {
+            setIsLoading(false);
+        }
     };
+
+
+
 
     const calculatePasswordStrength = (pwd) => {
         if (!pwd) return { level: 0, label: '', color: '#e5e7eb' };

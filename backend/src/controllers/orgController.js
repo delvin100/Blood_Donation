@@ -2,11 +2,11 @@ const pool = require('../config/database');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const admin = require('../config/firebaseAdmin');
-const emailService = require('../utils/emailService');
 const { calculateDonorAvailability } = require('../utils/donorUtils');
 const { addOrgLog } = require('../utils/logUtils');
 const https = require('https');
 const { getIndiaCoordinates } = require('../utils/matchUtils');
+const sendEmail = require('../utils/emailUtils');
 
 const JWT_SECRET = process.env.JWT_SECRET || 'secret';
 exports.register = async (req, res) => {
@@ -73,7 +73,12 @@ exports.register = async (req, res) => {
             user: { id: result.insertId, name, email, type, role: 'organization' }
         });
     } catch (err) {
-        res.status(500).json({ error: 'Server error' });
+        console.error('Org Registration Error:', {
+            message: err.message,
+            stack: err.stack,
+            body: { ...req.body, password: '[REDACTED]', confirm_password: '[REDACTED]' }
+        });
+        res.status(500).json({ error: 'Server error', details: err.message });
     }
 };
 
@@ -93,146 +98,12 @@ exports.login = async (req, res) => {
         const token = jwt.sign({ id: org.id, role: 'organization' }, JWT_SECRET, { expiresIn: '7d' });
         res.json({ token, user: { id: org.id, name: org.name, email: org.email, type: org.type, role: 'organization' } });
     } catch (err) {
-        res.status(500).json({ error: 'Server error' });
-    }
-};
-
-exports.forgotPassword = async (req, res) => {
-    try {
-        const { email } = req.body;
-        const [rows] = await pool.query('SELECT * FROM organizations WHERE email = ? LIMIT 1', [email]);
-        const org = rows[0];
-        if (!org) return res.status(404).json({ error: 'No account found with that email address.' });
-
-        const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
-        const payload = JSON.stringify({
-            requestType: 'PASSWORD_RESET',
-            email: email,
-            continueUrl: `${frontendUrl}/reset-password?type=organization`
+        console.error('Org Login Error:', {
+            message: err.message,
+            stack: err.stack,
+            email: req.body.email
         });
-
-        const options = {
-            hostname: 'identitytoolkit.googleapis.com',
-            path: `/v1/accounts:sendOobCode?key=${process.env.FIREBASE_WEB_API_KEY}`,
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(payload) }
-        };
-
-        try {
-            await new Promise((resolve, reject) => {
-                const fbReq = https.request(options, (resp) => {
-                    let body = '';
-                    resp.on('data', (d) => body += d);
-                    resp.on('end', () => {
-                        console.log('Firebase org status:', resp.statusCode, body);
-                        if (resp.statusCode >= 200 && resp.statusCode < 300) resolve();
-                        else reject(new Error(`Firebase error: ${body}`));
-                    });
-                });
-                fbReq.on('error', reject);
-                fbReq.write(payload);
-                fbReq.end();
-            });
-            return res.json({ message: 'Password reset link sent to your email.' });
-        } catch (fbErr) {
-            console.warn('Firebase org reset failed, falling back to NodeMailer:', fbErr.message);
-
-            // Generate custom reset code
-            const resetCode = Math.floor(100000 + Math.random() * 900000).toString();
-            const expires = new Date(Date.now() + 3600000); // 1 hour
-
-            await pool.query(
-                'UPDATE organizations SET reset_code = ?, reset_code_expires_at = ? WHERE id = ?',
-                [resetCode, expires, org.id]
-            );
-
-            // Create custom reset link
-            const resetLink = `${frontendUrl}/reset-password?type=organization&oobCode=${resetCode}&mode=resetPassword&fallback=true&email=${encodeURIComponent(email)}`;
-
-            await emailService.sendResetEmail(email, resetLink, org.org_name);
-
-            return res.json({
-                message: 'Password reset link sent to your email (via Recovery Service).',
-                isFallback: true
-            });
-        }
-    } catch (err) {
-        console.error('Org forgot password error:', err);
-        res.status(500).json({ error: 'Failed to send reset email.', details: err.message });
-    }
-};
-
-
-exports.syncPassword = async (req, res) => {
-    try {
-        const { email, newPassword } = req.body;
-        console.log(`[OrgSyncPassword] Attempting sync for organization: ${email}`);
-
-        if (!email || !newPassword) {
-            console.warn('[OrgSyncPassword] Missing email or password');
-            return res.status(400).json({ error: 'Email and new password are required.' });
-        }
-
-        // Case-insensitive lookup for organizations
-        const [rows] = await pool.query('SELECT * FROM organizations WHERE LOWER(email) = LOWER(?) LIMIT 1', [email]);
-        if (rows.length === 0) {
-            console.warn(`[OrgSyncPassword] Organization not found for email (case-insensitive): ${email}`);
-            return res.status(404).json({ error: 'Facility not found. Please ensure you are using the correct account type (Organization).' });
-        }
-
-        const orgId = rows[0].id;
-
-        console.log(`[OrgSyncPassword] Found org ID: ${orgId}, hashing new password...`);
-        const hash = await bcrypt.hash(newPassword, 10);
-
-        const [result] = await pool.query(
-            'UPDATE organizations SET password_hash = ?, reset_code = NULL, reset_code_expires_at = NULL WHERE id = ?',
-            [hash, orgId]
-        );
-
-        console.log(`[OrgSyncPassword] Update result: ${result.affectedRows} row(s) updated`);
-        if (result.affectedRows === 0) {
-            return res.status(500).json({ error: 'Database update failed. No records were changed.' });
-        }
-
-        res.json({ message: 'Org password synced to MySQL successfully.' });
-    } catch (err) {
-        console.error('[OrgSyncPassword] Error:', err);
-        res.status(500).json({ error: 'Failed to sync password.', details: err.message });
-    }
-};
-
-exports.verifyResetCode = async (req, res) => {
-    try {
-        const { email, code } = req.body;
-        const [rows] = await pool.query('SELECT * FROM organizations WHERE email = ? LIMIT 1', [email]);
-        if (rows.length === 0) return res.status(404).json({ error: 'Facility not found.' });
-        const org = rows[0];
-
-        if (org.reset_code !== code || new Date() > new Date(org.reset_code_expires_at)) {
-            return res.status(400).json({ error: 'Invalid or expired code.' });
-        }
-        res.json({ message: 'Code verified.', valid: true });
-    } catch (err) {
-        res.status(500).json({ error: 'Server error' });
-    }
-};
-
-exports.resetPassword = async (req, res) => {
-    try {
-        const { email, code, newPassword } = req.body;
-        const [rows] = await pool.query('SELECT * FROM organizations WHERE email = ? LIMIT 1', [email]);
-        if (rows.length === 0) return res.status(404).json({ error: 'Facility not found.' });
-        const org = rows[0];
-
-        if (org.reset_code !== code || new Date() > new Date(org.reset_code_expires_at)) {
-            return res.status(400).json({ error: 'Invalid or expired request.' });
-        }
-        const hash = await bcrypt.hash(newPassword, 10);
-        await pool.query('UPDATE organizations SET password_hash = ?, reset_code = NULL, reset_code_expires_at = NULL WHERE id = ?', [hash, org.id]);
-        res.json({ message: 'Access key updated successfully.' });
-    } catch (err) {
-        res.status(500).json({ error: 'Server error' });
+        res.status(500).json({ error: 'Server error', details: err.message });
     }
 };
 
@@ -259,7 +130,8 @@ exports.getStats = async (req, res) => {
             inventory_breakdown: breakdown
         });
     } catch (err) {
-        res.status(500).json({ error: 'Server error' });
+        console.error('Org getStats Error:', err);
+        res.status(500).json({ error: 'Server error', details: err.message });
     }
 };
 
@@ -276,7 +148,8 @@ exports.getInventory = async (req, res) => {
         const [rows] = await pool.query('SELECT * FROM blood_inventory WHERE org_id = ?', [orgId]);
         res.json(rows);
     } catch (err) {
-        res.status(500).json({ error: 'Server error' });
+        console.error('Org getInventory Error:', err);
+        res.status(500).json({ error: 'Server error', details: err.message });
     }
 };
 
@@ -305,7 +178,8 @@ exports.updateInventory = async (req, res) => {
 
 
     } catch (err) {
-        res.status(500).json({ error: 'Server error' });
+        console.error('Org updateInventory Error:', err);
+        res.status(500).json({ error: 'Server error', details: err.message });
     }
 };
 
@@ -357,7 +231,8 @@ exports.getProfile = async (req, res) => {
 
         res.json(org);
     } catch (err) {
-        res.status(500).json({ error: 'Server error' });
+        console.error('Org getProfile Error:', err);
+        res.status(500).json({ error: 'Server error', details: err.message });
     }
 };
 
@@ -370,7 +245,8 @@ exports.updateProfile = async (req, res) => {
         );
         res.json({ message: 'Profile updated' });
     } catch (err) {
-        res.status(500).json({ error: 'Server error' });
+        console.error('Org updateProfile Error:', err);
+        res.status(500).json({ error: 'Server error', details: err.message });
     }
 };
 
@@ -383,7 +259,8 @@ exports.searchDonor = async (req, res) => {
         );
         res.json(rows);
     } catch (err) {
-        res.status(500).json({ error: 'Server error' });
+        console.error('Org searchDonor Error:', err);
+        res.status(500).json({ error: 'Server error', details: err.message });
     }
 };
 
@@ -397,7 +274,8 @@ exports.getAnalytics = async (req, res) => {
         );
         res.json({ donations });
     } catch (err) {
-        res.status(500).json({ error: 'Server error' });
+        console.error('Org getAnalytics Error:', err);
+        res.status(500).json({ error: 'Server error', details: err.message });
     }
 };
 
@@ -412,7 +290,7 @@ exports.getGeographicStats = async (req, res) => {
         res.json(rows);
     } catch (err) {
         console.error('Error fetching geographic stats:', err);
-        res.status(500).json({ error: 'Server error' });
+        res.status(500).json({ error: 'Server error', details: err.message });
     }
 };
 
@@ -425,7 +303,7 @@ exports.getHistory = async (req, res) => {
         res.json(rows);
     } catch (err) {
         console.error('Error in getHistory:', err);
-        res.status(500).json({ error: 'Server error' });
+        res.status(500).json({ error: 'Server error', details: err.message });
     }
 };
 
@@ -436,7 +314,8 @@ exports.getRequests = async (req, res) => {
         const [rows] = await pool.query('SELECT * FROM emergency_requests WHERE org_id = ? ORDER BY created_at DESC', [req.user.id]);
         res.json(rows);
     } catch (err) {
-        res.status(500).json({ error: 'Server error' });
+        console.error('Org getRequests Error:', err);
+        res.status(500).json({ error: 'Server error', details: err.message });
     }
 };
 
@@ -451,7 +330,8 @@ exports.createRequest = async (req, res) => {
         res.json({ message: 'Request created' });
 
     } catch (err) {
-        res.status(500).json({ error: 'Server error' });
+        console.error('Org createRequest Error:', err);
+        res.status(500).json({ error: 'Server error', details: err.message });
     }
 };
 
@@ -464,7 +344,8 @@ exports.updateRequestStatus = async (req, res) => {
         res.json({ message: 'Request status updated' });
 
     } catch (err) {
-        res.status(500).json({ error: 'Server error' });
+        console.error('Org updateRequestStatus Error:', err);
+        res.status(500).json({ error: 'Server error', details: err.message });
     }
 };
 
@@ -477,7 +358,8 @@ exports.getRecentActivity = async (req, res) => {
         );
         res.json(rows);
     } catch (err) {
-        res.status(500).json({ error: 'Server error' });
+        console.error('Org getRecentActivity Error:', err);
+        res.status(500).json({ error: 'Server error', details: err.message });
     }
 };
 
@@ -493,7 +375,8 @@ exports.getDonorReports = async (req, res) => {
         `, [donorId]);
         res.json(rows);
     } catch (err) {
-        res.status(500).json({ error: 'Server error' });
+        console.error('Org getDonorReports Error:', err);
+        res.status(500).json({ error: 'Server error', details: err.message });
     }
 };
 
@@ -568,7 +451,7 @@ exports.createMedicalReport = async (req, res) => {
     } catch (err) {
         await connection.rollback();
         console.error('Error in createMedicalReport:', err);
-        res.status(500).json({ error: 'Server error' });
+        res.status(500).json({ error: 'Server error', details: err.message });
     } finally {
         connection.release();
     }
@@ -590,7 +473,8 @@ exports.verifyDonor = async (req, res) => {
 
 
     } catch (err) {
-        res.status(500).json({ error: 'Server error' });
+        console.error('Org verifyDonor Error:', err);
+        res.status(500).json({ error: 'Server error', details: err.message });
     }
 };
 
@@ -603,7 +487,8 @@ exports.getMembers = async (req, res) => {
         );
         res.json(rows);
     } catch (err) {
-        res.status(500).json({ error: 'Server error' });
+        console.error('Org getMembers Error:', err);
+        res.status(500).json({ error: 'Server error', details: err.message });
     }
 };
 
@@ -625,7 +510,8 @@ exports.addMember = async (req, res) => {
         if (err.code === 'ER_DUP_ENTRY') {
             return res.status(400).json({ error: 'Already a member' });
         }
-        res.status(500).json({ error: 'Server error' });
+        console.error('Org addMember Error:', err);
+        res.status(500).json({ error: 'Server error', details: err.message });
     }
 };
 
@@ -649,7 +535,7 @@ exports.removeMember = async (req, res) => {
 
     } catch (err) {
         console.error('Error removing member:', err);
-        res.status(500).json({ error: 'Server error' });
+        res.status(500).json({ error: 'Server error', details: err.message });
     }
 };
 
@@ -699,7 +585,7 @@ exports.getNotifications = async (req, res) => {
         res.json(rows);
     } catch (err) {
         console.error("Notif Error", err);
-        res.status(500).json({ error: 'Server error' });
+        res.status(500).json({ error: 'Server error', details: err.message });
     }
 };
 
@@ -712,7 +598,8 @@ exports.markAsRead = async (req, res) => {
         );
         res.json({ message: 'Marked as read' });
     } catch (err) {
-        res.status(500).json({ error: 'Server error' });
+        console.error('Org markAsRead Error:', err);
+        res.status(500).json({ error: 'Server error', details: err.message });
     }
 };
 
@@ -724,7 +611,8 @@ exports.markAllRead = async (req, res) => {
         );
         res.json({ message: 'All marked as read' });
     } catch (err) {
-        res.status(500).json({ error: 'Server error' });
+        console.error('Org markAllRead Error:', err);
+        res.status(500).json({ error: 'Server error', details: err.message });
     }
 };
 
@@ -737,7 +625,7 @@ exports.deleteNotification = async (req, res) => {
         res.json({ message: 'Notification removed' });
     } catch (err) {
         console.error('Org Delete Notif Error:', err);
-        res.status(500).json({ error: 'Server error' });
+        res.status(500).json({ error: 'Server error', details: err.message });
     }
 };
 
@@ -750,6 +638,122 @@ exports.clearAllNotifications = async (req, res) => {
         res.json({ message: 'All notifications cleared' });
     } catch (err) {
         console.error('Org Clear All Notif Error:', err);
-        res.status(500).json({ error: 'Server error' });
+        res.status(500).json({ error: 'Server error', details: err.message });
+    }
+};
+
+exports.forgotPassword = async (req, res) => {
+    try {
+        const { email } = req.body;
+        if (!email) return res.status(400).json({ error: 'Email is required' });
+
+        const [rows] = await pool.query('SELECT * FROM organizations WHERE LOWER(email) = LOWER(?) LIMIT 1', [email]);
+        if (rows.length === 0) return res.status(404).json({ error: 'No organization found with this email' });
+
+        const org = rows[0];
+        // Generate 4-digit OTP
+        const resetCode = Math.floor(1000 + Math.random() * 9000).toString();
+        const expiry = new Date(Date.now() + 15 * 60000); // 15 mins
+
+        await pool.query(
+            'UPDATE organizations SET reset_code = ?, reset_code_expires_at = ? WHERE id = ?',
+            [resetCode, expiry, org.id]
+        );
+
+
+        const html = `
+            <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 500px; margin: 0 auto; padding: 40px; background-color: #ffffff; border-radius: 16px; box-shadow: 0 4px 24px rgba(0,0,0,0.06); border: 1px solid #f1f1f1;">
+                <div style="text-align: center; margin-bottom: 30px;">
+                    <div style="display: inline-block; padding: 12px; background-color: #f0f9ff; border-radius: 12px;">
+                        <span style="font-size: 32px;">🏢</span>
+                    </div>
+                </div>
+                <h2 style="color: #0c4a6e; text-align: center; margin-bottom: 10px; font-weight: 800;">Facility Access Recovery</h2>
+                <p style="color: #666; text-align: center; font-size: 14px; line-height: 1.6;">Hello <strong>${org.name}</strong>, use the verification code below to reset your organization credentials.</p>
+                
+                <div style="background-color: #f0f9ff; border: 1px solid #bae6fd; border-radius: 12px; padding: 24px; text-align: center; margin: 30px 0;">
+                    <div style="font-size: 14px; color: #0369a1; margin-bottom: 8px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em;">Manual Verification Code</div>
+                    <div style="font-size: 42px; font-weight: 900; color: #0284c7; letter-spacing: 12px; margin-left: 12px;">${resetCode}</div>
+                </div>
+
+
+
+                <div style="margin-top: 40px; padding-top: 24px; border-top: 1px solid #f1f1f1; text-align: center;">
+                    <p style="color: #94a3b8; font-size: 11px;">Shielded by eBloodBank Enterprise Security Network. This code expires in 15 minutes.</p>
+                </div>
+            </div>
+        `;
+
+        await sendEmail({
+            email: org.email,
+            subject: 'Organization Access Recovery - eBloodBank',
+            html
+        });
+
+        res.json({ message: 'Verification code sent to facility email' });
+    } catch (err) {
+        console.error('Org forgot password error:', err);
+        res.status(500).json({ error: 'Failed to process request', details: err.message });
+    }
+};
+
+exports.verifyOTP = async (req, res) => {
+    try {
+        const { email, code } = req.body;
+        if (!email || !code) return res.status(400).json({ error: 'Email and code are required' });
+
+        const [rows] = await pool.query(
+            'SELECT id FROM organizations WHERE LOWER(email) = LOWER(?) AND reset_code = ? AND reset_code_expires_at > NOW()',
+            [email, code]
+        );
+
+        if (rows.length === 0) {
+            return res.status(400).json({ error: 'Invalid or expired verification code' });
+        }
+
+        res.json({ message: 'OTP verified successfully' });
+    } catch (err) {
+        console.error('Org OTP verification error:', err);
+        res.status(500).json({ error: 'Failed to verify code', details: err.message });
+    }
+};
+
+exports.resetPassword = async (req, res) => {
+    try {
+        const { email, code, newPassword } = req.body;
+        if (!email || !code || !newPassword) {
+            return res.status(400).json({ error: 'Missing required fields' });
+        }
+
+        const [rows] = await pool.query(
+            'SELECT * FROM organizations WHERE LOWER(email) = LOWER(?) AND reset_code = ? AND reset_code_expires_at > NOW()',
+            [email, code]
+        );
+
+        if (rows.length === 0) {
+            return res.status(400).json({ error: 'Invalid or expired reset code' });
+        }
+
+        const org = rows[0];
+        const hash = await bcrypt.hash(newPassword, 10);
+
+        await pool.query(
+            'UPDATE organizations SET password_hash = ?, reset_code = NULL, reset_code_expires_at = NULL WHERE id = ?',
+            [hash, org.id]
+        );
+
+        // Sync with Firebase
+        try {
+            await admin.auth().updateUser(`org_${org.id}`, {
+                password: newPassword
+            });
+        } catch (fbErr) {
+            console.error('Firebase org password sync error:', fbErr);
+        }
+
+        res.json({ message: 'Organization password reset successful' });
+    } catch (err) {
+        console.error('Org reset password error:', err);
+        res.status(500).json({ error: 'Failed to reset organization password', details: err.message });
     }
 };

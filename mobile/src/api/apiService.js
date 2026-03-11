@@ -5,7 +5,8 @@ const LOCAL_API_URL = 'http://192.168.137.1:4000/api/';
 const RENDER_API_URL = 'https://ebloodbank.onrender.com/api/';
 
 // Enforced Production Mode to bypass local networking/firewall issues
-const API_BASE_URL = RENDER_API_URL;
+// Automatically switch between local and production based on environment
+const API_BASE_URL = __DEV__ ? LOCAL_API_URL : RENDER_API_URL;
 
 const apiService = axios.create({
     baseURL: API_BASE_URL,

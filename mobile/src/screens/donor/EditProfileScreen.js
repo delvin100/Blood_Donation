@@ -20,7 +20,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import * as ImagePicker from 'expo-image-picker';
 import * as Location from 'expo-location';
 import apiService from '../../api/apiService';
-import { stateDistrictMapping, bloodGroups, cityToDistrictMapping } from '../../utils/locationData';
+import { stateDistrictMapping, bloodGroups, cityToDistrictMapping, districtAliases } from '../../utils/locationData';
 import { parseError, logError } from '../../utils/errors';
 
 const EditProfileScreen = ({ navigation, route }) => {
@@ -263,14 +263,6 @@ const EditProfileScreen = ({ navigation, route }) => {
                 );
 
                 if (matchedState) {
-                    setFormData(prev => ({
-                        ...prev,
-                        state: matchedState,
-                        city: addr.city || addr.town || prev.city,
-                        latitude: lat,
-                        longitude: lng
-                    }));
-
                     const dists = stateDistrictMapping[matchedState];
                     const possibleDistrictSource = [
                         addr.subregion,
@@ -280,14 +272,26 @@ const EditProfileScreen = ({ navigation, route }) => {
                         addr.name
                     ].filter(Boolean);
 
+                    // Robust matching helper
+                    const clean = (s) => (s || "").toLowerCase().replace(/district/g, "").trim();
+
                     let matchedDist = null;
                     for (const source of possibleDistrictSource) {
-                        const sourceLower = source.toLowerCase();
+                        const sourceClean = clean(source);
+
+                        // 1. Alias check
+                        if (districtAliases[source]) {
+                            const aliasMapping = districtAliases[source];
+                            if (dists.includes(aliasMapping)) {
+                                matchedDist = aliasMapping;
+                                break;
+                            }
+                        }
+
+                        // 2. Direct/Partial match
                         matchedDist = dists.find(d => {
-                            const dLower = d.toLowerCase();
-                            return dLower === sourceLower ||
-                                sourceLower.includes(dLower) ||
-                                dLower.includes(sourceLower);
+                            const dClean = clean(d);
+                            return dClean === sourceClean || sourceClean.includes(dClean) || dClean.includes(sourceClean);
                         });
                         if (matchedDist) break;
                     }
@@ -299,19 +303,29 @@ const EditProfileScreen = ({ navigation, route }) => {
                         }
                     }
 
+                    if (!matchedDist && (addr.city || addr.town)) {
+                        const cityVal = (addr.city || addr.town).toLowerCase();
+                        const mappingKey = Object.keys(cityToDistrictMapping).find(k => k.toLowerCase() === cityVal);
+                        if (mappingKey) {
+                            matchedDist = cityToDistrictMapping[mappingKey];
+                        }
+                    }
+
+                    // Update most fields immediately
+                    setFormData(prev => ({
+                        ...prev,
+                        state: matchedState,
+                        city: addr.city || addr.town || prev.city,
+                        latitude: lat,
+                        longitude: lng,
+                        district: '' // Clear first to ensure picker re-selection
+                    }));
+
+                    // Delay district selection slightly so the Picker has time to render new items
                     if (matchedDist) {
-                        // Using a slightly longer timeout to ensure state is settled and Picker can re-render its list
                         setTimeout(() => {
                             setFormData(prev => ({ ...prev, district: matchedDist }));
-                        }, 300);
-                    } else if (addr.city || addr.town) {
-                        const cityVal = addr.city || addr.town;
-                        if (cityToDistrictMapping[cityVal]) {
-                            const fallbackDist = cityToDistrictMapping[cityVal];
-                            setTimeout(() => {
-                                setFormData(prev => ({ ...prev, district: fallbackDist }));
-                            }, 400);
-                        }
+                        }, 500);
                     }
                 }
             }

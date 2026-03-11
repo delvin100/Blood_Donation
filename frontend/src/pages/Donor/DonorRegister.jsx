@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { useGoogleLogin } from '@react-oauth/google';
 import CompleteProfileModal from "../../components/modals/CompleteProfileModal";
+import toast from 'react-hot-toast';
 import "../../assets/css/auth-base.css";
 import "../../assets/css/register.css";
 
@@ -88,47 +89,32 @@ export default function DonorRegister() {
   const [googleUser, setGoogleUser] = useState(null);
 
   const googleLogin = useGoogleLogin({
-    scope: "email profile openid",
     onSuccess: async (tokenResponse) => {
       try {
-        setIsSubmitting(true);
-        setSignupError("");
         const res = await fetch("/api/auth/google", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ credential: tokenResponse.access_token }),
+          body: JSON.stringify({ accessToken: tokenResponse.access_token }),
         });
 
-        let data;
-        const contentType = res.headers.get("content-type");
-        if (contentType && contentType.includes("application/json")) {
-          data = await res.json();
-        } else {
-          const text = await res.text();
-          throw new Error(res.ok ? "Unexpected response format" : `Error ${res.status}: ${text.substring(0, 100)}`);
-        }
-
-        if (!res.ok) throw new Error(data.error || "Google Signup failed");
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || "Google auth failed");
 
         if (data.token) {
           localStorage.setItem("authToken", data.token);
-          console.log("Google Auth token set.", data.token);
         }
 
-        if (data.user && data.user.blood_type) {
-          window.location.href = "/dashboard";
-        } else {
+        if (!data.user.blood_type || !data.user.dob || !data.user.state) {
           setGoogleUser(data.user);
           setShowCompleteProfileModal(true);
+        } else {
+          window.location.href = "/dashboard";
         }
       } catch (err) {
-        setSignupError(err.message);
-        setIsSubmitting(false);
+        toast.error(err.message);
       }
     },
-    onError: () => {
-      setSignupError("Google Signup Failed");
-    }
+    onError: () => toast.error("Google signup failed")
   });
 
   // Validation functions

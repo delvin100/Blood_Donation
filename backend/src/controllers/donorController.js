@@ -57,7 +57,11 @@ exports.getStats = async (req, res) => {
             memberships
         });
     } catch (err) {
-        console.error('getStats Error:', err);
+        console.error('getStats Error:', {
+            message: err.message,
+            stack: err.stack,
+            donorId: req.user.id
+        });
         res.status(500).json({ error: 'Server error', details: err.message });
     }
 };

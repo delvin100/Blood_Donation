@@ -17,11 +17,11 @@ const pool = mysql.createPool({
     connectTimeout: 20000 // Increased timeout for initial connection
 });
 
-// IMPORTANT: Keep-alive and error handling for free-tier DB stability
+// Connection pool events
 pool.on('error', (err) => {
-    console.error('Unexpected error on idle client', err);
+    console.error('Unexpected error on idle MySQL client:', err);
     if (err.code === 'PROTOCOL_CONNECTION_LOST' || err.code === 'ECONNRESET') {
-        console.log('Database connection was closed. This is normal for free-tier DBs. The pool will handle reconnection.');
+        console.log('Database connection was closed. The pool will handle reconnection.');
     } else {
         throw err;
     }
@@ -30,11 +30,16 @@ pool.on('error', (err) => {
 // Verify connection on startup
 pool.getConnection()
     .then(connection => {
-        console.log("Connected to FreeSQLDatabase Successfully");
+        console.log(`Database connected successfully to ${process.env.DB_HOST || 'localhost'}`);
         connection.release();
     })
     .catch(err => {
-        console.error("DB Connection Failed on Startup:", err);
+        console.error("Database Connection Failed:", {
+            message: err.message,
+            code: err.code,
+            host: process.env.DB_HOST || 'localhost',
+            user: process.env.DB_USER || 'root'
+        });
     });
 
 module.exports = pool;

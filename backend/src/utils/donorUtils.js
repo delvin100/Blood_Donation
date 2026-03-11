@@ -12,7 +12,7 @@ const calculateDonorAvailability = async (donorId, connection = null) => {
     try {
         const db = connection || pool;
         const [donations] = await db.query(
-            'SELECT date FROM donations WHERE donor_id = ? ORDER BY date DESC LIMIT 1',
+            'SELECT `date` FROM donations WHERE donor_id = ? ORDER BY `date` DESC LIMIT 1',
             [donorId]
         );
 

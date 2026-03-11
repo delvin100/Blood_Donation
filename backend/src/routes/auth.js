@@ -7,10 +7,9 @@ router.post('/register', authController.register);
 router.get('/check-username', authController.checkUsername);
 router.post('/login', authController.login);
 router.post('/google', authController.googleAuth);
-router.post('/forgot-password', authController.forgotPassword);
-router.post('/verify-reset-code', authController.verifyResetCode);
-router.post('/reset-password', authController.resetPassword);
-router.post('/sync-password', authController.syncPassword);
 router.post('/complete-profile', authMiddleware, authController.completeProfile);
+router.post('/forgot-password', authController.forgotPassword);
+router.post('/verify-otp', authController.verifyOTP);
+router.post('/reset-password', authController.resetPassword);
 
 module.exports = router;

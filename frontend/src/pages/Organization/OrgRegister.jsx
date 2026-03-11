@@ -1,7 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import { toast } from 'react-hot-toast';
+import { toast } from "react-hot-toast";
+import { stateDistrictMapping, cityToDistrictMapping } from "../../utils/locationData";
+
+// Location mappings moved to src/utils/locationData.js
+
+// City fallbacks moved to src/utils/locationData.js
 
 export default function OrgRegister() {
     const navigate = useNavigate();
@@ -27,6 +32,7 @@ export default function OrgRegister() {
     // Password Visibility States
     const [showPassword, setShowPassword] = useState(false);
     const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+    const pendingDistrictRef = React.useRef(null);
 
     useEffect(() => {
         // Pre-warm the backend server (Render cold start)
@@ -34,6 +40,22 @@ export default function OrgRegister() {
 
         window.scrollTo(0, 0);
     }, []);
+
+    // Apply GPS-detected district AFTER the state's district options are rendered in the DOM
+    useEffect(() => {
+        if (formData.state && pendingDistrictRef.current) {
+            const districts = stateDistrictMapping[formData.state] || [];
+            const pending = pendingDistrictRef.current;
+            pendingDistrictRef.current = null;
+            // Check the value is actually a valid option for this state
+            if (districts.includes(pending)) {
+                setFormData(prev => ({ ...prev, district: pending }));
+                console.log(`Applied pending district: ${pending} for state: ${formData.state}`);
+            } else {
+                console.warn(`Pending district "${pending}" not found in options for state "${formData.state}"`);
+            }
+        }
+    }, [formData.state]);
 
     const handleChange = (e) => {
         const { name, value } = e.target;
@@ -80,6 +102,7 @@ export default function OrgRegister() {
             newErrors.email = "Please provide a valid corporate email address.";
         }
 
+        // --- Utils ---
         // 5. Contact Hotline
         if (formData.phone.length !== 10) {
             newErrors.phone = "Contact Hotline must contain exactly 10 digits.";
@@ -149,31 +172,117 @@ export default function OrgRegister() {
         const toastId = toast.loading("Accessing satellite data...");
         setFetchingLocation(true);
 
-        navigator.geolocation.getCurrentPosition(async (position) => {
-            try {
-                const { latitude, longitude } = position.coords;
-                const response = await axios.get(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}`);
-                const { address } = response.data;
+        const getPosition = (options) => {
+            return new Promise((resolve, reject) => {
+                navigator.geolocation.getCurrentPosition(resolve, reject, options);
+            });
+        };
 
-                setFormData(prev => ({
-                    ...prev,
-                    state: address.state || '',
-                    district: address.county || address.state_district || '',
-                    city: address.city || address.town || address.village || address.suburb || '',
-                    latitude: latitude,
-                    longitude: longitude
-                }));
+        (async () => {
+            try {
+                let position;
+                try {
+                    position = await getPosition({ enableHighAccuracy: true, timeout: 10000, maximumAge: 0 });
+                } catch (err) {
+                    position = await getPosition({ enableHighAccuracy: false, timeout: 10000, maximumAge: 0 });
+                }
+
+                const { latitude, longitude } = position.coords;
+                console.log('GPS Coordinates:', latitude, longitude);
+
+                let locationData = null;
+
+                // Try Nominatim
+                try {
+                    const res = await axios.get(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&addressdetails=1`, {
+                        headers: { 'User-Agent': 'BloodDonationApp/1.0' }
+                    });
+                    if (res.data && res.data.address) {
+                        const addr = res.data.address;
+                        locationData = {
+                            state: addr.state,
+                            district: addr.state_district || addr.county || addr.district,
+                            city: addr.city || addr.town || addr.village || addr.suburb || addr.municipality
+                        };
+                    }
+                } catch (err) { console.warn('Nominatim failed:', err); }
+
+                // Fallback: BigDataCloud
+                if (!locationData) {
+                    try {
+                        const res = await axios.get(`https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${latitude}&longitude=${longitude}&localityLanguage=en`);
+                        if (res.data) {
+                            locationData = {
+                                state: res.data.principalSubdivision,
+                                district: res.data.localityInfo?.administrative?.[2]?.name || res.data.locality,
+                                city: res.data.city || res.data.locality
+                            };
+                        }
+                    } catch (err) { console.warn('BigDataCloud failed:', err); }
+                }
+
+                if (!locationData || !locationData.state) throw new Error('Unable to determine location');
+
+                // Match state
+                let matchedState = null;
+                const stateKeys = Object.keys(stateDistrictMapping);
+                for (const key of stateKeys) {
+                    if (key.toLowerCase().includes(locationData.state.toLowerCase()) ||
+                        locationData.state.toLowerCase().includes(key.toLowerCase())) {
+                        matchedState = key;
+                        break;
+                    }
+                }
+
+                if (!matchedState) throw new Error(`State "${locationData.state}" not recognized`);
+
+                // Match district
+                let matchedDistrict = null;
+                const districts = stateDistrictMapping[matchedState] || [];
+                const searchDist = locationData.district?.toLowerCase();
+
+                if (searchDist) {
+                    matchedDistrict = districts.find(d => d.toLowerCase() === searchDist) ||
+                        districts.find(d => d.toLowerCase().includes(searchDist) || searchDist.includes(d.toLowerCase()));
+                }
+
+                // City fallback
+                if (!matchedDistrict && locationData.city) {
+                    const cityMatch = Object.keys(cityToDistrictMapping).find(c => c.toLowerCase() === locationData.city.toLowerCase());
+                    if (cityMatch) matchedDistrict = cityToDistrictMapping[cityMatch];
+                }
+
+                // Unify setFormData calls to ensure state consistency and avoid race conditions
+                setFormData(prev => {
+                    const newData = {
+                        ...prev,
+                        state: matchedState,
+                        city: locationData.city || '',
+                        latitude: latitude,
+                        longitude: longitude
+                    };
+
+                    // Apply district immediately if state hasn't changed
+                    if (matchedDistrict) {
+                        if (matchedState === prev.state) {
+                            newData.district = matchedDistrict;
+                            console.log(`Phase 6: State Unchanged (${matchedState}), applied district: ${matchedDistrict}`);
+                        } else {
+                            console.log(`Phase 6: Queuing district: ${matchedDistrict} for state: ${matchedState}`);
+                            pendingDistrictRef.current = matchedDistrict;
+                        }
+                    }
+                    return newData;
+                });
+
                 toast.success("Location synchronized successfully.", { id: toastId });
             } catch (error) {
                 console.error(error);
-                toast.error("Geolocation failed. Please enter manually.", { id: toastId });
+                toast.error(error.message || "Geolocation failed. Please enter manually.", { id: toastId });
             } finally {
                 setFetchingLocation(false);
             }
-        }, (error) => {
-            toast.error("Position access denied by user.", { id: toastId });
-            setFetchingLocation(false);
-        });
+        })();
     };
 
     const handleManualGeocode = async () => {
@@ -535,6 +644,7 @@ export default function OrgRegister() {
 
                         <div className="pt-6">
                             <button
+                                id="org-register-button"
                                 type="submit"
                                 disabled={loading}
                                 className="group relative w-full bg-gradient-to-r from-gray-900 to-gray-800 text-white font-black py-6 rounded-[2rem] hover:from-red-600 hover:to-rose-600 transition-all duration-500 shadow-2xl shadow-gray-200 active:scale-[0.98] disabled:opacity-50 text-xl tracking-[0.05em] uppercase overflow-hidden"

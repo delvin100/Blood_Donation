@@ -17,6 +17,10 @@ export default function OrgLogin() {
     const [fpEmail, setFpEmail] = useState("");
     const [fpLoading, setFpLoading] = useState(false);
     const [fpSuccess, setFpSuccess] = useState("");
+    const [fpStep, setFpStep] = useState(1); // 1 = Email, 2 = OTP/Password
+    const [fpOtp, setFpOtp] = useState(['', '', '', '']);
+    const [fpNewPass, setFpNewPass] = useState("");
+    const [fpConfirmPass, setFpConfirmPass] = useState("");
 
     // Check for existing session on mount
     useEffect(() => {
@@ -72,11 +76,73 @@ export default function OrgLogin() {
         setFpLoading(true);
         try {
             await axios.post('/api/organization/forgot-password', { email: fpEmail });
-            setFpSuccess("A password reset link has been sent to your facility email! Please check your inbox.");
-            toast.success("Reset link sent!");
+            setFpSuccess("Code sent to your email!");
+            toast.success("Verification code sent!");
+            setFpStep(2);
         } catch (err) {
-            let msg = err.response?.data?.error || "Failed to send reset link.";
-            if (err.response?.data?.details) msg += ` Details: ${err.response.data.details}`;
+            let msg = err.response?.data?.error || "Failed to send code.";
+            toast.error(msg);
+        } finally {
+            setFpLoading(false);
+        }
+    };
+
+    const handleOrgVerifyOtp = async () => {
+        const otpCode = fpOtp.join("");
+        if (otpCode.length !== 4) return toast.error("Please enter the 4-digit code");
+        setFpLoading(true);
+        try {
+            await axios.post('/api/organization/verify-otp', {
+                email: fpEmail,
+                code: otpCode
+            });
+            toast.success("Identity verified!");
+            setFpStep(3); // Transition to password fields
+        } catch (err) {
+            let msg = err.response?.data?.error || "Invalid or expired code.";
+            toast.error(msg);
+
+            // Clear OTP and focus first box if invalid
+            if (msg.includes("Invalid or expired")) {
+                setFpOtp(['', '', '', '']);
+                setTimeout(() => {
+                    const firstInput = document.getElementById('org-otp-0');
+                    if (firstInput) firstInput.focus();
+                }, 10);
+            }
+        } finally {
+            setFpLoading(false);
+        }
+    };
+
+    const handleOrgResetPassword = async (e) => {
+        e.preventDefault();
+        const otpCode = fpOtp.join("");
+        if (otpCode.length !== 4) return toast.error("Please enter the 4-digit code");
+        if (fpNewPass.length < 8) return toast.error("Password must be at least 8 characters");
+        if (fpNewPass !== fpConfirmPass) return toast.error("Passwords do not match");
+
+        setFpLoading(true);
+        try {
+            await axios.post('/api/organization/reset-password', {
+                email: fpEmail,
+                code: otpCode,
+                newPassword: fpNewPass
+            });
+            toast.success("Password recovery successful!");
+            setFpSuccess("Success! Your access key has been updated. You can now sign in.");
+
+            setTimeout(() => {
+                setShowForgotModal(false);
+                setFpStep(1);
+                setFpEmail("");
+                setFpSuccess("");
+                setFpOtp(['', '', '', '']);
+                setFpNewPass("");
+                setFpConfirmPass("");
+            }, 3000);
+        } catch (err) {
+            let msg = err.response?.data?.error || "Verification failed.";
             toast.error(msg);
         } finally {
             setFpLoading(false);
@@ -234,6 +300,7 @@ export default function OrgLogin() {
                         </div>
 
                         <button
+                            id="org-login-button"
                             type="submit"
                             disabled={loading}
                             className="group relative w-full bg-gradient-to-r from-gray-900 to-gray-800 text-white font-black py-5 rounded-3xl hover:from-red-600 hover:to-rose-600 transition-all duration-500 shadow-2xl shadow-gray-200 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed text-lg overflow-hidden"
@@ -298,11 +365,11 @@ export default function OrgLogin() {
                             </div>
                             <h3 className="text-2xl font-black text-gray-900 text-center mb-2">Recover Access Key</h3>
                             <p className="text-gray-500 text-center font-medium mb-8">
-                                {fpSuccess ? fpSuccess : "Enter your facility email to receive a secure reset link."}
+                                {fpSuccess ? fpSuccess : "Enter your facility email to receive a secure 4-digit OTP code."}
                             </p>
 
-                            <form onSubmit={handleForgotSubmit} className="space-y-6">
-                                {!fpSuccess && (
+                            <form onSubmit={fpStep === 1 ? handleForgotSubmit : (fpStep === 2 ? (e) => { e.preventDefault(); handleOrgVerifyOtp(); } : handleOrgResetPassword)} className="space-y-6">
+                                {fpStep === 1 && (
                                     <>
                                         <div className="space-y-2">
                                             <label className="text-xs font-black text-gray-400 uppercase tracking-widest ml-1">Facility Email</label>
@@ -313,6 +380,7 @@ export default function OrgLogin() {
                                                 className="w-full px-6 py-4 bg-gray-50 border border-gray-100 rounded-2xl focus:bg-white focus:ring-4 focus:ring-red-500/5 focus:border-red-500/30 outline-none transition-all font-bold text-gray-900"
                                                 placeholder="admin@hospital.com"
                                                 required
+                                                disabled={fpLoading}
                                             />
                                         </div>
 
@@ -324,10 +392,123 @@ export default function OrgLogin() {
                                             {fpLoading ? (
                                                 <i className="fas fa-spinner fa-spin"></i>
                                             ) : (
-                                                "Send Reset Link"
+                                                "Send OTP Code"
                                             )}
                                         </button>
                                     </>
+                                )}
+
+                                {fpStep === 2 && (
+                                    <div className="space-y-5">
+                                        <div>
+                                            <label className="text-xs font-black text-gray-400 uppercase tracking-widest ml-1">4-Digit Security Code</label>
+                                            <div className="flex gap-3 justify-center mt-3">
+                                                {fpOtp.map((digit, idx) => (
+                                                    <input
+                                                        key={idx}
+                                                        id={`org-otp-${idx}`}
+                                                        type="text"
+                                                        maxLength="1"
+                                                        value={digit}
+                                                        disabled={idx > 0 && !fpOtp[idx - 1]}
+                                                        onChange={(e) => {
+                                                            const val = e.target.value.replace(/\D/g, '');
+                                                            const newOtp = [...fpOtp];
+                                                            newOtp[idx] = val;
+                                                            setFpOtp(newOtp);
+                                                            if (val && idx < 3) {
+                                                                setTimeout(() => {
+                                                                    const nextInput = document.getElementById(`org-otp-${idx + 1}`);
+                                                                    if (nextInput) nextInput.focus();
+                                                                }, 10);
+                                                            }
+                                                        }}
+                                                        onKeyDown={(e) => {
+                                                            if (e.key === 'Backspace') {
+                                                                if (!fpOtp[idx] && idx > 0) {
+                                                                    const newOtp = [...fpOtp];
+                                                                    newOtp[idx - 1] = '';
+                                                                    setFpOtp(newOtp);
+                                                                    document.getElementById(`org-otp-${idx - 1}`).focus();
+                                                                } else {
+                                                                    const newOtp = [...fpOtp];
+                                                                    newOtp[idx] = '';
+                                                                    setFpOtp(newOtp);
+                                                                }
+                                                            }
+                                                        }}
+                                                        className="w-12 h-16 text-center text-2xl font-black bg-gray-50 border border-gray-100 rounded-2xl focus:bg-white focus:ring-4 focus:ring-red-500/5 focus:border-red-500/30 outline-none transition-all text-gray-900"
+                                                        style={{
+                                                            backgroundColor: (idx > 0 && !fpOtp[idx - 1]) ? '#f3f4f6' : 'white',
+                                                            cursor: (idx > 0 && !fpOtp[idx - 1]) ? 'not-allowed' : 'text'
+                                                        }}
+                                                    />
+                                                ))}
+                                            </div>
+                                        </div>
+
+                                        <button
+                                            type="button"
+                                            onClick={handleOrgVerifyOtp}
+                                            disabled={fpLoading || fpOtp.join("").length !== 4}
+                                            className="w-full bg-gray-900 hover:bg-blue-600 text-white font-black py-4 rounded-2xl transition-all shadow-xl shadow-gray-200 active:scale-[0.98] disabled:opacity-50"
+                                        >
+                                            {fpLoading ? (
+                                                <i className="fas fa-spinner fa-spin"></i>
+                                            ) : (
+                                                "Verify OTP"
+                                            )}
+                                        </button>
+
+                                        <button
+                                            type="button"
+                                            onClick={() => { setFpStep(1); setFpOtp(['', '', '', '']); }}
+                                            className="w-full text-xs font-bold text-gray-400 hover:text-gray-600 transition-colors uppercase tracking-widest"
+                                        >
+                                            Back to Email
+                                        </button>
+                                    </div>
+                                )}
+
+                                {fpStep === 3 && !fpSuccess.includes("Success!") && (
+                                    <div className="space-y-5">
+                                        <div className="space-y-4">
+                                            <div className="space-y-1">
+                                                <label className="text-xs font-black text-gray-400 uppercase tracking-widest ml-1">New Access Key</label>
+                                                <input
+                                                    type="password"
+                                                    value={fpNewPass}
+                                                    onChange={(e) => setFpNewPass(e.target.value)}
+                                                    className="w-full px-6 py-4 bg-gray-50 border border-gray-100 rounded-2xl focus:bg-white focus:ring-4 focus:ring-red-500/5 focus:border-red-500/30 outline-none transition-all font-bold text-gray-900"
+                                                    placeholder="••••••••"
+                                                    required
+                                                />
+                                            </div>
+                                            <div className="space-y-1">
+                                                <label className="text-xs font-black text-gray-400 uppercase tracking-widest ml-1">Confirm Access Key</label>
+                                                <input
+                                                    type="password"
+                                                    value={fpConfirmPass}
+                                                    onChange={(e) => setFpConfirmPass(e.target.value)}
+                                                    className="w-full px-6 py-4 bg-gray-50 border border-gray-100 rounded-2xl focus:bg-white focus:ring-4 focus:ring-red-500/5 focus:border-red-500/30 outline-none transition-all font-bold text-gray-900"
+                                                    placeholder="••••••••"
+                                                    required
+                                                />
+                                            </div>
+                                        </div>
+
+                                        <button
+                                            type="submit"
+                                            disabled={fpLoading}
+                                            className="w-full bg-gray-900 hover:bg-blue-600 text-white font-black py-4 rounded-2xl transition-all shadow-xl shadow-gray-200 active:scale-[0.98] disabled:opacity-50"
+                                        >
+                                            {fpLoading ? (
+                                                <i className="fas fa-spinner fa-spin"></i>
+                                            ) : (
+                                                "Update Access Key"
+                                            )}
+                                        </button>
+                                    </div>
                                 )}
                             </form>
                         </div>
