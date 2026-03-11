@@ -84,7 +84,10 @@ const Dashboard = () => {
         return;
       }
 
-      if (!res.ok) throw new Error('Failed to fetch dashboard data');
+      if (!res.ok) {
+        const errorText = await res.text().catch(() => 'Unknown error');
+        throw new Error(`Failed to fetch dashboard data (Status: ${res.status} ${res.statusText}). Details: ${errorText.substring(0, 100)}`);
+      }
       const jsonData = await res.json();
       setData(jsonData);
 
