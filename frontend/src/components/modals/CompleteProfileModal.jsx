@@ -35,6 +35,7 @@ export default function CompleteProfileModal({ onClose, onSuccess, user }) {
 
   // Location fetching states
   const [locationError, setLocationError] = useState('');
+  const [isFetchingLocation, setIsFetchingLocation] = useState(false);
 
   // DEBUG LOGS for Phase 5
   useEffect(() => {
