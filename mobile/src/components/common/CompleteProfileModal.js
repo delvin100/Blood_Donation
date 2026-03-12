@@ -70,7 +70,7 @@ const CompleteProfileModal = ({ visible, onClose, onSuccess }) => {
                 return;
             }
 
-            let location = await Location.getCurrentPositionAsync({});
+            let location = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
             const { latitude: lat, longitude: lng } = location.coords;
             setLatitude(lat);
             setLongitude(lng);

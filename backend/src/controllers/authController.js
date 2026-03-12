@@ -102,7 +102,7 @@ exports.register = async (req, res) => {
         const hash = await bcrypt.hash(password, 10);
         const [result] = await pool.query(
             'INSERT INTO donors (username, full_name, email, password_hash, blood_type, dob, phone, gender, availability, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())',
-            [username, full_name, email, hash, blood_type, dob, phone, gender, availability === 'on' ? 1 : 0]
+            [username, full_name, email, hash, blood_type, dob, phone, gender, 'Available']
         );
 
         const insertId = result.insertId;

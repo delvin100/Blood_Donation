@@ -246,7 +246,7 @@ const EditProfileScreen = ({ navigation, route }) => {
                 return;
             }
 
-            let location = await Location.getCurrentPositionAsync({});
+            let location = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
             let reverseGeocode = await Location.reverseGeocodeAsync({
                 latitude: location.coords.latitude,
                 longitude: location.coords.longitude,

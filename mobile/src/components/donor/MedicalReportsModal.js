@@ -13,7 +13,6 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { formatDate } from '../../utils/dateUtils';
 import * as FileSystem from 'expo-file-system';
-import { getContentUriAsync } from 'expo-file-system/legacy';
 import * as IntentLauncher from 'expo-intent-launcher';
 import apiService from '../../api/apiService';
 import { parseError, logError } from '../../utils/errors';
@@ -276,7 +275,7 @@ const MedicalReportsModal = ({ visible, onClose }) => {
 
             // Open in external viewer
             if (Platform.OS === 'android') {
-                const contentUri = await getContentUriAsync(uri);
+                const contentUri = await FileSystem.getContentUriAsync(uri);
                 await IntentLauncher.startActivityAsync('android.intent.action.VIEW', {
                     data: contentUri,
                     flags: 1, // FLAG_GRANT_READ_URI_PERMISSION
