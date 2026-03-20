@@ -1258,10 +1258,20 @@ const Dashboard = () => {
                 bloodDrives
                   .map((drive) => {
                     const now = new Date();
-                    const start = new Date(`${drive.start_date}T${drive.start_time}`);
-                    const end = new Date(`${drive.end_date}T${drive.end_time}`);
                     
-                    if (now > end) return null; // Safety check in case backend filter missed it
+                    // Robust date parsing to handle both string and Date object inputs from backend
+                    const parseSafe = (dStr, tStr) => {
+                        const d = new Date(dStr);
+                        if (isNaN(d.getTime())) return new Date(NaN);
+                        const [h, m] = tStr.split(':').map(Number);
+                        return new Date(d.getFullYear(), d.getMonth(), d.getDate(), h, m);
+                    };
+
+                    const start = parseSafe(drive.start_date, drive.start_time);
+                    const end = parseSafe(drive.end_date, drive.end_time);
+                    
+                    if (isNaN(start.getTime()) || isNaN(end.getTime())) return null;
+                    if (now > end) return null;
 
                     let dynamicStatus = 'Upcoming';
                     let statusColor = 'bg-blue-600';
