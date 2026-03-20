@@ -862,8 +862,8 @@ export default function OrgDashboard() {
             title: isCancel ? 'Cancel Request?' : 'Fulfill Request?',
             message: isCancel 
                 ? 'Are you sure you want to cancel this emergency request? It will be deleted permanently.'
-                : 'Are you sure you want to mark this request as fulfilled? This will deduct the required units from your inventory.',
-            confirmText: isCancel ? 'Yes, Cancel & Delete' : 'Yes, Fulfill & Deduct',
+                : 'Are you sure you want to mark this request as fulfilled? This will add the required units to your inventory.',
+            confirmText: isCancel ? 'Yes, Cancel & Delete' : 'Yes, Fulfill & Add',
             type: isCancel ? 'danger' : 'success',
             onConfirm: async () => {
                 setIsModalOpen(false);
@@ -2152,20 +2152,20 @@ export default function OrgDashboard() {
                                         </span>
                                     </div>
 
-                                    <div className="space-y-6 max-h-[900px] overflow-y-auto pr-2 scrollbar-hide">
+                                    <div className="space-y-6 max-h-[900px] overflow-y-auto pr-2 scrollbar-hide flex flex-col items-center justify-center min-h-[500px]">
                                         {requests.filter(r => r.status === 'Active').length === 0 ? (
-                                            <div className="p-16 border-2 border-dashed border-gray-100 rounded-[3.5rem] bg-gray-50/50 text-center space-y-6 flex flex-col items-center justify-center min-h-[450px]">
-                                                <div className="w-24 h-24 bg-white rounded-full flex items-center justify-center text-gray-200 mx-auto shadow-inner">
-                                                    <i className="fas fa-satellite-dish text-5xl"></i>
+                                            <div className="w-full h-full border-2 border-dashed border-gray-100 rounded-[3.5rem] bg-gray-50/50 text-center flex flex-col items-center justify-center min-h-[500px] space-y-8">
+                                                <div className="w-32 h-32 bg-white rounded-full flex items-center justify-center text-gray-200 mx-auto shadow-inner">
+                                                    <i className="fas fa-satellite-dish text-6xl"></i>
                                                 </div>
-                                                <div className="flex flex-col items-center justify-center">
-                                                    <p className="font-black text-gray-400 uppercase text-sm tracking-widest">Scanning Network</p>
-                                                    <p className="text-gray-400 font-bold text-xs mt-2">No active emergency requests detected.</p>
+                                                <div className="flex flex-col items-center justify-center space-y-2">
+                                                    <p className="font-black text-gray-400 uppercase text-base tracking-[0.25em]">Scanning Network</p>
+                                                    <p className="text-gray-400 font-bold text-sm">No active emergency requests detected.</p>
                                                 </div>
                                             </div>
                                         ) : (
                                             requests.filter(r => r.status === 'Active').map(req => (
-                                                <div key={req.id} className="group bg-white p-8 rounded-[3rem] border border-gray-100 shadow-xl shadow-gray-200/20 transition-all hover:shadow-2xl hover:border-red-100 animate-in slide-in-from-right-4 duration-500">
+                                                <div key={req.id} className="group bg-white p-8 rounded-[3rem] border border-gray-100 shadow-xl shadow-gray-200/20 transition-all hover:border-red-100/50 hover:shadow-[0_20px_40px_-15px_rgba(220,38,38,0.1)] animate-in slide-in-from-right-4 duration-500">
                                                     <div className="flex justify-between items-start mb-8">
                                                         <span className="text-[10px] font-black text-gray-300 uppercase tracking-widest bg-gray-50 px-3 py-1.5 rounded-lg">
                                                             {new Date(req.created_at).toLocaleDateString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}

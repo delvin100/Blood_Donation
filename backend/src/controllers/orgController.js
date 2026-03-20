@@ -411,18 +411,20 @@ exports.fulfillRequest = async (req, res) => {
         // 2. Fetch inventory for that blood group
         const [inventory] = await connection.query('SELECT units FROM blood_inventory WHERE org_id = ? AND blood_group = ?', [orgId, bloodGroup]);
         const currentUnits = inventory.length > 0 ? inventory[0].units : 0;
-        const remainingUnits = Math.max(0, currentUnits - unitsRequired);
+        const newUnits = currentUnits + Number(unitsRequired);
 
         // 3. Update inventory
         if (inventory.length > 0) {
-            await connection.query('UPDATE blood_inventory SET units = ? WHERE org_id = ? AND blood_group = ?', [remainingUnits, orgId, bloodGroup]);
+            await connection.query('UPDATE blood_inventory SET units = ? WHERE org_id = ? AND blood_group = ?', [newUnits, orgId, bloodGroup]);
+        } else {
+            await connection.query('INSERT INTO blood_inventory (org_id, blood_group, units) VALUES (?, ?, ?)', [orgId, bloodGroup, newUnits]);
         }
         
         // 4. Update request status
         await connection.query('UPDATE emergency_requests SET status = "Fulfilled" WHERE id = ? AND org_id = ?', [id, orgId]);
 
         // 5. Add Log
-        await addOrgLog(orgId, 'EMERGENCY_FULFILLED', bloodGroup, `Fulfilled emergency request #${id} and deducted ${Math.min(currentUnits, unitsRequired)} units of ${bloodGroup} from inventory`);
+        await addOrgLog(orgId, 'INVENTORY_ADD', bloodGroup, `Fulfilled emergency request #${id} and added ${unitsRequired} units of ${bloodGroup} to inventory`);
 
         await connection.commit();
         res.json({ message: 'Request fulfilled gracefully' });
