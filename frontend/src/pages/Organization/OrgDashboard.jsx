@@ -885,7 +885,9 @@ export default function OrgDashboard() {
                     fetchInventory();
                     fetchActivity();
                 } catch (err) {
-                    toast.error(`Failed to ${isCancel ? 'cancel' : 'fulfill'} request`);
+                    const errorMsg = err.response?.data?.details || err.message;
+                    toast.error(`Error: ${errorMsg}`);
+                    console.error('Operation failed:', err);
                 }
             }
         });
@@ -2165,7 +2167,7 @@ export default function OrgDashboard() {
                                             </div>
                                         ) : (
                                             requests.filter(r => r.status === 'Active').map(req => (
-                                                <div key={req.id} className="group bg-white p-8 rounded-[3rem] border border-gray-100 shadow-xl shadow-gray-200/20 transition-all hover:border-red-100/50 hover:shadow-[0_20px_40px_-15px_rgba(220,38,38,0.1)] animate-in slide-in-from-right-4 duration-500">
+                                                <div key={req.id} className="group bg-white p-8 rounded-[3rem] border border-gray-100 shadow-xl shadow-gray-200/20 transition-all hover:border-red-500/30 animate-in slide-in-from-right-4 duration-500 hover:-translate-y-1">
                                                     <div className="flex justify-between items-start mb-8">
                                                         <span className="text-[10px] font-black text-gray-300 uppercase tracking-widest bg-gray-50 px-3 py-1.5 rounded-lg">
                                                             {new Date(req.created_at).toLocaleDateString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
