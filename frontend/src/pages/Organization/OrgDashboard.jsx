@@ -279,6 +279,7 @@ export default function OrgDashboard() {
         fetchStats();
         fetchActivity();
         fetchInventory(); // Preload so Units Stock shows correctly on home tab
+        fetchRequests(); // Preload so Active Alerts count shows correctly
         fetchOrgProfile();
         fetchNotifications();
     }, []);
@@ -380,6 +381,7 @@ export default function OrgDashboard() {
             fetchActivity();
             fetchAnalytics();
             fetchGeoReach();
+            fetchRequests(); // refresh active alerts count
         }
         if (activeTab === 'inventory') fetchInventory();
         if (activeTab === 'history') fetchHistory();
@@ -854,25 +856,36 @@ export default function OrgDashboard() {
         }
     };
 
-    const handleCloseRequest = async (id) => {
+    const handleCloseRequest = async (id, actionStatus) => {
+        const isCancel = actionStatus === 'Cancelled';
         setModalConfig({
-            title: 'Close Request?',
-            message: 'Are you sure you want to close this emergency request? This will stop notifications to donors.',
-            confirmText: 'Close Request',
-            type: 'warning',
+            title: isCancel ? 'Cancel Request?' : 'Fulfill Request?',
+            message: isCancel 
+                ? 'Are you sure you want to cancel this emergency request? It will be deleted permanently.'
+                : 'Are you sure you want to mark this request as fulfilled? This will deduct the required units from your inventory.',
+            confirmText: isCancel ? 'Yes, Cancel & Delete' : 'Yes, Fulfill & Deduct',
+            type: isCancel ? 'danger' : 'success',
             onConfirm: async () => {
                 setIsModalOpen(false);
                 try {
                     const token = getAuthToken();
-                    await axios.put(`/api/organization/request/${id}/status`,
-                        { status: 'Cancelled' },
-                        { headers: { Authorization: `Bearer ${token}` } }
-                    );
-                    toast.success("Request closed");
+                    if (isCancel) {
+                        await axios.delete(`/api/organization/request/${id}`, {
+                            headers: { Authorization: `Bearer ${token}` }
+                        });
+                        toast.success("Request cancelled and deleted");
+                    } else {
+                        await axios.put(`/api/organization/request/${id}/fulfill`, {}, {
+                            headers: { Authorization: `Bearer ${token}` }
+                        });
+                        toast.success("Request fulfilled and inventory updated");
+                    }
                     fetchRequests();
                     fetchStats();
+                    fetchInventory();
+                    fetchActivity();
                 } catch (err) {
-                    toast.error("Failed to close request");
+                    toast.error(`Failed to ${isCancel ? 'cancel' : 'fulfill'} request`);
                 }
             }
         });
@@ -1572,7 +1585,7 @@ export default function OrgDashboard() {
                                     <div className="grid grid-cols-2 md:grid-cols-4 gap-6 w-full mt-16 max-w-6xl">
                                         {[
                                             { label: 'Total Donations', val: stats.total_donations, icon: 'fa-hand-holding-heart', color: 'text-red-400' },
-                                            { label: 'Active Alerts', val: stats.active_requests, icon: 'fa-ambulance', color: 'text-blue-400' },
+                                            { label: 'Active Alerts', val: requests.filter(r => r.status === 'Active').length, icon: 'fa-ambulance', color: 'text-blue-400' },
                                             { label: 'Units Stock', val: inventory.reduce((sum, item) => sum + (Number(item.units) || 0), 0), icon: 'fa-burn', color: 'text-orange-400' },
                                             { label: 'Geo Reach', val: geoReach.length, icon: 'fa-globe', color: 'text-green-400' }
                                         ].map((box, i) => (
@@ -1767,7 +1780,7 @@ export default function OrgDashboard() {
                                         </button>
                                     </div>
                                     <div className="space-y-6 flex-1">
-                                        {activity.length > 0 ? activity.slice(0, 4).map((act, i) => {
+                                        {activity.length > 0 ? activity.slice(0, 5).map((act, i) => {
                                             let icon = 'fa-list-ul';
                                             let color = 'bg-gray-500';
                                             if (act.action_type === 'INVENTORY_ADD') { icon = 'fa-tint'; color = 'bg-red-600'; }
@@ -1784,7 +1797,7 @@ export default function OrgDashboard() {
                                                         <div className={`w-12 h-12 rounded-2xl flex items-center justify-center text-white shadow-lg transition-transform group-hover:scale-110 duration-300 ${color}`}>
                                                             <i className={`fas ${icon} text-sm`}></i>
                                                         </div>
-                                                        {i !== Math.min(activity.length, 4) - 1 && <div className="w-0.5 grow bg-gray-100 my-2"></div>}
+                                                        {i !== Math.min(activity.length, 5) - 1 && <div className="w-0.5 grow bg-gray-100 my-2"></div>}
                                                     </div>
                                                     <div className="pb-8 pt-1">
                                                         <p className="text-sm font-black text-gray-800 leading-tight mb-1 group-hover:text-red-600 transition-colors">
@@ -1806,7 +1819,7 @@ export default function OrgDashboard() {
                                             </div>
                                         )}
                                     </div>
-                                    {activity.length > 4 && (
+                                    {activity.length > 5 && (
                                         <button
                                             onClick={() => setActiveTab('history')}
                                             className="w-full py-4 bg-gray-50 hover:bg-gray-100 text-gray-500 font-black rounded-2xl transition-all text-[10px] uppercase tracking-widest flex items-center justify-center gap-2 border border-gray-100"
@@ -2141,11 +2154,11 @@ export default function OrgDashboard() {
 
                                     <div className="space-y-6 max-h-[900px] overflow-y-auto pr-2 scrollbar-hide">
                                         {requests.filter(r => r.status === 'Active').length === 0 ? (
-                                            <div className="p-16 border-2 border-dashed border-gray-100 rounded-[3.5rem] bg-gray-50/50 text-center space-y-5">
+                                            <div className="p-16 border-2 border-dashed border-gray-100 rounded-[3.5rem] bg-gray-50/50 text-center space-y-5 flex flex-col items-center justify-center min-h-[350px]">
                                                 <div className="w-20 h-20 bg-white rounded-full flex items-center justify-center text-gray-200 mx-auto shadow-inner">
                                                     <i className="fas fa-satellite-dish text-4xl"></i>
                                                 </div>
-                                                <div>
+                                                <div className="flex flex-col items-center justify-center">
                                                     <p className="font-black text-gray-400 uppercase text-xs tracking-widest">Scanning Network</p>
                                                     <p className="text-gray-300 font-bold text-[10px] mt-1">No active emergency requests detected.</p>
                                                 </div>
@@ -2195,11 +2208,7 @@ export default function OrgDashboard() {
                                             ))
                                         )}
 
-                                        {/* Show history toggle */}
-                                        <button className="w-full py-5 bg-gray-50 hover:bg-gray-100 text-gray-400 font-black rounded-[2rem] transition-all text-[9px] uppercase tracking-widest flex items-center justify-center gap-3 border border-gray-100">
-                                            <i className="fas fa-archive"></i>
-                                            History of Past Broadcasts
-                                        </button>
+                                        {/* Show history toggle removed per user request */}
                                     </div>
                                 </div>
                             </div>

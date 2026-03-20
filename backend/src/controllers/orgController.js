@@ -376,6 +376,132 @@ exports.updateRequestStatus = async (req, res) => {
     }
 };
 
+exports.deleteRequest = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const [result] = await pool.query('DELETE FROM emergency_requests WHERE id = ? AND org_id = ?', [id, req.user.id]);
+        if (result.affectedRows === 0) {
+            return res.status(404).json({ error: 'Request not found' });
+        }
+        await addOrgLog(req.user.id, 'REQUEST_DELETE', `Request #${id}`, 'Deleted emergency broadcast request entirely');
+        res.json({ message: 'Request deleted successfully' });
+    } catch (err) {
+        console.error('Org deleteRequest Error:', err);
+        res.status(500).json({ error: 'Server error', details: err.message });
+    }
+};
+
+exports.fulfillRequest = async (req, res) => {
+    const connection = await pool.getConnection();
+    try {
+        await connection.beginTransaction();
+        const { id } = req.params;
+        const orgId = req.user.id;
+
+        // 1. Fetch request details
+        const [requests] = await connection.query('SELECT blood_group, units_required FROM emergency_requests WHERE id = ? AND org_id = ?', [id, orgId]);
+        if (requests.length === 0) {
+            await connection.rollback();
+            return res.status(404).json({ error: 'Request not found' });
+        }
+        const reqData = requests[0];
+        const unitsRequired = reqData.units_required;
+        const bloodGroup = reqData.blood_group;
+
+        // 2. Fetch inventory for that blood group
+        const [inventory] = await connection.query('SELECT units FROM blood_inventory WHERE org_id = ? AND blood_group = ?', [orgId, bloodGroup]);
+        if (inventory.length === 0 || inventory[0].units < unitsRequired) {
+            await connection.rollback();
+            // User requested to deduct, what if not enough? Deduct up to whatever is there, or fail?
+            // "update the amount of units in the Requirement Volume to the inventory..also show the logs"
+            // Let's just deduct it and if it goes negative, so be it, or ideally we prevent negative.
+            // Actually, we'll clamp at 0.
+        }
+        const currentUnits = inventory.length > 0 ? inventory[0].units : 0;
+        const remainingUnits = Math.max(0, currentUnits - unitsRequired);
+
+        // 3. Update inventory
+        if (inventory.length > 0) {
+            await connection.query('UPDATE blood_inventory SET units = ? WHERE org_id = ? AND blood_group = ?', [remainingUnits, orgId, bloodGroup]);
+        }
+        
+        // 4. Update request status
+        await connection.query('UPDATE emergency_requests SET status = "Fulfilled" WHERE id = ? AND org_id = ?', [id, orgId]);
+
+        // 5. Add Log
+        await addOrgLog(orgId, 'EMERGENCY_FULFILLED', bloodGroup, `Fulfilled emergency request #${id} and deducted ${Math.min(currentUnits, unitsRequired)} units of ${bloodGroup} from inventory`);
+
+        await connection.commit();
+        res.json({ message: 'Request fulfilled gracefully' });
+    } catch (err) {
+        await connection.rollback();
+        console.error('Org fulfillRequest Error:', err);
+        res.status(500).json({ error: 'Server error', details: err.message });
+    } finally {
+        connection.release();
+    }
+};
+
+exports.deleteRequest = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const [result] = await pool.query('DELETE FROM emergency_requests WHERE id = ? AND org_id = ?', [id, req.user.id]);
+        if (result.affectedRows === 0) {
+            return res.status(404).json({ error: 'Request not found' });
+        }
+        await addOrgLog(req.user.id, 'REQUEST_DELETE', `Request #${id}`, 'Deleted emergency broadcast request entirely');
+        res.json({ message: 'Request deleted successfully' });
+    } catch (err) {
+        console.error('Org deleteRequest Error:', err);
+        res.status(500).json({ error: 'Server error', details: err.message });
+    }
+};
+
+exports.fulfillRequest = async (req, res) => {
+    const connection = await pool.getConnection();
+    try {
+        await connection.beginTransaction();
+        const { id } = req.params;
+        const orgId = req.user.id;
+
+        // 1. Fetch request details
+        const [requests] = await connection.query('SELECT blood_group, units_required FROM emergency_requests WHERE id = ? AND org_id = ?', [id, orgId]);
+        if (requests.length === 0) {
+            await connection.rollback();
+            return res.status(404).json({ error: 'Request not found' });
+        }
+        const reqData = requests[0];
+        const unitsRequired = reqData.units_required;
+        const bloodGroup = reqData.blood_group;
+
+        // 2. Fetch inventory for that blood group
+        const [inventory] = await connection.query('SELECT units FROM blood_inventory WHERE org_id = ? AND blood_group = ?', [orgId, bloodGroup]);
+        
+        const currentUnits = inventory.length > 0 ? inventory[0].units : 0;
+        const remainingUnits = Math.max(0, currentUnits - unitsRequired);
+
+        // 3. Update inventory
+        if (inventory.length > 0) {
+            await connection.query('UPDATE blood_inventory SET units = ? WHERE org_id = ? AND blood_group = ?', [remainingUnits, orgId, bloodGroup]);
+        }
+        
+        // 4. Update request status
+        await connection.query('UPDATE emergency_requests SET status = "Fulfilled" WHERE id = ? AND org_id = ?', [id, orgId]);
+
+        // 5. Add Log
+        await addOrgLog(orgId, 'EMERGENCY_FULFILLED', bloodGroup, `Fulfilled emergency request #${id} and deducted ${Math.min(currentUnits, unitsRequired)} units of ${bloodGroup} from inventory`);
+
+        await connection.commit();
+        res.json({ message: 'Request fulfilled gracefully' });
+    } catch (err) {
+        await connection.rollback();
+        console.error('Org fulfillRequest Error:', err);
+        res.status(500).json({ error: 'Server error', details: err.message });
+    } finally {
+        connection.release();
+    }
+};
+
 exports.getRecentActivity = async (req, res) => {
     try {
         const orgId = req.user.id;

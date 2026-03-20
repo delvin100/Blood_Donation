@@ -20,6 +20,8 @@ router.get('/history', authMiddleware, orgController.getHistory);
 router.get('/requests', authMiddleware, orgController.getRequests);
 router.post('/request/create', authMiddleware, orgController.createRequest);
 router.put('/request/:id/status', authMiddleware, orgController.updateRequestStatus);
+router.delete('/request/:id', authMiddleware, orgController.deleteRequest);
+router.put('/request/:id/fulfill', authMiddleware, orgController.fulfillRequest);
 router.get('/recent-activity', authMiddleware, orgController.getRecentActivity);
 router.get('/member/:donorId/reports', authMiddleware, orgController.getDonorReports);
 router.post('/member/:donorId/reports', authMiddleware, orgController.createMedicalReport);
