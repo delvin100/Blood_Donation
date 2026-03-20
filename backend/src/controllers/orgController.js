@@ -378,7 +378,7 @@ exports.getRecentActivity = async (req, res) => {
     try {
         const orgId = req.user.id;
         const [rows] = await pool.query(
-            'SELECT action_type, description, created_at FROM org_logs WHERE org_id = ? ORDER BY created_at DESC LIMIT 6',
+            'SELECT action_type, description, created_at FROM org_logs WHERE org_id = ? ORDER BY created_at DESC LIMIT 15',
             [orgId]
         );
         res.json(rows);

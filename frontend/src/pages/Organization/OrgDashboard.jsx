@@ -1772,7 +1772,7 @@ export default function OrgDashboard() {
                                                         <div className="flex items-center gap-3">
                                                             <span className="text-[9px] font-black text-white px-2 py-0.5 bg-gray-900 rounded-md uppercase tracking-widest">{act.action_type.replace(/_/g, ' ')}</span>
                                                             <span className="text-[10px] font-bold text-gray-300 uppercase tracking-widest">
-                                                                {new Date(act.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                                                {new Date(act.created_at).toLocaleDateString('en-GB')} • {new Date(act.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                                                             </span>
                                                         </div>
                                                     </div>

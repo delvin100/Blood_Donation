@@ -879,26 +879,26 @@ function OrgDetailView({ org, onBack, onVerify, onDelete }) {
 
             {/* Basic Info Row */}
             <div className="bg-white rounded-3xl p-8 shadow-xl shadow-gray-200/50 border border-white grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-8 font-medium">
-                <div>
-                    <label className="text-gray-400 block text-[10px] font-bold uppercase tracking-widest mb-1">Organization ID</label>
-                    <p className="font-mono text-gray-700 bg-gray-50 px-3 py-1.5 rounded-lg border border-gray-100 font-bold truncate">#{org.id}</p>
+                <div className="flex flex-col items-center text-center">
+                    <label className="text-gray-400 block text-[10px] font-bold uppercase tracking-widest mb-2">Organization ID</label>
+                    <p className="font-mono text-gray-700 bg-gray-50 px-4 py-2 rounded-xl border border-gray-100 font-bold">#{org.id}</p>
                 </div>
-                <div>
-                    <label className="text-gray-400 block text-[10px] font-bold uppercase tracking-widest mb-1">License Number</label>
-                    <p className="font-mono text-gray-700 bg-gray-50 px-3 py-1.5 rounded-lg border border-gray-100 font-bold truncate">{org.license_number || 'N/A'}</p>
+                <div className="flex flex-col items-center text-center">
+                    <label className="text-gray-400 block text-[10px] font-bold uppercase tracking-widest mb-2">License Number</label>
+                    <p className="font-mono text-gray-700 bg-gray-50 px-4 py-2 rounded-xl border border-gray-100 font-bold">{org.license_number || 'N/A'}</p>
                 </div>
-                <div>
-                    <label className="text-gray-400 block text-[10px] font-bold uppercase tracking-widest mb-1">Detailed Address</label>
-                    <p className="text-gray-800 font-semibold line-clamp-2">{org.address || 'No address provided'}</p>
+                <div className="flex flex-col items-center text-center">
+                    <label className="text-gray-400 block text-[10px] font-bold uppercase tracking-widest mb-2">Detailed Address</label>
+                    <p className="text-gray-800 font-semibold line-clamp-2 max-w-[200px]">{org.address || 'No address provided'}</p>
                 </div>
-                <div>
-                    <label className="text-gray-400 block text-[10px] font-bold uppercase tracking-widest mb-1">Organization Type</label>
+                <div className="flex flex-col items-center text-center">
+                    <label className="text-gray-400 block text-[10px] font-bold uppercase tracking-widest mb-2">Organization Type</label>
                     <div className="mt-1">
                         <Badge status="info">{org.type}</Badge>
                     </div>
                 </div>
-                <div>
-                    <label className="text-gray-400 block text-[10px] font-bold uppercase tracking-widest mb-1">Registration Date</label>
+                <div className="flex flex-col items-center text-center">
+                    <label className="text-gray-400 block text-[10px] font-bold uppercase tracking-widest mb-2">Registration Date</label>
                     <p className="text-gray-800 font-bold mt-1 text-sm">{new Date(org.created_at).toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' })}</p>
                 </div>
             </div>
