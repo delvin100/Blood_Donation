@@ -435,7 +435,7 @@ const Dashboard = () => {
       title: 'My Medical Reports',
       content: (
         <div className="space-y-6 animate-in slide-in-from-bottom-4 duration-500">
-          <div className="modern-card p-8 bg-blue-50/50 border border-blue-100 rounded-3xl">
+          <div className="modern-card p-8 bg-white border border-gray-100 rounded-3xl shadow-sm">
             <div className="flex items-center gap-4 mb-4">
               <div className="w-12 h-12 bg-blue-100 text-blue-600 rounded-2xl flex items-center justify-center text-xl">
                 <i className="fas fa-file-medical-alt"></i>
@@ -492,7 +492,7 @@ const Dashboard = () => {
       title: 'My Organizations',
       content: (
         <div className="space-y-6 animate-in slide-in-from-bottom-4 duration-500">
-          <div className="modern-card p-8 bg-blue-50/50 border border-blue-100 rounded-3xl">
+          <div className="modern-card p-8 bg-white border border-gray-100 rounded-3xl shadow-sm">
             <div className="flex items-center gap-4 mb-4">
               <div className="w-12 h-12 bg-blue-100 text-blue-600 rounded-2xl flex items-center justify-center text-xl">
                 <i className="fas fa-building"></i>
@@ -719,7 +719,7 @@ const Dashboard = () => {
       title: 'Donation History',
       content: (
         <div className="space-y-6 animate-in slide-in-from-bottom-4 duration-500">
-          <div className="modern-card p-8 bg-red-50/50 border border-red-100 rounded-3xl">
+          <div className="modern-card p-8 bg-white border border-gray-100 rounded-3xl shadow-sm">
             <div className="flex items-center gap-4 mb-4">
               <div className="w-12 h-12 bg-red-100 text-red-600 rounded-2xl flex items-center justify-center text-xl">
                 <i className="fas fa-history"></i>
@@ -1227,7 +1227,7 @@ const Dashboard = () => {
       title: 'Upcoming Blood Donation Camps',
       content: (
         <div className="space-y-6 animate-in slide-in-from-bottom-4 duration-500">
-          <div className="modern-card p-8 bg-red-50/50 border border-red-100 rounded-3xl">
+          <div className="modern-card p-8 bg-white border border-gray-100 rounded-3xl shadow-sm">
             <div className="flex items-center gap-4 mb-4">
               <div className="w-12 h-12 bg-red-100 text-red-600 rounded-2xl flex items-center justify-center text-xl">
                 <i className="fas fa-calendar-alt"></i>
@@ -1357,11 +1357,11 @@ const Dashboard = () => {
         }
         .animate-float { animation: float 6s ease-in-out infinite; }
         .mesh-gradient {
-          background-color: #4f46e5;
+          background-color: #dc2626;
           background-image: 
-            radial-gradient(at 0% 0%, #ef4444 0, transparent 50%), 
-            radial-gradient(at 50% 0%, #8b5cf6 0, transparent 50%), 
-            radial-gradient(at 100% 0%, #ec4899 0, transparent 50%);
+            radial-gradient(at 0% 0%, #f43f5e 0, transparent 50%), 
+            radial-gradient(at 50% 0%, #dc2626 0, transparent 50%), 
+            radial-gradient(at 100% 0%, #e11d48 0, transparent 50%);
         }
       `}</style>
       {/* PHP Sync Header */}
