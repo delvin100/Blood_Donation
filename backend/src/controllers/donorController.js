@@ -530,13 +530,23 @@ exports.chat = async (req, res) => {
 
 exports.getBloodDrives = async (req, res) => {
     try {
+        const donorId = req.user.id;
+        
+        // Fetch donor info for district matching
+        const [donorRows] = await pool.query('SELECT district FROM donors WHERE id = ?', [donorId]);
+        if (donorRows.length === 0) return res.status(404).json({ error: 'Donor not found' });
+        const donorDistrict = donorRows[0].district;
+
         const [rows] = await pool.query(`
-            SELECT bd.*, o.name as org_name, o.city as org_city, o.district as org_district, o.type as org_type, o.phone as org_phone
+            SELECT bd.*, o.name as org_name, o.city as org_city, o.district as org_district, o.type as org_type, o.phone as org_phone,
+                   (SELECT COUNT(*) FROM org_members om WHERE om.org_id = bd.org_id AND om.donor_id = ?) as is_member
             FROM blood_drives bd
             JOIN organizations o ON bd.org_id = o.id
             WHERE bd.status IN ('Upcoming', 'Active')
-            ORDER BY bd.date ASC, bd.time ASC
-        `);
+              AND (o.district = ? OR bd.org_id IN (SELECT org_id FROM org_members WHERE donor_id = ?))
+              AND CAST(CONCAT(bd.end_date, ' ', bd.end_time) AS DATETIME) > NOW()
+            ORDER BY bd.start_date ASC, bd.start_time ASC
+        `, [donorId, donorDistrict, donorId]);
         res.json(rows);
     } catch (err) {
         console.error('getBloodDrives Error:', err);

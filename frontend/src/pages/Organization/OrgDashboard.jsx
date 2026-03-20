@@ -222,10 +222,11 @@ export default function OrgDashboard() {
     const [showDriveModal, setShowDriveModal] = useState(false);
     const [driveForm, setDriveForm] = useState({
         event_name: '',
-        date: '',
-        time: '',
+        start_date: '',
+        start_time: '',
+        end_date: '',
+        end_time: '',
         location: '',
-        target_units: 0,
         description: ''
     });
 
@@ -1181,6 +1182,15 @@ export default function OrgDashboard() {
 
     const handleCreateDrive = async (e) => {
         e.preventDefault();
+        
+        // Frontend Validation: Start before End
+        const start = new Date(`${driveForm.start_date}T${driveForm.start_time}`);
+        const end = new Date(`${driveForm.end_date}T${driveForm.end_time}`);
+
+        if (end <= start) {
+            return toast.error("End date and time must be after start date and time.");
+        }
+
         const createToast = toast.loading("Scheduling blood drive...");
         try {
             const token = getAuthToken();
@@ -1190,11 +1200,18 @@ export default function OrgDashboard() {
             toast.success("Blood drive scheduled successfully!", { id: createToast });
             setShowDriveModal(false);
             setDriveForm({
-                event_name: '', date: '', time: '', location: '', target_units: 0, description: ''
+                event_name: '',
+                start_date: '',
+                start_time: '',
+                end_date: '',
+                end_time: '',
+                location: '',
+                description: ''
             });
             fetchDrives();
+            fetchHistory();
         } catch (err) {
-            toast.error("Failed to schedule drive", { id: createToast });
+            toast.error(err.response?.data?.error || "Failed to schedule drive", { id: createToast });
         }
     };
 
@@ -2382,34 +2399,35 @@ export default function OrgDashboard() {
                                                         </td>
                                                         <td className="p-8">
                                                             <div className="space-y-1">
-                                                                <p className="text-sm font-bold text-gray-700 flex items-center gap-2">
-                                                                    <i className="far fa-calendar text-gray-400"></i>
-                                                                    {new Date(drive.date).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })}
-                                                                </p>
-                                                                <p className="text-xs font-semibold text-gray-400 flex items-center gap-2">
-                                                                    <i className="far fa-clock text-gray-400"></i>
-                                                                    {drive.time}
-                                                                </p>
-                                                                <p className="text-xs font-bold text-red-600 flex items-center gap-2 mt-2">
+                                                                <div className="flex flex-col gap-1">
+                                                                    <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Starts</p>
+                                                                    <p className="text-sm font-bold text-gray-900 flex items-center gap-2">
+                                                                        <i className="far fa-calendar-alt text-blue-500"></i>
+                                                                        {new Date(drive.start_date).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
+                                                                        <span className="text-gray-300">|</span>
+                                                                        {drive.start_time.substring(0, 5)}
+                                                                    </p>
+                                                                </div>
+                                                                <div className="flex flex-col gap-1 mt-3">
+                                                                    <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Ends</p>
+                                                                    <p className="text-sm font-bold text-gray-700 flex items-center gap-2">
+                                                                        <i className="far fa-calendar-check text-emerald-500"></i>
+                                                                        {new Date(drive.end_date).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
+                                                                        <span className="text-gray-300">|</span>
+                                                                        {drive.end_time.substring(0, 5)}
+                                                                    </p>
+                                                                </div>
+                                                                <p className="text-xs font-bold text-red-600 flex items-center gap-2 mt-4 pt-2 border-t border-gray-50">
                                                                     <i className="fas fa-map-marker-alt"></i>
                                                                     {drive.location}
                                                                 </p>
                                                             </div>
                                                         </td>
                                                         <td className="p-8">
-                                                            <div className="space-y-3">
-                                                                <div className="flex justify-between text-[10px] font-black uppercase tracking-tighter">
-                                                                    <span className="text-gray-400">Progress</span>
-                                                                    <span className="text-red-600">{Math.round((drive.collected_units / drive.target_units) * 100) || 0}%</span>
-                                                                </div>
-                                                                <div className="w-full h-2 bg-gray-100 rounded-full overflow-hidden">
-                                                                    <div 
-                                                                        className="h-full bg-red-500 transition-all duration-1000"
-                                                                        style={{ width: `${Math.min((drive.collected_units / drive.target_units) * 100, 100) || 0}%` }}
-                                                                    ></div>
-                                                                </div>
-                                                                <p className="text-xs font-bold text-gray-900">
-                                                                    {drive.collected_units} <span className="text-gray-400">/ {drive.target_units} Units</span>
+                                                            <div className="text-center">
+                                                                <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Volume Collected</p>
+                                                                <p className="text-2xl font-black text-gray-900">
+                                                                    {drive.collected_units} <span className="text-xs text-gray-400 font-bold">Units</span>
                                                                 </p>
                                                             </div>
                                                         </td>
@@ -3161,14 +3179,15 @@ export default function OrgDashboard() {
                                         />
                                     </div>
 
+                                    {/* Start Date & Time */}
                                     <div className="space-y-3">
-                                        <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-4">Deployment Date</label>
+                                        <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-4">Start Date</label>
                                         <input
                                             required
                                             type="date"
                                             className="w-full px-8 py-5 bg-gray-50 border-2 border-transparent rounded-2xl font-bold text-gray-900 outline-none focus:border-red-500/20 focus:bg-white transition-all shadow-inner"
-                                            value={driveForm.date}
-                                            onChange={e => setDriveForm({ ...driveForm, date: e.target.value })}
+                                            value={driveForm.start_date}
+                                            onChange={e => setDriveForm({ ...driveForm, start_date: e.target.value })}
                                         />
                                     </div>
 
@@ -3178,24 +3197,35 @@ export default function OrgDashboard() {
                                             required
                                             type="time"
                                             className="w-full px-8 py-5 bg-gray-50 border-2 border-transparent rounded-2xl font-bold text-gray-900 outline-none focus:border-red-500/20 focus:bg-white transition-all shadow-inner"
-                                            value={driveForm.time}
-                                            onChange={e => setDriveForm({ ...driveForm, time: e.target.value })}
+                                            value={driveForm.start_time}
+                                            onChange={e => setDriveForm({ ...driveForm, start_time: e.target.value })}
                                         />
                                     </div>
 
+                                    {/* End Date & Time */}
                                     <div className="space-y-3">
-                                        <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-4">Target Volume (Units)</label>
+                                        <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-4">End Date</label>
                                         <input
                                             required
-                                            type="number"
-                                            min="1"
+                                            type="date"
                                             className="w-full px-8 py-5 bg-gray-50 border-2 border-transparent rounded-2xl font-bold text-gray-900 outline-none focus:border-red-500/20 focus:bg-white transition-all shadow-inner"
-                                            value={driveForm.target_units}
-                                            onChange={e => setDriveForm({ ...driveForm, target_units: e.target.value })}
+                                            value={driveForm.end_date}
+                                            onChange={e => setDriveForm({ ...driveForm, end_date: e.target.value })}
                                         />
                                     </div>
 
                                     <div className="space-y-3">
+                                        <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-4">End Time</label>
+                                        <input
+                                            required
+                                            type="time"
+                                            className="w-full px-8 py-5 bg-gray-50 border-2 border-transparent rounded-2xl font-bold text-gray-900 outline-none focus:border-red-500/20 focus:bg-white transition-all shadow-inner"
+                                            value={driveForm.end_time}
+                                            onChange={e => setDriveForm({ ...driveForm, end_time: e.target.value })}
+                                        />
+                                    </div>
+
+                                    <div className="col-span-2 space-y-3">
                                         <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-4">Precise Location</label>
                                         <input
                                             required
@@ -3210,6 +3240,7 @@ export default function OrgDashboard() {
                                     <div className="col-span-2 space-y-3">
                                         <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-4">Brief Description</label>
                                         <textarea
+                                            required
                                             className="w-full px-8 py-5 bg-gray-50 border-2 border-transparent rounded-2xl font-bold text-gray-900 outline-none focus:border-red-500/20 focus:bg-white transition-all shadow-inner resize-none h-32"
                                             placeholder="Describe the drive's goals or specific instructions for donors..."
                                             value={driveForm.description}

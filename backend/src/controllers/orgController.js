@@ -761,7 +761,7 @@ exports.resetPassword = async (req, res) => {
 exports.getDrives = async (req, res) => {
     try {
         const [rows] = await pool.query(
-            'SELECT * FROM blood_drives WHERE org_id = ? ORDER BY date DESC, time DESC',
+            'SELECT * FROM blood_drives WHERE org_id = ? ORDER BY start_date DESC, start_time DESC',
             [req.user.id]
         );
         res.json(rows);
@@ -773,12 +773,28 @@ exports.getDrives = async (req, res) => {
 
 exports.createDrive = async (req, res) => {
     try {
-        const { event_name, date, time, location, target_units, description } = req.body;
+        const { event_name, start_date, start_time, end_date, end_time, location, description } = req.body;
+        
+        // Validation: All required fields
+        if (!event_name || !start_date || !start_time || !end_date || !end_time || !location) {
+            return res.status(400).json({ error: 'All fields are required except description.' });
+        }
+
+        // Validation: End must be after Start
+        const start = new Date(`${start_date}T${start_time}`);
+        const end = new Date(`${end_date}T${end_time}`);
+
+        if (end <= start) {
+            return res.status(400).json({ error: 'End date and time must be after start date and time.' });
+        }
+
         await pool.query(
-            'INSERT INTO blood_drives (org_id, event_name, date, time, location, target_units, description) VALUES (?, ?, ?, ?, ?, ?, ?)',
-            [req.user.id, event_name, date, time, location, target_units || 0, description]
+            'INSERT INTO blood_drives (org_id, event_name, start_date, start_time, end_date, end_time, location, description) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+            [req.user.id, event_name, start_date, start_time, end_date, end_time, location, description]
         );
-        await addOrgLog(req.user.id, 'DRIVE_CREATE', event_name, `Scheduled blood drive: ${event_name} at ${location} on ${date}`);
+        
+        await addOrgLog(req.user.id, 'DRIVE_CREATE', event_name, `Scheduled blood drive: ${event_name} at ${location} from ${start_date} ${start_time} to ${end_date} ${end_time}`);
+        
         res.json({ message: 'Blood drive scheduled successfully' });
     } catch (err) {
         console.error('Org createDrive Error:', err);

@@ -1271,33 +1271,31 @@ const Dashboard = () => {
                         </div>
                     </div>
 
-                    <div className="grid grid-cols-2 gap-4 mb-8 relative z-10">
-                        <div className="bg-gray-50/80 backdrop-blur-sm p-4 rounded-[1.5rem] border border-gray-100 hover:bg-white hover:shadow-md transition-all">
-                            <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-2">Schedule</span>
-                            <p className="text-sm font-black text-gray-800 flex items-center gap-2">
-                                <i className="far fa-calendar-check text-red-500"></i> {formatDateHyphen(drive.date)}
-                            </p>
-                            <p className="text-[10px] font-black text-gray-500 ml-6 tracking-wide uppercase">{drive.time}</p>
-                        </div>
-                        <div className="bg-gray-50/80 backdrop-blur-sm p-4 rounded-[1.5rem] border border-gray-100 hover:bg-white hover:shadow-md transition-all">
-                            <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-2">Location</span>
-                            <p className="text-sm font-black text-gray-800 line-clamp-1 flex items-center gap-2">
-                                <i className="fas fa-map-location-dot text-red-500"></i> {drive.location}
-                            </p>
-                            <p className="text-[10px] font-black text-gray-500 ml-6 uppercase tracking-widest">{drive.org_city}</p>
-                        </div>
-                    </div>
-
-                    <div className="mb-8 relative z-10 px-1">
-                        <div className="flex justify-between items-end mb-2.5">
-                            <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Collection Target</span>
-                            <span className="text-xs font-black text-gray-900 bg-gray-50 px-3 py-1 rounded-lg border border-gray-100">{drive.collected_units} / {drive.target_units} Units</span>
-                        </div>
-                        <div className="h-3 bg-gray-100 rounded-full overflow-hidden shadow-inner">
-                            <div 
-                                className="h-full bg-gradient-to-r from-red-500 to-rose-600 transition-all duration-1000 shadow-lg"
-                                style={{ width: `${Math.min(100, (drive.collected_units / drive.target_units) * 100)}%` }}
-                            ></div>
+                    <div className="grid grid-cols-1 gap-4 mb-8 relative z-10">
+                        <div className="bg-gray-50/80 backdrop-blur-sm p-5 rounded-[1.5rem] border border-gray-100 hover:bg-white hover:shadow-md transition-all">
+                            <div className="flex justify-between items-start mb-4">
+                                <div>
+                                    <span className="text-[10px] font-black text-blue-500 uppercase tracking-widest block mb-1">Starts</span>
+                                    <p className="text-sm font-black text-gray-800 flex items-center gap-2">
+                                        <i className="far fa-calendar-alt text-red-500"></i> {formatDateHyphen(drive.start_date)}
+                                    </p>
+                                    <p className="text-[10px] font-black text-gray-500 ml-6 tracking-wide uppercase">{drive.start_time.substring(0, 5)}</p>
+                                </div>
+                                <div className="text-right">
+                                    <span className="text-[10px] font-black text-emerald-500 uppercase tracking-widest block mb-1">Ends</span>
+                                    <p className="text-sm font-black text-gray-800 flex items-center justify-end gap-2">
+                                        {formatDateHyphen(drive.end_date)} <i className="far fa-calendar-check text-red-500"></i> 
+                                    </p>
+                                    <p className="text-[10px] font-black text-gray-500 mr-6 tracking-wide uppercase">{drive.end_time.substring(0, 5)}</p>
+                                </div>
+                            </div>
+                            <div className="pt-4 border-t border-gray-100">
+                                <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-2">Location</span>
+                                <p className="text-sm font-black text-gray-800 flex items-center gap-2">
+                                    <i className="fas fa-map-location-dot text-red-500"></i> {drive.location}
+                                </p>
+                                <p className="text-[10px] font-black text-gray-500 ml-6 uppercase tracking-widest">{drive.org_city}, {drive.org_district}</p>
+                            </div>
                         </div>
                     </div>
 
