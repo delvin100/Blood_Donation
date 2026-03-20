@@ -527,3 +527,19 @@ exports.chat = async (req, res) => {
 
 
 
+
+exports.getBloodDrives = async (req, res) => {
+    try {
+        const [rows] = await pool.query(`
+            SELECT bd.*, o.name as org_name, o.city as org_city, o.district as org_district, o.type as org_type, o.phone as org_phone
+            FROM blood_drives bd
+            JOIN organizations o ON bd.org_id = o.id
+            WHERE bd.status IN ('Upcoming', 'Active')
+            ORDER BY bd.date ASC, bd.time ASC
+        `);
+        res.json(rows);
+    } catch (err) {
+        console.error('getBloodDrives Error:', err);
+        res.status(500).json({ error: 'Server error', details: err.message });
+    }
+};

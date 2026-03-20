@@ -18,5 +18,6 @@ router.patch('/notifications/read-all', authMiddleware, donorController.markAllR
 router.delete('/notifications/clear-all', authMiddleware, donorController.clearAllNotifications);
 router.delete('/notifications/:id', authMiddleware, donorController.deleteNotification);
 router.post('/chat', authMiddleware, donorController.chat);
+router.get('/blood-drives', authMiddleware, donorController.getBloodDrives);
 
 module.exports = router;

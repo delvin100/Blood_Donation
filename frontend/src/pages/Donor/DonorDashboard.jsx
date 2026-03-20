@@ -49,7 +49,8 @@ const Dashboard = () => {
   const [reports, setReports] = useState([]);
   const [activeReportForPDF, setActiveReportForPDF] = useState(null);
   const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
-
+  const [bloodDrives, setBloodDrives] = useState([]);
+  const [loadingDrives, setLoadingDrives] = useState(false);
 
   // Form states
   const [newDonation, setNewDonation] = useState({ date: '', units: 1, notes: '', hb_level: '', blood_pressure: '' });
@@ -164,11 +165,28 @@ const Dashboard = () => {
     }, 100);
   };
 
+  const fetchBloodDrives = async () => {
+    setLoadingDrives(true);
+    try {
+      const token = localStorage.getItem('authToken') || sessionStorage.getItem('authToken');
+      if (!token) return;
+      const res = await axios.get('/api/donor/blood-drives', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setBloodDrives(res.data);
+    } catch (err) {
+      console.error('Error fetching blood drives:', err);
+    } finally {
+      setLoadingDrives(false);
+    }
+  };
+
   useEffect(() => {
     fetchDashboardData();
     fetchNotifications();
     fetchUrgentNeeds();
     fetchReports();
+    fetchBloodDrives();
 
     // Close notifications when clicking outside
     const handleClickOutside = (event) => {
@@ -1204,11 +1222,112 @@ const Dashboard = () => {
           )}
         </div>
       )
+    },
+    'blood-drives': {
+      title: 'Upcoming Blood Donation Camps',
+      content: (
+        <div className="space-y-6 animate-in slide-in-from-bottom-4 duration-500">
+          <div className="modern-card p-8 bg-red-50/50 border border-red-100 rounded-3xl">
+            <div className="flex items-center gap-4 mb-4">
+              <div className="w-12 h-12 bg-red-100 text-red-600 rounded-2xl flex items-center justify-center text-xl">
+                <i className="fas fa-calendar-alt"></i>
+              </div>
+              <div>
+                <h3 className="text-xl font-black text-gray-800 tracking-tight">Support Community Drives</h3>
+                <p className="text-sm font-bold text-gray-500">Find and participate in blood donation camps near you.</p>
+              </div>
+            </div>
+            <p className="text-sm text-gray-600 leading-relaxed font-bold">
+              Donating at a camp is a great way to meet fellow donors and save lives together. 
+              Check the schedule below and visit the one most convenient for you!
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pb-20">
+            {loadingDrives ? (
+               <div className="md:col-span-2 text-center py-20 text-gray-400 font-black uppercase tracking-[0.3em] animate-pulse">Loading Camps...</div>
+            ) : bloodDrives.length === 0 ? (
+              <div className="md:col-span-2 py-20 text-center bg-gray-50/50 rounded-[3rem] border-2 border-dashed border-gray-100">
+                <div className="w-20 h-20 bg-white rounded-3xl flex items-center justify-center mx-auto mb-6 shadow-sm">
+                  <i className="fas fa-calendar-times text-gray-200 text-4xl"></i>
+                </div>
+                <p className="text-sm font-black text-gray-400 uppercase tracking-widest">No Scheduled Camps Found</p>
+                <p className="text-xs text-gray-400 mt-2 font-bold px-12">We'll alert you as soon as a medical facility schedules a drive in your area.</p>
+              </div>
+            ) : (
+                bloodDrives.map((drive) => (
+                  <div key={drive.id} className="modern-card p-8 bg-white border border-gray-100 rounded-[2.5rem] shadow-sm hover:shadow-2xl hover:shadow-red-900/5 transition-all group relative overflow-hidden">
+                    <div className="absolute top-0 right-0 w-32 h-32 bg-red-50/30 rounded-full blur-3xl -translate-y-16 translate-x-16 group-hover:bg-red-50/50 transition-colors"></div>
+                    
+                    <div className="flex justify-between items-start mb-6 relative z-10">
+                        <div className="flex-1">
+                            <h4 className="text-xl font-black text-gray-900 group-hover:text-red-600 transition-colors leading-tight tracking-tight">{drive.event_name}</h4>
+                            <p className="text-xs font-black text-gray-500 flex items-center gap-1.5 mt-2 uppercase tracking-wide">
+                                <i className="fas fa-building text-blue-500 opacity-70"></i> {drive.org_name}
+                            </p>
+                        </div>
+                        <div className={`px-4 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest shadow-sm ${drive.status === 'Active' ? 'bg-emerald-500 text-white' : 'bg-blue-600 text-white'}`}>
+                            {drive.status}
+                        </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4 mb-8 relative z-10">
+                        <div className="bg-gray-50/80 backdrop-blur-sm p-4 rounded-[1.5rem] border border-gray-100 hover:bg-white hover:shadow-md transition-all">
+                            <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-2">Schedule</span>
+                            <p className="text-sm font-black text-gray-800 flex items-center gap-2">
+                                <i className="far fa-calendar-check text-red-500"></i> {formatDateHyphen(drive.date)}
+                            </p>
+                            <p className="text-[10px] font-black text-gray-500 ml-6 tracking-wide uppercase">{drive.time}</p>
+                        </div>
+                        <div className="bg-gray-50/80 backdrop-blur-sm p-4 rounded-[1.5rem] border border-gray-100 hover:bg-white hover:shadow-md transition-all">
+                            <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-2">Location</span>
+                            <p className="text-sm font-black text-gray-800 line-clamp-1 flex items-center gap-2">
+                                <i className="fas fa-map-location-dot text-red-500"></i> {drive.location}
+                            </p>
+                            <p className="text-[10px] font-black text-gray-500 ml-6 uppercase tracking-widest">{drive.org_city}</p>
+                        </div>
+                    </div>
+
+                    <div className="mb-8 relative z-10 px-1">
+                        <div className="flex justify-between items-end mb-2.5">
+                            <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Collection Target</span>
+                            <span className="text-xs font-black text-gray-900 bg-gray-50 px-3 py-1 rounded-lg border border-gray-100">{drive.collected_units} / {drive.target_units} Units</span>
+                        </div>
+                        <div className="h-3 bg-gray-100 rounded-full overflow-hidden shadow-inner">
+                            <div 
+                                className="h-full bg-gradient-to-r from-red-500 to-rose-600 transition-all duration-1000 shadow-lg"
+                                style={{ width: `${Math.min(100, (drive.collected_units / drive.target_units) * 100)}%` }}
+                            ></div>
+                        </div>
+                    </div>
+
+                    <div className="flex items-center gap-4 relative z-10">
+                        <a 
+                            href={`tel:${drive.org_phone}`}
+                            className="flex-[2] py-4 bg-gray-900 text-white rounded-2xl text-[11px] font-black uppercase tracking-widest flex items-center justify-center gap-3 hover:bg-black transition-all shadow-xl shadow-gray-200 transform active:scale-95 group/btn"
+                        >
+                            <i className="fas fa-phone-volume group-hover/btn:animate-wiggle"></i> 
+                            <span>Contact Organizer</span>
+                        </a>
+                        <button 
+                            className="flex-1 py-4 bg-white border-2 border-gray-100 text-gray-600 rounded-2xl flex items-center justify-center hover:bg-red-50 hover:text-red-500 hover:border-red-100 transition-all transform active:scale-95 text-[11px] font-black uppercase tracking-widest gap-2"
+                            title="Share"
+                        >
+                            <i className="fas fa-share-nodes"></i>
+                            <span>Share</span>
+                        </button>
+                    </div>
+                  </div>
+                ))
+            )}
+          </div>
+        </div>
+      )
     }
   };
 
   const openInfo = (key) => {
-    const fullScreenKeys = ['medical-reports', 'my-organizations', 'donation-history', 'analysis', 'urgent-needs'];
+    const fullScreenKeys = ['medical-reports', 'my-organizations', 'donation-history', 'analysis', 'urgent-needs', 'blood-drives'];
     const content = navigationContent[key];
 
     if (fullScreenKeys.includes(key)) {
@@ -1230,18 +1349,32 @@ const Dashboard = () => {
   const rankInfo = getRankInfo(donationCount);
 
   return (
-    <div className="modern-bg min-h-screen">
+    <div className="modern-bg min-h-screen bg-[#f8fafc]">
+      <style>{`
+        @keyframes float {
+          0%, 100% { transform: translateY(0) scale(1); }
+          50% { transform: translateY(-20px) scale(1.05); }
+        }
+        .animate-float { animation: float 6s ease-in-out infinite; }
+        .mesh-gradient {
+          background-color: #4f46e5;
+          background-image: 
+            radial-gradient(at 0% 0%, #ef4444 0, transparent 50%), 
+            radial-gradient(at 50% 0%, #8b5cf6 0, transparent 50%), 
+            radial-gradient(at 100% 0%, #ec4899 0, transparent 50%);
+        }
+      `}</style>
       {/* PHP Sync Header */}
-      <header className="modern-header py-5">
+      <header className="sticky top-0 z-[100] bg-white/80 backdrop-blur-md border-b border-white/20 py-4 shadow-sm">
         <div className="container mx-auto px-6">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-4">
-              <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center shadow-lg transform transition-transform hover:scale-105">
-                <i className="fas fa-heart text-red-600 text-2xl"></i>
+              <div className="w-10 h-10 bg-red-600 rounded-xl flex items-center justify-center shadow-lg shadow-red-200 transform transition-transform hover:rotate-12">
+                <i className="fas fa-heart text-white text-xl"></i>
               </div>
               <div>
-                <h1 className="text-2xl font-black text-white tracking-tight leading-none mb-1">eBloodBank</h1>
-                <p className="text-white/90 text-[10.5px] uppercase font-black tracking-[0.3em]">Blood Donation Portal</p>
+                <h1 className="text-xl font-black text-gray-900 tracking-tight leading-none mb-1">eBloodBank</h1>
+                <p className="text-gray-400 text-[9px] uppercase font-black tracking-[0.2em]">Blood Donation Portal</p>
               </div>
             </div>
 
@@ -1250,8 +1383,8 @@ const Dashboard = () => {
               <div className="relative" ref={notificationRef}>
                 <button
                   onClick={() => setShowNotifications(!showNotifications)}
-                  className={`w-12 h-12 rounded-[1.2rem] flex items-center justify-center transition-all duration-300 relative group
-                                    ${showNotifications ? 'bg-red-600 text-white shadow-lg shadow-red-200' : 'bg-white/10 text-white hover:bg-white/20'}`}
+                  className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all duration-300 relative group
+                                    ${showNotifications ? 'bg-red-600 text-white shadow-lg' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
                 >
                   <i className="fas fa-bell text-lg"></i>
                   {(data?.stats?.unreadNotifications > 0 || urgentNeeds.length > 0) && (
@@ -1385,6 +1518,12 @@ const Dashboard = () => {
                     ]
                   },
                   {
+                    label: 'Community',
+                    items: [
+                      { key: 'blood-drives', icon: 'fa-calendar-check', label: 'Upcoming Camps', color: 'red' },
+                    ]
+                  },
+                  {
 
                     label: 'General',
                     items: [
@@ -1508,10 +1647,29 @@ const Dashboard = () => {
               </div>
             ) : (
               <>
-                {/* Centered Header */}
-                <div className="text-center mb-8 fade-in">
-                  <h1 className="text-5xl font-black text-white mb-2 drop-shadow-lg tracking-tight">Donor Dashboard</h1>
-                  <p className="text-white/80 text-xl font-medium">Manage your profile and donations</p>
+                {/* Visual Hero Section */}
+                <div className="relative overflow-hidden rounded-[3rem] p-12 mesh-gradient shadow-2xl shadow-indigo-200 mb-10 group">
+                  {/* Floating Abstract Blobs */}
+                  <div className="absolute top-0 right-0 w-80 h-80 bg-white/10 rounded-full blur-[80px] -translate-y-1/2 translate-x-1/4 animate-float"></div>
+                  <div className="absolute bottom-0 left-0 w-60 h-60 bg-purple-500/20 rounded-full blur-[60px] translate-y-1/4 -translate-x-1/4 animate-float" style={{ animationDelay: '2s' }}></div>
+                  
+                  <div className="relative z-10 text-center py-4">
+                    <h1 className="text-6xl font-black text-white mb-4 tracking-tighter drop-shadow-2xl">
+                      Donor Dashboard
+                    </h1>
+                    <div className="flex items-center justify-center gap-3">
+                      <div className="h-px w-12 bg-white/30"></div>
+                      <p className="text-white/90 text-lg font-bold uppercase tracking-[0.2em]">Empowering Heroes</p>
+                      <div className="h-px w-12 bg-white/30"></div>
+                    </div>
+                  </div>
+
+                  {/* Decorative Bottom Wave */}
+                  <div className="absolute bottom-0 left-0 w-full leading-none z-10 opacity-20">
+                    <svg viewBox="0 0 1200 120" preserveAspectRatio="none" className="w-full h-12 fill-white">
+                      <path d="M321.39,56.44c58-10.79,114.16-30.13,172-41.86,82.39-16.72,168.19-17.73,250.45-.39C823.78,31,906.67,72,985.66,92.83c70.05,18.48,146.53,26.09,214.34,3V120H0V95.8C59.71,118.43,147.3,126,211.52,111Z"></path>
+                    </svg>
+                  </div>
                 </div>
 
                 {/* Top Status Alert */}
