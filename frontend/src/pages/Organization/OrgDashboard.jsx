@@ -1572,7 +1572,7 @@ export default function OrgDashboard() {
                                         {[
                                             { label: 'Total Donations', val: stats.total_donations, icon: 'fa-hand-holding-heart', color: 'text-red-400' },
                                             { label: 'Active Alerts', val: stats.active_requests, icon: 'fa-ambulance', color: 'text-blue-400' },
-                                            { label: 'Units Stock', val: stats.inventory_breakdown?.reduce((sum, item) => sum + (Number(item.units) || 0), 0) || stats.total_units || 0, icon: 'fa-burn', color: 'text-orange-400' },
+                                            { label: 'Units Stock', val: inventory.reduce((sum, item) => sum + (Number(item.units) || 0), 0), icon: 'fa-burn', color: 'text-orange-400' },
                                             { label: 'Geo Reach', val: geoReach.length, icon: 'fa-globe', color: 'text-green-400' }
                                         ].map((box, i) => (
                                             <div key={i} className="p-8 bg-white/5 border border-white/10 rounded-[2rem] backdrop-blur-md hover:bg-white/10 transition-all">
@@ -2543,29 +2543,33 @@ export default function OrgDashboard() {
                                                             </td>
                                                             <td className="p-8 text-center">
                                                                 <div className="flex items-center justify-center gap-3">
-                                                                    {dynamicStatus === 'Upcoming' && (
-                                                                        <button
-                                                                            onClick={() => {
-                                                                                setDriveForm({
-                                                                                    event_name: drive.event_name,
-                                                                                    start_date: drive.start_date.split('T')[0],
-                                                                                    start_time: drive.start_time.substring(0, 5),
-                                                                                    end_date: drive.end_date.split('T')[0],
-                                                                                    end_time: drive.end_time.substring(0, 5),
-                                                                                    location: drive.location,
-                                                                                    description: drive.description || ''
-                                                                                });
-                                                                                setIsEditingDrive(true);
-                                                                                setEditingDriveId(drive.id);
-                                                                                setShowDriveModal(true);
-                                                                            }}
-                                                                            className="w-10 h-10 rounded-xl bg-amber-50 text-amber-600 hover:bg-amber-600 hover:text-white transition-all flex items-center justify-center shadow-sm"
-                                                                            title="Edit Schedule"
-                                                                        >
-                                                                            <i className="fas fa-pencil-alt"></i>
-                                                                        </button>
-                                                                    )}
-                                                                    
+
+                                                                    {/* Edit button — shown for Upcoming & Active, disabled for Ended */}
+                                                                    <button
+                                                                        onClick={() => {
+                                                                            if (dynamicStatus === 'Ended') return;
+                                                                            setDriveForm({
+                                                                                event_name: drive.event_name,
+                                                                                start_date: drive.start_date.split('T')[0],
+                                                                                start_time: drive.start_time.substring(0, 5),
+                                                                                end_date: drive.end_date.split('T')[0],
+                                                                                end_time: drive.end_time.substring(0, 5),
+                                                                                location: drive.location,
+                                                                                description: drive.description || ''
+                                                                            });
+                                                                            setIsEditingDrive(true);
+                                                                            setEditingDriveId(drive.id);
+                                                                            setShowDriveModal(true);
+                                                                        }}
+                                                                        className={`w-10 h-10 rounded-xl transition-all flex items-center justify-center shadow-sm
+                                                                            ${dynamicStatus === 'Ended'
+                                                                                ? 'bg-gray-50 text-gray-300 cursor-not-allowed'
+                                                                                : 'bg-amber-50 text-amber-600 hover:bg-amber-600 hover:text-white cursor-pointer'}`}
+                                                                        title={dynamicStatus === 'Ended' ? 'Drive has ended — cannot edit' : 'Edit Schedule'}
+                                                                        disabled={dynamicStatus === 'Ended'}
+                                                                    >
+                                                                        <i className="fas fa-pencil-alt"></i>
+                                                                    </button>
                                                                     {dynamicStatus !== 'Upcoming' && (
                                                                         <button
                                                                             onClick={() => fetchCampDetails(drive)}
@@ -3633,27 +3637,27 @@ export default function OrgDashboard() {
                 </div>
                 {/* --- CAMP DETAILS MODAL --- */}
                 {showCampDetailsModal && (
-                    <div className="fixed inset-0 z-[400] bg-gray-900/60 backdrop-blur-md flex items-center justify-center p-6 animate-in fade-in duration-300">
-                        <div className="bg-white w-full max-w-4xl rounded-[3rem] shadow-2xl overflow-hidden animate-in zoom-in-95 duration-500">
-                            <div className="p-10 border-b border-gray-50 flex items-center justify-between bg-gray-50/50">
+                    <div className="fixed inset-0 z-[400] bg-gray-900/60 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in duration-300">
+                        <div className="bg-white w-full max-w-3xl rounded-[2rem] shadow-2xl overflow-hidden animate-in zoom-in-95 duration-500 flex flex-col max-h-[90vh]">
+                            <div className="px-8 py-6 border-b border-gray-50 flex items-center justify-between bg-gray-50/50 shrink-0">
                                 <div>
-                                    <h3 className="text-2xl font-black text-gray-900 tracking-tight">Camp Collection Details</h3>
-                                    <h4 className="text-lg font-black text-red-600 mt-1">{selectedCampForDetails?.event_name}</h4>
+                                    <h3 className="text-xl font-black text-gray-900 tracking-tight">Camp Collection Details</h3>
+                                    <h4 className="text-base font-black text-red-600 mt-0.5">{selectedCampForDetails?.event_name}</h4>
                                 </div>
                                 <button
                                     onClick={() => setShowCampDetailsModal(false)}
-                                    className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center text-gray-400 hover:text-red-600 transition-all border border-gray-100 shadow-sm"
+                                    className="w-10 h-10 bg-white rounded-xl flex items-center justify-center text-gray-400 hover:text-red-600 transition-all border border-gray-100 shadow-sm"
                                 >
-                                    <i className="fas fa-times"></i>
+                                    <i className="fas fa-times text-sm"></i>
                                 </button>
                             </div>
 
-                            <div className="px-10 py-6 bg-slate-50/50 border-b border-gray-100">
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                    <div className="space-y-4">
+                            <div className="px-8 py-4 bg-slate-50/50 border-b border-gray-100 shrink-0">
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div className="space-y-3">
                                         <div>
                                             <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Time & Date Info</p>
-                                            <p className="text-sm font-bold text-gray-900 flex items-center gap-2">
+                                            <p className="text-sm font-bold text-gray-900 flex items-center gap-2 flex-wrap">
                                                 <i className="far fa-calendar-alt text-red-500"></i>
                                                 {selectedCampForDetails && new Date(selectedCampForDetails.start_date).toLocaleDateString()} at {selectedCampForDetails?.start_time.substring(0, 5)} 
                                                 <span className="text-gray-300 px-1">to</span> 
@@ -3670,28 +3674,30 @@ export default function OrgDashboard() {
                                     </div>
                                     <div className="space-y-2">
                                         <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Drive Description</p>
-                                        <p className="text-sm font-medium text-gray-600 leading-relaxed bg-white p-4 rounded-xl shadow-sm border border-gray-100 max-h-32 overflow-y-auto">
+                                        <p className="text-sm font-medium text-gray-600 leading-relaxed bg-white p-3 rounded-xl shadow-sm border border-gray-100 max-h-20 overflow-y-auto">
                                             {selectedCampForDetails?.description || 'No description provided for this drive.'}
                                         </p>
                                     </div>
                                 </div>
                             </div>
 
-                            <div className="p-10 h-[400px] overflow-y-auto">
+                            <div className="p-6 overflow-y-auto flex-1">
                                 {campInventoryLoading ? (
-                                    <div className="py-20 text-center">
+                                    <div className="py-16 text-center">
                                         <i className="fas fa-circle-notch fa-spin text-4xl text-gray-200"></i>
                                     </div>
                                 ) : (
-                                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-6">
+                                    <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-3">
                                         {['A+', 'A-', 'A1+', 'A1-', 'A1B+', 'A1B-', 'A2+', 'A2-', 'A2B+', 'A2B-', 'AB+', 'AB-', 'B+', 'B-', 'Bombay Blood Group', 'INRA', 'O+', 'O-'].map(bg => {
                                             const bloodData = selectedCampInventory.find(item => item.blood_group === bg);
-                                            const units = bloodData ? bloodData.total_units : 0;
+                                            const units = bloodData ? Number(bloodData.total_units) : 0;
+                                            const displayLabel = bg === 'Bombay Blood Group' ? 'BBG' : bg;
+                                            const hasUnits = units > 0;
                                             return (
-                                                <div key={bg} className="p-6 bg-gray-50 rounded-3xl border border-gray-100 text-center transition-all hover:bg-white hover:shadow-xl hover:border-red-100 group">
-                                                    <p className="text-2xl font-black text-gray-900 group-hover:text-red-600 transition-colors">{bg}</p>
-                                                    <p className="text-3xl font-black text-gray-400 mt-2">{units}</p>
-                                                    <p className="text-[8px] font-black text-gray-400 uppercase tracking-widest mt-1">Units Collected</p>
+                                                <div key={bg} className={`p-3 rounded-2xl border text-center transition-all group ${hasUnits ? 'bg-red-50 border-red-100 hover:bg-red-100' : 'bg-gray-50 border-gray-100 hover:bg-white hover:shadow-md'}`}>
+                                                    <p className={`text-lg font-black transition-colors ${hasUnits ? 'text-red-600' : 'text-gray-700 group-hover:text-red-500'}`} title={bg}>{displayLabel}</p>
+                                                    <p className={`text-2xl font-black mt-1 ${hasUnits ? 'text-red-700' : 'text-gray-400'}`}>{units}</p>
+                                                    <p className="text-[8px] font-black text-gray-400 uppercase tracking-widest mt-0.5">Units Collected</p>
                                                 </div>
                                             );
                                         })}
@@ -3699,16 +3705,16 @@ export default function OrgDashboard() {
                                 )}
                             </div>
 
-                            <div className="p-10 bg-gray-50/50 border-t border-gray-100 flex justify-between items-center">
+                            <div className="px-8 py-5 bg-gray-50/50 border-t border-gray-100 flex justify-between items-center shrink-0">
                                 <div className="flex gap-4">
                                     <div className="px-4 py-2 bg-white rounded-xl border border-gray-100 shadow-sm">
                                         <p className="text-[8px] font-black text-gray-400 uppercase tracking-widest">Total Collection</p>
-                                        <p className="text-lg font-black text-gray-900">{selectedCampInventory.reduce((acc, curr) => acc + curr.total_units, 0)} Units</p>
+                                        <p className="text-lg font-black text-gray-900">{selectedCampInventory.reduce((acc, curr) => acc + Number(curr.total_units || 0), 0)} Units</p>
                                     </div>
                                 </div>
                                 <button
                                     onClick={() => setShowCampDetailsModal(false)}
-                                    className="px-8 py-4 bg-gray-900 text-white rounded-[1.5rem] font-black text-xs uppercase tracking-widest hover:bg-black transition-all"
+                                    className="px-6 py-3 bg-gray-900 text-white rounded-xl font-black text-xs uppercase tracking-widest hover:bg-black transition-all"
                                 >
                                     Close Details
                                 </button>
