@@ -229,6 +229,8 @@ export default function OrgDashboard() {
         location: '',
         description: ''
     });
+    const [isEditingDrive, setIsEditingDrive] = useState(false);
+    const [editingDriveId, setEditingDriveId] = useState(null);
 
     const [showInventoryModal, setShowInventoryModal] = useState(false);
     const [selectedDriveForInventory, setSelectedDriveForInventory] = useState(null);
@@ -236,6 +238,10 @@ export default function OrgDashboard() {
         blood_group: 'A+',
         units: ''
     });
+    const [showCampDetailsModal, setShowCampDetailsModal] = useState(false);
+    const [selectedCampInventory, setSelectedCampInventory] = useState([]);
+    const [campInventoryLoading, setCampInventoryLoading] = useState(false);
+    const [selectedCampForDetails, setSelectedCampForDetails] = useState(null);
 
 
 
@@ -1206,10 +1212,9 @@ export default function OrgDashboard() {
         }
     };
 
-    const handleCreateDrive = async (e) => {
-        e.preventDefault();
+    const handleSubmitDrive = async (e) => {
+        if (e) e.preventDefault();
         
-        // Frontend Validation: Start before End
         const start = new Date(`${driveForm.start_date}T${driveForm.start_time}`);
         const end = new Date(`${driveForm.end_date}T${driveForm.end_time}`);
 
@@ -1217,27 +1222,46 @@ export default function OrgDashboard() {
             return toast.error("End date and time must be after start date and time.");
         }
 
-        const createToast = toast.loading("Scheduling blood drive...");
+        const actionText = isEditingDrive ? "Updating" : "Scheduling";
+        const loadingToast = toast.loading(`${actionText} blood drive...`);
         try {
             const token = getAuthToken();
-            await axios.post('/api/organization/drives', driveForm, {
-                headers: { Authorization: `Bearer ${token}` }
-            });
-            toast.success("Blood drive scheduled successfully!", { id: createToast });
+            if (isEditingDrive) {
+                await axios.put(`/api/organization/drives/${editingDriveId}`, driveForm, {
+                    headers: { Authorization: `Bearer ${token}` }
+                });
+                toast.success("Blood drive updated successfully!", { id: loadingToast });
+            } else {
+                await axios.post('/api/organization/drives', driveForm, {
+                    headers: { Authorization: `Bearer ${token}` }
+                });
+                toast.success("Blood drive scheduled successfully!", { id: loadingToast });
+            }
             setShowDriveModal(false);
-            setDriveForm({
-                event_name: '',
-                start_date: '',
-                start_time: '',
-                end_date: '',
-                end_time: '',
-                location: '',
-                description: ''
-            });
+            setIsEditingDrive(false);
+            setEditingDriveId(null);
             fetchDrives();
             fetchHistory();
         } catch (err) {
-            toast.error(err.response?.data?.error || "Failed to schedule drive", { id: createToast });
+            toast.error(err.response?.data?.error || `Failed to ${actionText.toLowerCase()} drive`, { id: loadingToast });
+        }
+    };
+
+    const fetchCampDetails = async (drive) => {
+        setSelectedCampForDetails(drive);
+        setCampInventoryLoading(true);
+        setShowCampDetailsModal(true);
+        try {
+            const token = getAuthToken();
+            const res = await axios.get(`/api/organization/drives/${drive.id}/inventory`, {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+            setSelectedCampInventory(res.data);
+        } catch (err) {
+            toast.error("Failed to fetch camp details");
+            setShowCampDetailsModal(false);
+        } finally {
+            setCampInventoryLoading(false);
         }
     };
 
@@ -2358,20 +2382,20 @@ export default function OrgDashboard() {
                                 </div>
                                 <button
                                     onClick={() => {
-                                        const now = new Date();
-                                        const in30min = new Date(now.getTime() + 30 * 60000);
                                         setDriveForm({
                                             event_name: '',
-                                            start_date: now.toISOString().split('T')[0],
-                                            start_time: now.toTimeString().substring(0, 5),
-                                            end_date: now.toISOString().split('T')[0],
-                                            end_time: in30min.toTimeString().substring(0, 5),
+                                            start_date: '',
+                                            start_time: '',
+                                            end_date: '',
+                                            end_time: '',
                                             location: '',
                                             description: ''
                                         });
+                                        setIsEditingDrive(false);
+                                        setEditingDriveId(null);
                                         setShowDriveModal(true);
                                     }}
-                                    className="px-8 py-4 bg-red-600 hover:bg-red-700 text-white rounded-2xl font-black transition-all shadow-xl shadow-red-600/20 flex items-center gap-3 active:scale-95"
+                                    className="px-8 py-4 bg-gray-900 hover:bg-black text-white rounded-2xl font-black text-xs uppercase tracking-[0.2em] transition-all shadow-xl shadow-gray-200 flex items-center gap-3 active:scale-95"
                                 >
                                     <i className="fas fa-plus"></i>
                                     Schedule New Drive
@@ -2421,7 +2445,7 @@ export default function OrgDashboard() {
                                                     <th className="p-8 text-[10px] font-black text-gray-400 uppercase tracking-widest">Event Detail</th>
                                                     <th className="p-8 text-[10px] font-black text-gray-400 uppercase tracking-widest">Schedule & Location</th>
                                                     <th className="p-8 text-[10px] font-black text-gray-400 uppercase tracking-widest text-center">Status</th>
-                                                    <th className="p-8 text-[10px] font-black text-gray-400 uppercase tracking-widest text-right">Control</th>
+                                                    <th className="p-8 text-[10px] font-black text-gray-400 uppercase tracking-widest text-center">Control</th>
                                                 </tr>
                                             </thead>
                                             <tbody className="divide-y divide-gray-50">
@@ -2485,8 +2509,41 @@ export default function OrgDashboard() {
                                                                     {dynamicStatus}
                                                                 </span>
                                                             </td>
-                                                            <td className="p-8 text-right">
-                                                                <div className="flex items-center justify-end gap-3 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                            <td className="p-8 text-center">
+                                                                <div className="flex items-center justify-center gap-3">
+                                                                    {dynamicStatus === 'Upcoming' && (
+                                                                        <button
+                                                                            onClick={() => {
+                                                                                setDriveForm({
+                                                                                    event_name: drive.event_name,
+                                                                                    start_date: drive.start_date.split('T')[0],
+                                                                                    start_time: drive.start_time.substring(0, 5),
+                                                                                    end_date: drive.end_date.split('T')[0],
+                                                                                    end_time: drive.end_time.substring(0, 5),
+                                                                                    location: drive.location,
+                                                                                    description: drive.description || ''
+                                                                                });
+                                                                                setIsEditingDrive(true);
+                                                                                setEditingDriveId(drive.id);
+                                                                                setShowDriveModal(true);
+                                                                            }}
+                                                                            className="w-10 h-10 rounded-xl bg-amber-50 text-amber-600 hover:bg-amber-600 hover:text-white transition-all flex items-center justify-center shadow-sm"
+                                                                            title="Edit Schedule"
+                                                                        >
+                                                                            <i className="fas fa-pencil-alt"></i>
+                                                                        </button>
+                                                                    )}
+                                                                    
+                                                                    {dynamicStatus !== 'Upcoming' && (
+                                                                        <button
+                                                                            onClick={() => fetchCampDetails(drive)}
+                                                                            className="w-10 h-10 rounded-xl bg-indigo-50 text-indigo-600 hover:bg-indigo-600 hover:text-white transition-all flex items-center justify-center shadow-sm"
+                                                                            title="Camp Details"
+                                                                        >
+                                                                            <i className="fas fa-list-ul"></i>
+                                                                        </button>
+                                                                    )}
+
                                                                     <button 
                                                                         onClick={() => {
                                                                             setSelectedDriveForInventory(drive);
@@ -2498,26 +2555,35 @@ export default function OrgDashboard() {
                                                                     >
                                                                         <i className="fas fa-plus-circle"></i>
                                                                     </button>
-                                                                    <button 
+
+                                                                    <button
                                                                         onClick={async () => {
-                                                                            if(window.confirm('Are you sure you want to cancel this drive? This cannot be undone.')) {
-                                                                                try {
-                                                                                    const token = getAuthToken();
-                                                                                    await axios.delete(`/api/organization/drives/${drive.id}`, {
-                                                                                        headers: { Authorization: `Bearer ${token}` }
-                                                                                    });
-                                                                                    toast.success("Drive cancelled successfully");
-                                                                                    fetchDrives();
-                                                                                    fetchStats();
-                                                                                } catch (err) {
-                                                                                    toast.error("Failed to cancel drive");
+                                                                            setModalConfig({
+                                                                                title: 'Cancel Blood Drive?',
+                                                                                message: `Are you sure you want to cancel "${drive.event_name}"? This cannot be undone.`,
+                                                                                confirmText: 'Yes, Cancel Drive',
+                                                                                type: 'danger',
+                                                                                onConfirm: async () => {
+                                                                                    try {
+                                                                                        const token = getAuthToken();
+                                                                                        await axios.delete(`/api/organization/drives/${drive.id}`, {
+                                                                                            headers: { Authorization: `Bearer ${token}` }
+                                                                                        });
+                                                                                        toast.success("Drive cancelled successfully");
+                                                                                        fetchDrives();
+                                                                                        fetchStats();
+                                                                                        setIsModalOpen(false);
+                                                                                    } catch (err) {
+                                                                                        toast.error("Failed to cancel drive");
+                                                                                    }
                                                                                 }
-                                                                            }
+                                                                            });
+                                                                            setIsModalOpen(true);
                                                                         }}
-                                                                        className="w-10 h-10 rounded-xl bg-gray-50 text-gray-400 hover:bg-red-600 hover:text-white transition-all flex items-center justify-center shadow-sm"
+                                                                        className="w-10 h-10 rounded-xl bg-red-50 text-red-600 hover:bg-red-600 hover:text-white transition-all flex items-center justify-center shadow-sm"
                                                                         title="Cancel Drive"
                                                                     >
-                                                                        <i className="fas fa-ban"></i>
+                                                                        <i className="fas fa-trash-alt"></i>
                                                                     </button>
                                                                 </div>
                                                             </td>
@@ -2532,11 +2598,10 @@ export default function OrgDashboard() {
                         </div>
                     )}
 
-                    {
-                        activeTab === 'profile' && (
-                            <div className="max-w-4xl mx-auto animate-in fade-in slide-in-from-bottom-4 duration-500">
-                                <div className="bg-white rounded-[3rem] shadow-sm border border-gray-100 overflow-hidden">
-                                    {/* Profile Header */}
+                                    {activeTab === 'profile' && (
+                        <div className="max-w-4xl mx-auto animate-in fade-in slide-in-from-bottom-4 duration-500">
+                            <div className="bg-white rounded-[3rem] shadow-sm border border-gray-100 overflow-hidden">
+                                     {/* Profile Header */}
                                     <div className="relative h-48 bg-gradient-to-r from-red-600 to-red-500">
                                         <div className="absolute -bottom-16 left-10 p-2 bg-white rounded-3xl shadow-xl">
                                             <div className="w-32 h-32 rounded-2xl bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center text-gray-400 font-black text-5xl shadow-inner">
@@ -3237,6 +3302,7 @@ export default function OrgDashboard() {
                                             type="date"
                                             className="w-full px-8 py-5 bg-gray-50 border-2 border-transparent rounded-2xl font-bold text-gray-900 outline-none focus:border-red-500/20 focus:bg-white transition-all shadow-inner"
                                             value={driveForm.start_date}
+                                            min={new Date().toISOString().split('T')[0]}
                                             onChange={e => setDriveForm({ ...driveForm, start_date: e.target.value })}
                                         />
                                     </div>
@@ -3248,6 +3314,7 @@ export default function OrgDashboard() {
                                             type="time"
                                             className="w-full px-8 py-5 bg-gray-50 border-2 border-transparent rounded-2xl font-bold text-gray-900 outline-none focus:border-red-500/20 focus:bg-white transition-all shadow-inner"
                                             value={driveForm.start_time}
+                                            min={driveForm.start_date === new Date().toISOString().split('T')[0] ? new Date().toTimeString().slice(0, 5) : undefined}
                                             onChange={e => setDriveForm({ ...driveForm, start_time: e.target.value })}
                                         />
                                     </div>
@@ -3260,6 +3327,7 @@ export default function OrgDashboard() {
                                             type="date"
                                             className="w-full px-8 py-5 bg-gray-50 border-2 border-transparent rounded-2xl font-bold text-gray-900 outline-none focus:border-red-500/20 focus:bg-white transition-all shadow-inner"
                                             value={driveForm.end_date}
+                                            min={driveForm.start_date || new Date().toISOString().split('T')[0]}
                                             onChange={e => setDriveForm({ ...driveForm, end_date: e.target.value })}
                                         />
                                     </div>
@@ -3271,6 +3339,7 @@ export default function OrgDashboard() {
                                             type="time"
                                             className="w-full px-8 py-5 bg-gray-50 border-2 border-transparent rounded-2xl font-bold text-gray-900 outline-none focus:border-red-500/20 focus:bg-white transition-all shadow-inner"
                                             value={driveForm.end_time}
+                                            min={driveForm.start_date === driveForm.end_date ? driveForm.start_time : undefined}
                                             onChange={e => setDriveForm({ ...driveForm, end_time: e.target.value })}
                                         />
                                     </div>
@@ -3518,6 +3587,63 @@ export default function OrgDashboard() {
                         </div>
                     </div>
                 </div>
+                {/* --- CAMP DETAILS MODAL --- */}
+                {showCampDetailsModal && (
+                    <div className="fixed inset-0 z-[400] bg-gray-900/60 backdrop-blur-md flex items-center justify-center p-6 animate-in fade-in duration-300">
+                        <div className="bg-white w-full max-w-4xl rounded-[3rem] shadow-2xl overflow-hidden animate-in zoom-in-95 duration-500">
+                            <div className="p-10 border-b border-gray-50 flex items-center justify-between bg-gray-50/50">
+                                <div>
+                                    <h3 className="text-2xl font-black text-gray-900 tracking-tight">Camp Collection Details</h3>
+                                    <p className="text-gray-400 font-bold text-[10px] uppercase tracking-widest mt-1">Event: {selectedCampForDetails?.event_name}</p>
+                                </div>
+                                <button
+                                    onClick={() => setShowCampDetailsModal(false)}
+                                    className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center text-gray-400 hover:text-red-600 transition-all border border-gray-100 shadow-sm"
+                                >
+                                    <i className="fas fa-times"></i>
+                                </button>
+                            </div>
+
+                            <div className="p-10">
+                                {campInventoryLoading ? (
+                                    <div className="py-20 text-center">
+                                        <i className="fas fa-circle-notch fa-spin text-4xl text-gray-200"></i>
+                                    </div>
+                                ) : (
+                                    <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+                                        {['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'].map(bg => {
+                                            const bloodData = selectedCampInventory.find(item => item.blood_group === bg);
+                                            const units = bloodData ? bloodData.total_units : 0;
+                                            return (
+                                                <div key={bg} className="p-6 bg-gray-50 rounded-3xl border border-gray-100 text-center transition-all hover:bg-white hover:shadow-xl hover:border-red-100 group">
+                                                    <p className="text-2xl font-black text-gray-900 group-hover:text-red-600 transition-colors">{bg}</p>
+                                                    <p className="text-3xl font-black text-gray-400 mt-2">{units}</p>
+                                                    <p className="text-[8px] font-black text-gray-400 uppercase tracking-widest mt-1">Units Collected</p>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                )}
+                            </div>
+
+                            <div className="p-10 bg-gray-50/50 border-t border-gray-100 flex justify-between items-center">
+                                <div className="flex gap-4">
+                                    <div className="px-4 py-2 bg-white rounded-xl border border-gray-100 shadow-sm">
+                                        <p className="text-[8px] font-black text-gray-400 uppercase tracking-widest">Total Collection</p>
+                                        <p className="text-lg font-black text-gray-900">{selectedCampInventory.reduce((acc, curr) => acc + curr.total_units, 0)} Units</p>
+                                    </div>
+                                </div>
+                                <button
+                                    onClick={() => setShowCampDetailsModal(false)}
+                                    className="px-8 py-4 bg-gray-900 text-white rounded-[1.5rem] font-black text-xs uppercase tracking-widest hover:bg-black transition-all"
+                                >
+                                    Close Details
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
                 {/* --- LOG INVENTORY MODAL --- */}
                 {showInventoryModal && (
                     <div className="fixed inset-0 z-[400] bg-gray-900/60 backdrop-blur-md flex items-center justify-center p-6 animate-in fade-in duration-300">
@@ -3544,7 +3670,7 @@ export default function OrgDashboard() {
                                         value={inventoryForm.blood_group}
                                         onChange={e => setInventoryForm({ ...inventoryForm, blood_group: e.target.value })}
                                     >
-                                        {['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'].map(bg => (
+                                        {['A+', 'A-', 'A1+', 'A1-', 'A1B+', 'A1B-', 'A2+', 'A2-', 'A2B+', 'A2B-', 'AB+', 'AB-', 'B+', 'B-', 'Bombay Blood Group', 'INRA', 'O+', 'O-'].map(bg => (
                                             <option key={bg} value={bg}>{bg}</option>
                                         ))}
                                     </select>

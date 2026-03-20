@@ -38,6 +38,8 @@ router.get('/drives', authMiddleware, orgController.getDrives);
 router.post('/drives', authMiddleware, orgController.createDrive);
 router.delete('/drives/:id', authMiddleware, orgController.deleteDrive);
 router.patch('/drives/:id/status', authMiddleware, orgController.updateDriveStatus);
+router.put('/drives/:id', authMiddleware, orgController.updateDrive);
+router.get('/drives/:id/inventory', authMiddleware, orgController.getDriveInventory);
 router.post('/drives/inventory', authMiddleware, orgController.addDriveInventory);
 
 module.exports = router;

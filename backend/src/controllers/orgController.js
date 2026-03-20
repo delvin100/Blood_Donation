@@ -120,6 +120,7 @@ exports.getStats = async (req, res) => {
         const [inventory] = await pool.query('SELECT SUM(units) as total_units FROM blood_inventory WHERE org_id = ?', [orgId]);
         const [requests] = await pool.query('SELECT COUNT(*) as active_requests FROM emergency_requests WHERE status = ?', ['Active']);
         const [verifications] = await pool.query('SELECT COUNT(*) as verified_count FROM donor_verifications WHERE org_id = ? AND status = ?', [orgId, 'Verified']);
+        // Fix total_donations: count valid donations from the donations table
         const [donations] = await pool.query('SELECT COUNT(*) as total_donations FROM donations WHERE org_id = ?', [orgId]);
         const [breakdown] = await pool.query('SELECT blood_group, units, min_threshold FROM blood_inventory WHERE org_id = ?', [orgId]);
         const [endedDrives] = await pool.query(
@@ -131,7 +132,7 @@ exports.getStats = async (req, res) => {
             total_units: inventory[0].total_units || 0,
             active_requests: requests[0].active_requests || 0,
             verified_count: verifications[0].verified_count || 0,
-            total_donations: donations[0].total_donations || 0,
+            total_donations: donations[0].total_donations || 0, // Should show 0 if count is 0
             ended_count: endedDrives[0].count || 0,
             inventory_breakdown: breakdown
         });
@@ -814,6 +815,38 @@ exports.createDrive = async (req, res) => {
     }
 };
 
+exports.updateDrive = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { event_name, start_date, start_time, end_date, end_time, location, description } = req.body;
+
+        if (!event_name || !start_date || !start_time || !end_date || !end_time || !location) {
+            return res.status(400).json({ error: 'All fields are required.' });
+        }
+
+        // Check if drive is already started
+        const [drive] = await pool.query('SELECT * FROM blood_drives WHERE id = ? AND org_id = ?', [id, req.user.id]);
+        if (drive.length === 0) return res.status(404).json({ error: 'Drive not found' });
+
+        const now = new Date();
+        const driveStart = new Date(`${drive[0].start_date} ${drive[0].start_time}`);
+        if (now >= driveStart) {
+            return res.status(400).json({ error: 'Cannot edit a drive that has already started or ended.' });
+        }
+
+        await pool.query(
+            'UPDATE blood_drives SET event_name = ?, start_date = ?, start_time = ?, end_date = ?, end_time = ?, location = ?, description = ? WHERE id = ? AND org_id = ?',
+            [event_name, start_date, start_time, end_date, end_time, location, description, id, req.user.id]
+        );
+
+        await addOrgLog(req.user.id, 'DRIVE_UPDATE', event_name, `Updated blood drive details for: ${event_name}`);
+        res.json({ message: 'Blood drive updated successfully' });
+    } catch (err) {
+        console.error('Org updateDrive Error:', err);
+        res.status(500).json({ error: 'Server error', details: err.message });
+    }
+};
+
 exports.updateDriveStatus = async (req, res) => {
     try {
         const { id } = req.params;
@@ -856,10 +889,33 @@ exports.addDriveInventory = async (req, res) => {
             await pool.query('INSERT INTO inventory (org_id, blood_group, units) VALUES (?, ?, ?)', [req.user.id, blood_group, units]);
         }
 
+        // Also update drive_collections if drive_id is provided
+        const { drive_id } = req.body;
+        if (drive_id) {
+            await pool.query(
+                'INSERT INTO drive_collections (drive_id, blood_group, units) VALUES (?, ?, ?) ON DUPLICATE KEY UPDATE units = units + ?',
+                [drive_id, blood_group, units, units]
+            );
+        }
+
         await addOrgLog(req.user.id, 'INVENTORY_ADD', blood_group, `Added ${units} units of ${blood_group} to inventory from blood drive`);
         res.json({ message: 'Inventory updated successfully' });
     } catch (err) {
         console.error('Org addDriveInventory Error:', err);
+        res.status(500).json({ error: 'Server error', details: err.message });
+    }
+};
+
+exports.getDriveInventory = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const [collections] = await pool.query(
+            'SELECT blood_group, units, created_at FROM drive_collections WHERE drive_id = ? ORDER BY blood_group ASC',
+            [id]
+        );
+        res.json(collections);
+    } catch (err) {
+        console.error('Org getDriveInventory Error:', err);
         res.status(500).json({ error: 'Server error', details: err.message });
     }
 };
