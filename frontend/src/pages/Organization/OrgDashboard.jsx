@@ -1568,7 +1568,7 @@ export default function OrgDashboard() {
                                         {[
                                             { label: 'Total Donations', val: stats.total_donations, icon: 'fa-hand-holding-heart', color: 'text-red-400' },
                                             { label: 'Active Alerts', val: stats.active_requests, icon: 'fa-ambulance', color: 'text-blue-400' },
-                                            { label: 'Units Stock', val: stats.total_units, icon: 'fa-burn', color: 'text-orange-400' },
+                                            { label: 'Units Stock', val: stats.inventory_breakdown?.reduce((sum, item) => sum + (Number(item.units) || 0), 0) || stats.total_units || 0, icon: 'fa-burn', color: 'text-orange-400' },
                                             { label: 'Geo Reach', val: geoReach.length, icon: 'fa-globe', color: 'text-green-400' }
                                         ].map((box, i) => (
                                             <div key={i} className="p-8 bg-white/5 border border-white/10 rounded-[2rem] backdrop-blur-md hover:bg-white/10 transition-all">
@@ -2384,12 +2384,18 @@ export default function OrgDashboard() {
                                 </div>
                                 <button
                                     onClick={() => {
+                                        const now = new Date();
+                                        const today = now.toISOString().split('T')[0];
+                                        const startT = now.toTimeString().substring(0, 5);
+                                        const endTDate = new Date(now.getTime() + 30 * 60 * 1000);
+                                        const endT = endTDate.toTimeString().substring(0, 5);
+
                                         setDriveForm({
                                             event_name: '',
-                                            start_date: '',
-                                            start_time: '',
-                                            end_date: '',
-                                            end_time: '',
+                                            start_date: today,
+                                            start_time: startT,
+                                            end_date: today,
+                                            end_time: endT,
                                             location: '',
                                             description: ''
                                         });
@@ -2413,13 +2419,19 @@ export default function OrgDashboard() {
                                     <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">Active/Upcoming</p>
                                     <h4 className="text-4xl font-black text-orange-500">{drives.filter(d => {
                                         const now = new Date();
-                                        const end = new Date(`${d.end_date}T${d.end_time}`);
+                                        const datePart = d.end_date.includes('T') ? d.end_date.split('T')[0] : d.end_date;
+                                        const end = new Date(`${datePart}T${d.end_time}`);
                                         return now <= end;
                                     }).length}</h4>
                                 </div>
                                 <div className="bg-white p-8 rounded-[2.5rem] border border-gray-100 shadow-sm transition-all hover:scale-105">
                                     <p className="text-[10px] font-black text-emerald-500 uppercase tracking-widest mb-2">Drives Ended</p>
-                                    <h4 className="text-4xl font-black text-gray-900">{stats.ended_count || 0}</h4>
+                                    <h4 className="text-4xl font-black text-gray-900">{drives.filter(d => {
+                                        const now = new Date();
+                                        const datePart = d.end_date.includes('T') ? d.end_date.split('T')[0] : d.end_date;
+                                        const end = new Date(`${datePart}T${d.end_time}`);
+                                        return now > end;
+                                    }).length}</h4>
                                 </div>
                             </div>
 
@@ -2453,8 +2465,11 @@ export default function OrgDashboard() {
                                             <tbody className="divide-y divide-gray-50">
                                                 {drives.map((drive) => {
                                                     const now = new Date();
-                                                    const start = new Date(`${drive.start_date}T${drive.start_time}`);
-                                                    const end = new Date(`${drive.end_date}T${drive.end_time}`);
+                                                    const startDatePart = drive.start_date.includes('T') ? drive.start_date.split('T')[0] : drive.start_date;
+                                                    const endDatePart = drive.end_date.includes('T') ? drive.end_date.split('T')[0] : drive.end_date;
+                                                    
+                                                    const start = new Date(`${startDatePart}T${drive.start_time}`);
+                                                    const end = new Date(`${endDatePart}T${drive.end_time}`);
                                                     
                                                     let dynamicStatus = 'Upcoming';
                                                     let statusColor = 'bg-blue-50 text-blue-600 border-blue-100';
@@ -3302,9 +3317,15 @@ export default function OrgDashboard() {
                                         <input
                                             required
                                             type="date"
-                                            className="w-full px-8 py-5 bg-gray-50 border-2 border-transparent rounded-2xl font-bold text-gray-900 outline-none focus:border-red-500/20 focus:bg-white transition-all shadow-inner"
+                                            className="w-full px-8 py-5 bg-gray-50 border-2 border-transparent rounded-2xl font-bold text-gray-900 outline-none focus:border-red-500/20 focus:bg-white transition-all shadow-inner disabled:opacity-50 disabled:cursor-not-allowed"
                                             value={driveForm.start_date}
                                             min={new Date().toISOString().split('T')[0]}
+                                            disabled={isEditingDrive && (() => {
+                                                const now = new Date();
+                                                const dPart = driveForm.start_date.includes('T') ? driveForm.start_date.split('T')[0] : driveForm.start_date;
+                                                const s = new Date(`${dPart}T${driveForm.start_time}`);
+                                                return now >= s;
+                                            })()}
                                             onChange={e => setDriveForm({ ...driveForm, start_date: e.target.value })}
                                         />
                                     </div>
@@ -3314,9 +3335,15 @@ export default function OrgDashboard() {
                                         <input
                                             required
                                             type="time"
-                                            className="w-full px-8 py-5 bg-gray-50 border-2 border-transparent rounded-2xl font-bold text-gray-900 outline-none focus:border-red-500/20 focus:bg-white transition-all shadow-inner"
+                                            className="w-full px-8 py-5 bg-gray-50 border-2 border-transparent rounded-2xl font-bold text-gray-900 outline-none focus:border-red-500/20 focus:bg-white transition-all shadow-inner disabled:opacity-50 disabled:cursor-not-allowed"
                                             value={driveForm.start_time}
                                             min={driveForm.start_date === new Date().toISOString().split('T')[0] ? new Date().toTimeString().slice(0, 5) : undefined}
+                                            disabled={isEditingDrive && (() => {
+                                                const now = new Date();
+                                                const dPart = driveForm.start_date.includes('T') ? driveForm.start_date.split('T')[0] : driveForm.start_date;
+                                                const s = new Date(`${dPart}T${driveForm.start_time}`);
+                                                return now >= s;
+                                            })()}
                                             onChange={e => setDriveForm({ ...driveForm, start_time: e.target.value })}
                                         />
                                     </div>
