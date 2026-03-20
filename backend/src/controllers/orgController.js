@@ -757,3 +757,47 @@ exports.resetPassword = async (req, res) => {
         res.status(500).json({ error: 'Failed to reset organization password', details: err.message });
     }
 };
+
+exports.getDrives = async (req, res) => {
+    try {
+        const [rows] = await pool.query(
+            'SELECT * FROM blood_drives WHERE org_id = ? ORDER BY date DESC, time DESC',
+            [req.user.id]
+        );
+        res.json(rows);
+    } catch (err) {
+        console.error('Org getDrives Error:', err);
+        res.status(500).json({ error: 'Server error', details: err.message });
+    }
+};
+
+exports.createDrive = async (req, res) => {
+    try {
+        const { event_name, date, time, location, target_units, description } = req.body;
+        await pool.query(
+            'INSERT INTO blood_drives (org_id, event_name, date, time, location, target_units, description) VALUES (?, ?, ?, ?, ?, ?, ?)',
+            [req.user.id, event_name, date, time, location, target_units || 0, description]
+        );
+        await addOrgLog(req.user.id, 'DRIVE_CREATE', event_name, `Scheduled blood drive: ${event_name} at ${location} on ${date}`);
+        res.json({ message: 'Blood drive scheduled successfully' });
+    } catch (err) {
+        console.error('Org createDrive Error:', err);
+        res.status(500).json({ error: 'Server error', details: err.message });
+    }
+};
+
+exports.updateDriveStatus = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { status } = req.body;
+        await pool.query(
+            'UPDATE blood_drives SET status = ? WHERE id = ? AND org_id = ?',
+            [status, id, req.user.id]
+        );
+        await addOrgLog(req.user.id, 'DRIVE_UPDATE', `Drive #${id}`, `Updated drive status to ${status}`);
+        res.json({ message: 'Drive status updated' });
+    } catch (err) {
+        console.error('Org updateDriveStatus Error:', err);
+        res.status(500).json({ error: 'Server error', details: err.message });
+    }
+};

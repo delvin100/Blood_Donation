@@ -214,6 +214,24 @@ CREATE TABLE org_logs (
   INDEX idx_org_logs_created_at (created_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+-- Blood Drives/Camps Table
+CREATE TABLE blood_drives (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  org_id INT NOT NULL,
+  event_name VARCHAR(255) NOT NULL,
+  date DATE NOT NULL,
+  time TIME NOT NULL,
+  location VARCHAR(255) NOT NULL,
+  target_units INT DEFAULT 0,
+  collected_units INT DEFAULT 0,
+  status ENUM('Upcoming', 'Active', 'Completed', 'Cancelled') DEFAULT 'Upcoming',
+  description TEXT,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (org_id) REFERENCES organizations(id) ON DELETE CASCADE,
+  INDEX idx_drive_org (org_id),
+  INDEX idx_drive_date (date)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
 -- Donor Activity Logs
 CREATE TABLE donor_logs (
   id INT AUTO_INCREMENT PRIMARY KEY,

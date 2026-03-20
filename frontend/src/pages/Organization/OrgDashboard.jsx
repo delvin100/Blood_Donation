@@ -208,6 +208,7 @@ export default function OrgDashboard() {
     // Verification State
     const [verificationResult, setVerificationResult] = useState(null);
     const [verifying, setVerifying] = useState(false);
+    const [searchKey, setSearchKey] = useState(0);
 
     const [showReportsModal, setShowReportsModal] = useState(false);
     const [selectedDonor, setSelectedDonor] = useState(null);
@@ -216,6 +217,17 @@ export default function OrgDashboard() {
     const [isExportingPDF, setIsExportingPDF] = useState(false);
     const [pdfExportChunk, setPdfExportChunk] = useState([]);
     const [pdfPageMeta, setPdfPageMeta] = useState({ isFirstPage: false, isLastPage: false });
+    const [drives, setDrives] = useState([]);
+    const [drivesLoading, setDrivesLoading] = useState(false);
+    const [showDriveModal, setShowDriveModal] = useState(false);
+    const [driveForm, setDriveForm] = useState({
+        event_name: '',
+        date: '',
+        time: '',
+        location: '',
+        target_units: 0,
+        description: ''
+    });
 
 
 
@@ -359,6 +371,7 @@ export default function OrgDashboard() {
         if (activeTab === 'emergency') fetchRequests();
         if (activeTab === 'members') fetchMembers();
         if (activeTab === 'profile') fetchOrgProfile();
+        if (activeTab === 'drives') fetchDrives();
     }, [activeTab]);
 
     const fetchOrgProfile = async () => {
@@ -971,6 +984,11 @@ export default function OrgDashboard() {
                 { headers: { Authorization: `Bearer ${token}` } }
             );
             toast.success("Donor added as Organization Member");
+            setVerificationResult(null);
+            setSearchKey(prev => prev + 1);
+            fetchMembers();
+            fetchStats();
+            fetchActivity();
         } catch (err) {
             toast.error(err.response?.data?.error || "Failed to add member");
         }
@@ -1146,6 +1164,55 @@ export default function OrgDashboard() {
         navigate('/organization/login');
     };
 
+    const fetchDrives = async () => {
+        setDrivesLoading(true);
+        try {
+            const token = getAuthToken();
+            const res = await axios.get('/api/organization/drives', {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+            setDrives(res.data);
+        } catch (err) {
+            toast.error("Failed to fetch blood drives");
+        } finally {
+            setDrivesLoading(false);
+        }
+    };
+
+    const handleCreateDrive = async (e) => {
+        e.preventDefault();
+        const createToast = toast.loading("Scheduling blood drive...");
+        try {
+            const token = getAuthToken();
+            await axios.post('/api/organization/drives', driveForm, {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+            toast.success("Blood drive scheduled successfully!", { id: createToast });
+            setShowDriveModal(false);
+            setDriveForm({
+                event_name: '', date: '', time: '', location: '', target_units: 0, description: ''
+            });
+            fetchDrives();
+        } catch (err) {
+            toast.error("Failed to schedule drive", { id: createToast });
+        }
+    };
+
+    const handleUpdateDriveStatus = async (id, status) => {
+        const updateToast = toast.loading(`Updating drive status to ${status}...`);
+        try {
+            const token = getAuthToken();
+            await axios.patch(`/api/organization/drives/${id}/status`, { status }, {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+            toast.success(`Drive ${status}`, { id: updateToast });
+            fetchDrives();
+            fetchActivity();
+        } catch (err) {
+            toast.error("Failed to update drive status", { id: updateToast });
+        }
+    };
+
     const navItems = [
         { id: 'home', label: 'Dashboard', icon: 'fa-th-large' },
         { id: 'inventory', label: 'Blood Inventory', icon: 'fa-burn' },
@@ -1153,6 +1220,7 @@ export default function OrgDashboard() {
         { id: 'verification', label: 'Add to Organisation', icon: 'fa-user-plus' },
         { id: 'members', label: 'Our Members', icon: 'fa-users' },
         { id: 'history', label: 'Activity Logs', icon: 'fa-list-ul' },
+        { id: 'drives', label: 'Blood Drives', icon: 'fa-campground' },
         { id: 'profile', label: 'Profile', icon: 'fa-id-card' },
 
     ];
@@ -2102,13 +2170,16 @@ export default function OrgDashboard() {
                                                                     item.action_type === 'VERIFICATION' ? 'bg-emerald-50 text-emerald-700' :
                                                                         item.action_type.includes('MEMBER') ? 'bg-blue-50 text-blue-700' :
                                                                             item.action_type.includes('REQUEST') ? 'bg-orange-50 text-orange-700' :
-                                                                                'bg-gray-50 text-gray-700'}`}>
+                                                                                item.action_type.includes('DRIVE') ? 'bg-amber-50 text-amber-700' :
+                                                                                    'bg-gray-50 text-gray-700'}`}>
                                                                 <i className={`fas ${item.action_type === 'DONATION' ? 'fa-burn' :
                                                                     item.action_type === 'VERIFICATION' ? 'fa-check-circle' :
                                                                         item.action_type === 'MEMBER_ADD' ? 'fa-user-plus' :
                                                                             item.action_type === 'MEMBER_REMOVE' ? 'fa-user-minus' :
                                                                                 item.action_type === 'REQUEST_CREATE' ? 'fa-ambulance' :
-                                                                                    'fa-list-ul'} text-[10px]`}></i> {item.action_type.replace(/_/g, ' ')}
+                                                                                    item.action_type === 'DRIVE_CREATE' ? 'fa-campground' :
+                                                                                        item.action_type === 'DRIVE_UPDATE' ? 'fa-edit' :
+                                                                                            'fa-list-ul'} text-[10px]`}></i> {item.action_type.replace(/_/g, ' ')}
                                                             </span>
                                                         </td>
                                                         <td className="p-6">
@@ -2235,6 +2306,163 @@ export default function OrgDashboard() {
                         </div>
                     )
                     }
+
+                    {activeTab === 'drives' && (
+                        <div className="max-w-6xl mx-auto animate-in fade-in slide-in-from-bottom-4 duration-500">
+                            <div className="flex items-center justify-between mb-10 px-6">
+                                <div>
+                                    <h3 className="text-3xl font-black text-gray-900 tracking-tight">Blood Drives & Camps</h3>
+                                    <p className="text-gray-500 font-bold mt-1">Manage and schedule your donation events.</p>
+                                </div>
+                                <button
+                                    onClick={() => setShowDriveModal(true)}
+                                    className="px-8 py-4 bg-red-600 hover:bg-red-700 text-white rounded-2xl font-black transition-all shadow-xl shadow-red-600/20 flex items-center gap-3 active:scale-95"
+                                >
+                                    <i className="fas fa-plus"></i>
+                                    Schedule New Drive
+                                </button>
+                            </div>
+
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-8 px-6 mb-12">
+                                <div className="bg-white p-8 rounded-[2.5rem] border border-gray-100 shadow-sm transition-all hover:scale-105">
+                                    <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">Total Events</p>
+                                    <h4 className="text-4xl font-black text-gray-900">{drives.length}</h4>
+                                </div>
+                                <div className="bg-white p-8 rounded-[2.5rem] border border-gray-100 shadow-sm transition-all hover:scale-105">
+                                    <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">Active/Upcoming</p>
+                                    <h4 className="text-4xl font-black text-orange-500">{drives.filter(d => ['Upcoming', 'Active'].includes(d.status)).length}</h4>
+                                </div>
+                                <div className="bg-white p-8 rounded-[2.5rem] border border-gray-100 shadow-sm transition-all hover:scale-105">
+                                    <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">Units Collected</p>
+                                    <h4 className="text-4xl font-black text-red-600">{drives.reduce((acc, d) => acc + (d.collected_units || 0), 0)}</h4>
+                                </div>
+                            </div>
+
+                            <div className="bg-white rounded-[3rem] shadow-sm border border-gray-100 overflow-hidden mx-6">
+                                {drivesLoading ? (
+                                    <div className="p-24 text-center">
+                                        <i className="fas fa-circle-notch fa-spin text-4xl text-red-500"></i>
+                                        <p className="mt-4 text-gray-400 font-bold">Synchronizing drive data...</p>
+                                    </div>
+                                ) : drives.length === 0 ? (
+                                    <div className="p-24 text-center space-y-6">
+                                        <div className="w-24 h-24 bg-gray-50 rounded-full flex items-center justify-center mx-auto text-gray-200">
+                                            <i className="fas fa-tent text-4xl"></i>
+                                        </div>
+                                        <div>
+                                            <h4 className="text-xl font-black text-gray-900">No Blood Drives Scheduled</h4>
+                                            <p className="text-gray-400 font-medium max-w-xs mx-auto mt-2">Start organizing blood donation camps to reach more donors in your community.</p>
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <div className="overflow-x-auto">
+                                        <table className="w-full text-left border-collapse">
+                                            <thead>
+                                                <tr className="bg-gray-50/50 border-b border-gray-100">
+                                                    <th className="p-8 text-[10px] font-black text-gray-400 uppercase tracking-widest">Event Detail</th>
+                                                    <th className="p-8 text-[10px] font-black text-gray-400 uppercase tracking-widest">Schedule & Location</th>
+                                                    <th className="p-8 text-[10px] font-black text-gray-400 uppercase tracking-widest">Target/Collected</th>
+                                                    <th className="p-8 text-[10px] font-black text-gray-400 uppercase tracking-widest text-center">Status</th>
+                                                    <th className="p-8 text-[10px] font-black text-gray-400 uppercase tracking-widest text-right">Control</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody className="divide-y divide-gray-50">
+                                                {drives.map(drive => (
+                                                    <tr key={drive.id} className="group hover:bg-gray-50/30 transition-all">
+                                                        <td className="p-8">
+                                                            <div className="flex items-center gap-4">
+                                                                <div className={`w-14 h-14 rounded-2xl flex items-center justify-center text-xl shadow-inner ${drive.status === 'Active' ? 'bg-orange-100 text-orange-600' : 'bg-gray-100 text-gray-400'}`}>
+                                                                    <i className={`fas ${drive.status === 'Active' ? 'fa-satellite-dish animate-pulse' : 'fa-campground'}`}></i>
+                                                                </div>
+                                                                <div>
+                                                                    <p className="font-black text-gray-900 text-lg">{drive.event_name}</p>
+                                                                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest truncate max-w-[200px]">{drive.description || 'No description provided'}</p>
+                                                                </div>
+                                                            </div>
+                                                        </td>
+                                                        <td className="p-8">
+                                                            <div className="space-y-1">
+                                                                <p className="text-sm font-bold text-gray-700 flex items-center gap-2">
+                                                                    <i className="far fa-calendar text-gray-400"></i>
+                                                                    {new Date(drive.date).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })}
+                                                                </p>
+                                                                <p className="text-xs font-semibold text-gray-400 flex items-center gap-2">
+                                                                    <i className="far fa-clock text-gray-400"></i>
+                                                                    {drive.time}
+                                                                </p>
+                                                                <p className="text-xs font-bold text-red-600 flex items-center gap-2 mt-2">
+                                                                    <i className="fas fa-map-marker-alt"></i>
+                                                                    {drive.location}
+                                                                </p>
+                                                            </div>
+                                                        </td>
+                                                        <td className="p-8">
+                                                            <div className="space-y-3">
+                                                                <div className="flex justify-between text-[10px] font-black uppercase tracking-tighter">
+                                                                    <span className="text-gray-400">Progress</span>
+                                                                    <span className="text-red-600">{Math.round((drive.collected_units / drive.target_units) * 100) || 0}%</span>
+                                                                </div>
+                                                                <div className="w-full h-2 bg-gray-100 rounded-full overflow-hidden">
+                                                                    <div 
+                                                                        className="h-full bg-red-500 transition-all duration-1000"
+                                                                        style={{ width: `${Math.min((drive.collected_units / drive.target_units) * 100, 100) || 0}%` }}
+                                                                    ></div>
+                                                                </div>
+                                                                <p className="text-xs font-bold text-gray-900">
+                                                                    {drive.collected_units} <span className="text-gray-400">/ {drive.target_units} Units</span>
+                                                                </p>
+                                                            </div>
+                                                        </td>
+                                                        <td className="p-8 text-center">
+                                                            <span className={`inline-flex px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest border transition-all ${
+                                                                drive.status === 'Active' ? 'bg-orange-50 text-orange-600 border-orange-100' :
+                                                                drive.status === 'Completed' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' :
+                                                                drive.status === 'Cancelled' ? 'bg-gray-50 text-gray-400 border-gray-100' :
+                                                                'bg-blue-50 text-blue-600 border-blue-100'
+                                                            }`}>
+                                                                {drive.status}
+                                                            </span>
+                                                        </td>
+                                                        <td className="p-8 text-right">
+                                                            <div className="flex items-center justify-end gap-3 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                                {drive.status === 'Upcoming' && (
+                                                                    <button 
+                                                                        onClick={() => handleUpdateDriveStatus(drive.id, 'Active')}
+                                                                        className="w-10 h-10 rounded-xl bg-orange-50 text-orange-600 hover:bg-orange-600 hover:text-white transition-all flex items-center justify-center shadow-sm"
+                                                                        title="Start Drive"
+                                                                    >
+                                                                        <i className="fas fa-play"></i>
+                                                                    </button>
+                                                                )}
+                                                                {(drive.status === 'Active' || drive.status === 'Upcoming') && (
+                                                                    <button 
+                                                                        onClick={() => handleUpdateDriveStatus(drive.id, 'Completed')}
+                                                                        className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 hover:bg-emerald-600 hover:text-white transition-all flex items-center justify-center shadow-sm"
+                                                                        title="Mark Completed"
+                                                                    >
+                                                                        <i className="fas fa-check"></i>
+                                                                    </button>
+                                                                )}
+                                                                {drive.status === 'Upcoming' && (
+                                                                    <button 
+                                                                        onClick={() => handleUpdateDriveStatus(drive.id, 'Cancelled')}
+                                                                        className="w-10 h-10 rounded-xl bg-gray-50 text-gray-400 hover:bg-red-600 hover:text-white transition-all flex items-center justify-center shadow-sm"
+                                                                        title="Cancel Drive"
+                                                                    >
+                                                                        <i className="fas fa-ban"></i>
+                                                                    </button>
+                                                                )}
+                                                            </div>
+                                                        </td>
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    )}
 
                     {
                         activeTab === 'profile' && (
@@ -2498,6 +2726,7 @@ export default function OrgDashboard() {
                                     </div>
                                     <div className="p-10">
                                         <DonorSearch
+                                            key={searchKey}
                                             verifying={verifying}
                                             onSelect={(donor) => setVerificationResult(donor)}
                                         />
@@ -2900,6 +3129,106 @@ export default function OrgDashboard() {
                         </div>
                     )
                 }
+
+                {/* --- SCHEDULE BLOOD DRIVE MODAL --- */}
+                {showDriveModal && (
+                    <div className="fixed inset-0 z-[300] bg-gray-900/60 backdrop-blur-md flex items-center justify-center p-6 animate-in fade-in duration-300">
+                        <div className="bg-white w-full max-w-2xl rounded-[3rem] shadow-2xl overflow-hidden animate-in zoom-in-95 duration-500">
+                            <div className="p-10 border-b border-gray-50 flex items-center justify-between bg-gray-50/50">
+                                <div>
+                                    <h3 className="text-2xl font-black text-gray-900 tracking-tight">Schedule Drive</h3>
+                                    <p className="text-gray-400 font-bold text-xs uppercase tracking-widest mt-1">Community Outreach Program</p>
+                                </div>
+                                <button
+                                    onClick={() => setShowDriveModal(false)}
+                                    className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center text-gray-400 hover:text-red-600 transition-all border border-gray-100 shadow-sm"
+                                >
+                                    <i className="fas fa-times"></i>
+                                </button>
+                            </div>
+
+                            <form onSubmit={handleCreateDrive} className="p-10 space-y-8 max-h-[70vh] overflow-y-auto scrollbar-hide">
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                                    <div className="col-span-2 space-y-3">
+                                        <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-4">Event Narrative</label>
+                                        <input
+                                            required
+                                            type="text"
+                                            className="w-full px-8 py-5 bg-gray-50 border-2 border-transparent rounded-2xl font-bold text-gray-900 outline-none focus:border-red-500/20 focus:bg-white transition-all shadow-inner"
+                                            placeholder="e.g., Summer Solidarity Blood Drive 2024"
+                                            value={driveForm.event_name}
+                                            onChange={e => setDriveForm({ ...driveForm, event_name: e.target.value })}
+                                        />
+                                    </div>
+
+                                    <div className="space-y-3">
+                                        <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-4">Deployment Date</label>
+                                        <input
+                                            required
+                                            type="date"
+                                            className="w-full px-8 py-5 bg-gray-50 border-2 border-transparent rounded-2xl font-bold text-gray-900 outline-none focus:border-red-500/20 focus:bg-white transition-all shadow-inner"
+                                            value={driveForm.date}
+                                            onChange={e => setDriveForm({ ...driveForm, date: e.target.value })}
+                                        />
+                                    </div>
+
+                                    <div className="space-y-3">
+                                        <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-4">Start Time</label>
+                                        <input
+                                            required
+                                            type="time"
+                                            className="w-full px-8 py-5 bg-gray-50 border-2 border-transparent rounded-2xl font-bold text-gray-900 outline-none focus:border-red-500/20 focus:bg-white transition-all shadow-inner"
+                                            value={driveForm.time}
+                                            onChange={e => setDriveForm({ ...driveForm, time: e.target.value })}
+                                        />
+                                    </div>
+
+                                    <div className="space-y-3">
+                                        <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-4">Target Volume (Units)</label>
+                                        <input
+                                            required
+                                            type="number"
+                                            min="1"
+                                            className="w-full px-8 py-5 bg-gray-50 border-2 border-transparent rounded-2xl font-bold text-gray-900 outline-none focus:border-red-500/20 focus:bg-white transition-all shadow-inner"
+                                            value={driveForm.target_units}
+                                            onChange={e => setDriveForm({ ...driveForm, target_units: e.target.value })}
+                                        />
+                                    </div>
+
+                                    <div className="space-y-3">
+                                        <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-4">Precise Location</label>
+                                        <input
+                                            required
+                                            type="text"
+                                            className="w-full px-8 py-5 bg-gray-50 border-2 border-transparent rounded-2xl font-bold text-gray-900 outline-none focus:border-red-500/20 focus:bg-white transition-all shadow-inner"
+                                            placeholder="City Square, Community Center, etc."
+                                            value={driveForm.location}
+                                            onChange={e => setDriveForm({ ...driveForm, location: e.target.value })}
+                                        />
+                                    </div>
+
+                                    <div className="col-span-2 space-y-3">
+                                        <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-4">Brief Description</label>
+                                        <textarea
+                                            className="w-full px-8 py-5 bg-gray-50 border-2 border-transparent rounded-2xl font-bold text-gray-900 outline-none focus:border-red-500/20 focus:bg-white transition-all shadow-inner resize-none h-32"
+                                            placeholder="Describe the drive's goals or specific instructions for donors..."
+                                            value={driveForm.description}
+                                            onChange={e => setDriveForm({ ...driveForm, description: e.target.value })}
+                                        ></textarea>
+                                    </div>
+                                </div>
+
+                                <button
+                                    type="submit"
+                                    className="w-full bg-gray-900 hover:bg-black text-white py-6 rounded-2xl font-black transition-all shadow-2xl shadow-gray-400/30 text-[10px] uppercase tracking-[0.2em] flex items-center justify-center gap-4 active:scale-95"
+                                >
+                                    <i className="fas fa-calendar-check"></i>
+                                    Confirm Campaign Schedule
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                )}
 
                 {/* HIDDEN PDF TEMPLATE - Professional Alignment */}
                 <div className="fixed -left-[9999px] top-0">

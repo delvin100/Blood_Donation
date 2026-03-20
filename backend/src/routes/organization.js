@@ -33,4 +33,9 @@ router.patch('/notifications/read-all', authMiddleware, orgController.markAllRea
 router.delete('/notifications/clear-all', authMiddleware, orgController.clearAllNotifications);
 router.delete('/notifications/:id', authMiddleware, orgController.deleteNotification);
 
+// Blood Drives
+router.get('/drives', authMiddleware, orgController.getDrives);
+router.post('/drives', authMiddleware, orgController.createDrive);
+router.patch('/drives/:id/status', authMiddleware, orgController.updateDriveStatus);
+
 module.exports = router;
