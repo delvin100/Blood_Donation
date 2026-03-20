@@ -427,7 +427,7 @@ exports.fulfillRequest = async (req, res) => {
         }
         
         // 4. Update request status
-        await connection.query('UPDATE emergency_requests SET status = "Fulfilled" WHERE id = ? AND org_id = ?', [id, orgId]);
+        await connection.query("UPDATE emergency_requests SET status = 'Fulfilled' WHERE id = ? AND org_id = ?", [id, orgId]);
 
         // 5. Add Log - Pass connection to keep it in transcation
         await addOrgLog(orgId, 'INVENTORY_ADD', bloodGroup, `Fulfilled emergency request #${id} and added ${unitsRequired} units of ${bloodGroup} to inventory`, null, connection);
