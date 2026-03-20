@@ -398,6 +398,8 @@ exports.fulfillRequest = async (req, res) => {
         const { id } = req.params;
         const orgId = req.user.id;
 
+        console.log(`[DEBUG] Fulfilling request ID ${id} for Org ${orgId}`);
+
         // 1. Fetch request details
         const [requests] = await connection.query('SELECT blood_group, units_required FROM emergency_requests WHERE id = ? AND org_id = ?', [id, orgId]);
         if (requests.length === 0) {
@@ -408,10 +410,14 @@ exports.fulfillRequest = async (req, res) => {
         const unitsRequired = reqData.units_required;
         const bloodGroup = reqData.blood_group;
 
+        console.log(`[DEBUG] Request data: BG=${bloodGroup}, Units=${unitsRequired}`);
+
         // 2. Fetch inventory for that blood group
         const [inventory] = await connection.query('SELECT units FROM blood_inventory WHERE org_id = ? AND blood_group = ?', [orgId, bloodGroup]);
         const currentUnits = inventory.length > 0 ? inventory[0].units : 0;
         const newUnits = currentUnits + Number(unitsRequired);
+
+        console.log(`[DEBUG] Inventory update: Current=${currentUnits}, New=${newUnits}`);
 
         // 3. Update inventory
         if (inventory.length > 0) {
@@ -423,15 +429,20 @@ exports.fulfillRequest = async (req, res) => {
         // 4. Update request status
         await connection.query('UPDATE emergency_requests SET status = "Fulfilled" WHERE id = ? AND org_id = ?', [id, orgId]);
 
-        // 5. Add Log
-        await addOrgLog(orgId, 'INVENTORY_ADD', bloodGroup, `Fulfilled emergency request #${id} and added ${unitsRequired} units of ${bloodGroup} to inventory`);
+        // 5. Add Log - Pass connection to keep it in transcation
+        await addOrgLog(orgId, 'INVENTORY_ADD', bloodGroup, `Fulfilled emergency request #${id} and added ${unitsRequired} units of ${bloodGroup} to inventory`, null, connection);
 
         await connection.commit();
-        res.json({ message: 'Request fulfilled gracefully' });
+        res.json({ message: 'Request fulfilled successfully' });
     } catch (err) {
         await connection.rollback();
         console.error('Org fulfillRequest Error:', err);
-        res.status(500).json({ error: 'Server error', details: err.message });
+        // Temporarily send full error to frontend for remote debugging
+        res.status(500).json({ 
+            error: 'Database operation failed', 
+            details: err.message,
+            stack: err.stack 
+        });
     } finally {
         connection.release();
     }
