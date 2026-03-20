@@ -13,7 +13,7 @@ const MedicalReports = ({ selectedDonor, onClose, orgDetails, refreshData }) => 
     const [reportsLoading, setReportsLoading] = useState(true);
     const [localDonor, setLocalDonor] = useState(selectedDonor);
     const [reportForm, setReportForm] = useState({
-        hb_level: '', blood_pressure: '', pulse_rate: '', temperature: '', weight: '', units_donated: '1',
+        hb_level: '', blood_pressure: '', pulse_rate: '', temperature: '', weight: '', units_donated: '0',
         blood_group: 'A+', rh_factor: 'Positive',
         hiv_status: 'Negative', hepatitis_b: 'Negative', hepatitis_c: 'Negative',
         syphilis: 'Negative', malaria: 'Negative', notes: ''
@@ -118,7 +118,7 @@ const MedicalReports = ({ selectedDonor, onClose, orgDetails, refreshData }) => 
 
             // Reset form for next entry
             setReportForm(prev => ({
-                ...prev, hb_level: '', blood_pressure: '', pulse_rate: '', temperature: '', weight: '', units_donated: '1', notes: ''
+                ...prev, hb_level: '', blood_pressure: '', pulse_rate: '', temperature: '', weight: '', units_donated: '0', notes: ''
             }));
             setFormErrors({});
             setShowConfirmation(false);
@@ -394,7 +394,7 @@ const MedicalReports = ({ selectedDonor, onClose, orgDetails, refreshData }) => 
                                                         }
                                                     }}
                                                     className={`w-full bg-slate-50 border-2 ${formErrors.units_donated ? 'border-red-400 ring-4 ring-red-50' : 'border-slate-100'} rounded-2xl px-6 py-4 font-bold text-slate-900 focus:bg-white focus:border-indigo-600 outline-none transition-all`}
-                                                    placeholder="1"
+                                                    placeholder="0"
                                                 />
                                                 {formErrors.units_donated && <p className="text-[11px] text-red-600 font-bold mt-1.5 ml-1">{formErrors.units_donated}</p>}
                                             </div>

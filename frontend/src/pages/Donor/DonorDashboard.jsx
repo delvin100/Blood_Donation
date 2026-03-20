@@ -1256,25 +1256,20 @@ const Dashboard = () => {
               </div>
             ) : (
                 bloodDrives
-                  .filter(drive => {
-                    const end = new Date(`${drive.end_date}T${drive.end_time}`);
-                    return new Date() <= end;
-                  })
                   .map((drive) => {
                     const now = new Date();
                     const start = new Date(`${drive.start_date}T${drive.start_time}`);
                     const end = new Date(`${drive.end_date}T${drive.end_time}`);
-                  
-                  let dynamicStatus = 'Upcoming';
-                  let statusColor = 'bg-blue-600';
-                  
-                  if (now > end) {
-                      dynamicStatus = 'Ended';
-                      statusColor = 'bg-gray-500';
-                  } else if (now >= start) {
-                      dynamicStatus = 'Active';
-                      statusColor = 'bg-emerald-500 animate-pulse';
-                  }
+                    
+                    if (now > end) return null; // Safety check in case backend filter missed it
+
+                    let dynamicStatus = 'Upcoming';
+                    let statusColor = 'bg-blue-600';
+                    
+                    if (now >= start) {
+                        dynamicStatus = 'Active';
+                        statusColor = 'bg-emerald-500 animate-pulse';
+                    }
 
                   return (
                   <div key={drive.id} className="modern-card p-8 bg-white border border-gray-100 rounded-[2.5rem] shadow-sm hover:shadow-2xl hover:shadow-red-900/5 transition-all group relative overflow-hidden">

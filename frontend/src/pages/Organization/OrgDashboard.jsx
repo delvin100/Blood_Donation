@@ -250,7 +250,7 @@ export default function OrgDashboard() {
     // New verification report state
     const [showVerificationReportModal, setShowVerificationReportModal] = useState(false);
     const [verificationReportForm, setVerificationReportForm] = useState({
-        hb_level: '', blood_pressure: '', pulse_rate: '', temperature: '', weight: '', units_donated: '1',
+        hb_level: '', blood_pressure: '', pulse_rate: '', temperature: '', weight: '', units_donated: '0',
         blood_group: 'A+', rh_factor: 'Positive',
         hiv_status: 'Negative', hepatitis_b: 'Negative', hepatitis_c: 'Negative',
         syphilis: 'Negative', malaria: 'Negative', notes: ''
@@ -3214,7 +3214,7 @@ export default function OrgDashboard() {
                                                                         }
                                                                     }}
                                                                     className={`w-full bg-slate-50 border-2 ${verificationFormErrors.units_donated ? 'border-red-400 ring-4 ring-red-50' : 'border-slate-100'} rounded-2xl px-6 py-4 font-bold text-slate-900 focus:bg-white focus:border-indigo-600 outline-none transition-all`}
-                                                                    placeholder="1"
+                                                                    placeholder="0"
                                                                 />
                                                                 {verificationFormErrors.units_donated && <p className="text-[11px] text-red-600 font-bold mt-1.5 ml-1">{verificationFormErrors.units_donated}</p>}
                                                             </div>
