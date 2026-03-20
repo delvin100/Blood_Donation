@@ -1255,10 +1255,15 @@ const Dashboard = () => {
                 <p className="text-xs text-gray-400 mt-2 font-bold px-12">We'll alert you as soon as a medical facility schedules a drive in your area.</p>
               </div>
             ) : (
-                bloodDrives.map((drive) => {
-                  const now = new Date();
-                  const start = new Date(`${drive.start_date}T${drive.start_time}`);
-                  const end = new Date(`${drive.end_date}T${drive.end_time}`);
+                bloodDrives
+                  .filter(drive => {
+                    const end = new Date(`${drive.end_date}T${drive.end_time}`);
+                    return new Date() <= end;
+                  })
+                  .map((drive) => {
+                    const now = new Date();
+                    const start = new Date(`${drive.start_date}T${drive.start_time}`);
+                    const end = new Date(`${drive.end_date}T${drive.end_time}`);
                   
                   let dynamicStatus = 'Upcoming';
                   let statusColor = 'bg-blue-600';
@@ -1318,18 +1323,11 @@ const Dashboard = () => {
                     <div className="flex items-center gap-4 relative z-10">
                         <a 
                             href={`tel:${drive.org_phone}`}
-                            className="flex-[2] py-4 bg-gray-900 text-white rounded-2xl text-[11px] font-black uppercase tracking-widest flex items-center justify-center gap-3 hover:bg-black transition-all shadow-xl shadow-gray-200 transform active:scale-95 group/btn"
+                            className="w-full py-4 bg-gray-900 text-white rounded-2xl text-[11px] font-black uppercase tracking-widest flex items-center justify-center gap-3 hover:bg-black transition-all shadow-xl shadow-gray-200 transform active:scale-95 group/btn"
                         >
                             <i className="fas fa-phone-volume group-hover/btn:animate-wiggle"></i> 
-                            <span>Contact Organizer</span>
+                            <span>{drive.org_phone}</span>
                         </a>
-                        <button 
-                            className="flex-1 py-4 bg-white border-2 border-gray-100 text-gray-600 rounded-2xl flex items-center justify-center hover:bg-red-50 hover:text-red-500 hover:border-red-100 transition-all transform active:scale-95 text-[11px] font-black uppercase tracking-widest gap-2"
-                            title="Share"
-                        >
-                            <i className="fas fa-share-nodes"></i>
-                            <span>Share</span>
-                        </button>
                     </div>
                   </div>
                 );
