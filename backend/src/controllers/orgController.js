@@ -410,13 +410,6 @@ exports.fulfillRequest = async (req, res) => {
 
         // 2. Fetch inventory for that blood group
         const [inventory] = await connection.query('SELECT units FROM blood_inventory WHERE org_id = ? AND blood_group = ?', [orgId, bloodGroup]);
-        if (inventory.length === 0 || inventory[0].units < unitsRequired) {
-            await connection.rollback();
-            // User requested to deduct, what if not enough? Deduct up to whatever is there, or fail?
-            // "update the amount of units in the Requirement Volume to the inventory..also show the logs"
-            // Let's just deduct it and if it goes negative, so be it, or ideally we prevent negative.
-            // Actually, we'll clamp at 0.
-        }
         const currentUnits = inventory.length > 0 ? inventory[0].units : 0;
         const remainingUnits = Math.max(0, currentUnits - unitsRequired);
 

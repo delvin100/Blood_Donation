@@ -2154,13 +2154,13 @@ export default function OrgDashboard() {
 
                                     <div className="space-y-6 max-h-[900px] overflow-y-auto pr-2 scrollbar-hide">
                                         {requests.filter(r => r.status === 'Active').length === 0 ? (
-                                            <div className="p-16 border-2 border-dashed border-gray-100 rounded-[3.5rem] bg-gray-50/50 text-center space-y-5 flex flex-col items-center justify-center min-h-[350px]">
-                                                <div className="w-20 h-20 bg-white rounded-full flex items-center justify-center text-gray-200 mx-auto shadow-inner">
-                                                    <i className="fas fa-satellite-dish text-4xl"></i>
+                                            <div className="p-16 border-2 border-dashed border-gray-100 rounded-[3.5rem] bg-gray-50/50 text-center space-y-6 flex flex-col items-center justify-center min-h-[450px]">
+                                                <div className="w-24 h-24 bg-white rounded-full flex items-center justify-center text-gray-200 mx-auto shadow-inner">
+                                                    <i className="fas fa-satellite-dish text-5xl"></i>
                                                 </div>
                                                 <div className="flex flex-col items-center justify-center">
-                                                    <p className="font-black text-gray-400 uppercase text-xs tracking-widest">Scanning Network</p>
-                                                    <p className="text-gray-300 font-bold text-[10px] mt-1">No active emergency requests detected.</p>
+                                                    <p className="font-black text-gray-400 uppercase text-sm tracking-widest">Scanning Network</p>
+                                                    <p className="text-gray-400 font-bold text-xs mt-2">No active emergency requests detected.</p>
                                                 </div>
                                             </div>
                                         ) : (
@@ -2173,7 +2173,7 @@ export default function OrgDashboard() {
                                                     </div>
 
                                                     <div className="flex items-center gap-6 mb-10">
-                                                        <div className="w-20 h-20 rounded-[2rem] bg-gray-900 flex items-center justify-center text-white font-black text-2xl shadow-xl shadow-gray-900/20 group-hover:scale-110 transition-transform duration-500">
+                                                        <div className="w-20 h-20 rounded-[2rem] bg-gray-900 flex items-center justify-center text-white font-black text-2xl shadow-xl shadow-gray-900/20">
                                                             {req.blood_group}
                                                         </div>
                                                         <div className="space-y-1">
