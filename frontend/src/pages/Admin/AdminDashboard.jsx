@@ -878,7 +878,11 @@ function OrgDetailView({ org, onBack, onVerify, onDelete }) {
             </div>
 
             {/* Basic Info Row */}
-            <div className="bg-white rounded-3xl p-8 shadow-xl shadow-gray-200/50 border border-white grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+            <div className="bg-white rounded-3xl p-8 shadow-xl shadow-gray-200/50 border border-white grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-8 font-medium">
+                <div>
+                    <label className="text-gray-400 block text-[10px] font-bold uppercase tracking-widest mb-1">Organization ID</label>
+                    <p className="font-mono text-gray-700 bg-gray-50 px-3 py-1.5 rounded-lg border border-gray-100 font-bold truncate">#{org.id}</p>
+                </div>
                 <div>
                     <label className="text-gray-400 block text-[10px] font-bold uppercase tracking-widest mb-1">License Number</label>
                     <p className="font-mono text-gray-700 bg-gray-50 px-3 py-1.5 rounded-lg border border-gray-100 font-bold truncate">{org.license_number || 'N/A'}</p>
