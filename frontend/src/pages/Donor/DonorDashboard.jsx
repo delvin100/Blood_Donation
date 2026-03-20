@@ -1255,7 +1255,23 @@ const Dashboard = () => {
                 <p className="text-xs text-gray-400 mt-2 font-bold px-12">We'll alert you as soon as a medical facility schedules a drive in your area.</p>
               </div>
             ) : (
-                bloodDrives.map((drive) => (
+                bloodDrives.map((drive) => {
+                  const now = new Date();
+                  const start = new Date(`${drive.start_date}T${drive.start_time}`);
+                  const end = new Date(`${drive.end_date}T${drive.end_time}`);
+                  
+                  let dynamicStatus = 'Upcoming';
+                  let statusColor = 'bg-blue-600';
+                  
+                  if (now > end) {
+                      dynamicStatus = 'Ended';
+                      statusColor = 'bg-gray-500';
+                  } else if (now >= start) {
+                      dynamicStatus = 'Active';
+                      statusColor = 'bg-emerald-500 animate-pulse';
+                  }
+
+                  return (
                   <div key={drive.id} className="modern-card p-8 bg-white border border-gray-100 rounded-[2.5rem] shadow-sm hover:shadow-2xl hover:shadow-red-900/5 transition-all group relative overflow-hidden">
                     <div className="absolute top-0 right-0 w-32 h-32 bg-red-50/30 rounded-full blur-3xl -translate-y-16 translate-x-16 group-hover:bg-red-50/50 transition-colors"></div>
                     
@@ -1266,8 +1282,8 @@ const Dashboard = () => {
                                 <i className="fas fa-building text-blue-500 opacity-70"></i> {drive.org_name}
                             </p>
                         </div>
-                        <div className={`px-4 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest shadow-sm ${drive.status === 'Active' ? 'bg-emerald-500 text-white' : 'bg-blue-600 text-white'}`}>
-                            {drive.status}
+                        <div className={`px-4 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest shadow-sm text-white ${statusColor}`}>
+                            {dynamicStatus}
                         </div>
                     </div>
 
@@ -1316,7 +1332,8 @@ const Dashboard = () => {
                         </button>
                     </div>
                   </div>
-                ))
+                );
+              })
             )}
           </div>
         </div>

@@ -36,6 +36,8 @@ router.delete('/notifications/:id', authMiddleware, orgController.deleteNotifica
 // Blood Drives
 router.get('/drives', authMiddleware, orgController.getDrives);
 router.post('/drives', authMiddleware, orgController.createDrive);
+router.delete('/drives/:id', authMiddleware, orgController.deleteDrive);
 router.patch('/drives/:id/status', authMiddleware, orgController.updateDriveStatus);
+router.post('/drives/inventory', authMiddleware, orgController.addDriveInventory);
 
 module.exports = router;

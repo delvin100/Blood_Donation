@@ -118,15 +118,21 @@ exports.getStats = async (req, res) => {
         }
 
         const [inventory] = await pool.query('SELECT SUM(units) as total_units FROM blood_inventory WHERE org_id = ?', [orgId]);
-        const [requests] = await pool.query('SELECT COUNT(*) as active_requests FROM emergency_requests WHERE org_id = ? AND status = ?', [orgId, 'Active']);
+        const [requests] = await pool.query('SELECT COUNT(*) as active_requests FROM emergency_requests WHERE status = ?', ['Active']);
         const [verifications] = await pool.query('SELECT COUNT(*) as verified_count FROM donor_verifications WHERE org_id = ? AND status = ?', [orgId, 'Verified']);
         const [donations] = await pool.query('SELECT COUNT(*) as total_donations FROM donations WHERE org_id = ?', [orgId]);
         const [breakdown] = await pool.query('SELECT blood_group, units, min_threshold FROM blood_inventory WHERE org_id = ?', [orgId]);
+        const [endedDrives] = await pool.query(
+            'SELECT COUNT(*) as count FROM blood_drives WHERE org_id = ? AND CAST(CONCAT(end_date, " ", end_time) AS DATETIME) < NOW()',
+            [orgId]
+        );
+
         res.json({
             total_units: inventory[0].total_units || 0,
             active_requests: requests[0].active_requests || 0,
             verified_count: verifications[0].verified_count || 0,
             total_donations: donations[0].total_donations || 0,
+            ended_count: endedDrives[0].count || 0,
             inventory_breakdown: breakdown
         });
     } catch (err) {
@@ -302,7 +308,7 @@ exports.getHistory = async (req, res) => {
         );
         res.json(rows);
     } catch (err) {
-        console.error('Error in getHistory:', err);
+        console.error('Org getHistory Error:', err);
         res.status(500).json({ error: 'Server error', details: err.message });
     }
 };
@@ -780,6 +786,12 @@ exports.createDrive = async (req, res) => {
             return res.status(400).json({ error: 'All fields are required except description.' });
         }
 
+        // Validation: Start Date must be >= Today
+        const todayStr = new Date().toISOString().split('T')[0];
+        if (start_date < todayStr) {
+            return res.status(400).json({ error: 'Start date cannot be in the past.' });
+        }
+
         // Validation: End must be after Start
         const start = new Date(`${start_date}T${start_time}`);
         const end = new Date(`${end_date}T${end_time}`);
@@ -814,6 +826,40 @@ exports.updateDriveStatus = async (req, res) => {
         res.json({ message: 'Drive status updated' });
     } catch (err) {
         console.error('Org updateDriveStatus Error:', err);
+        res.status(500).json({ error: 'Server error', details: err.message });
+    }
+};
+
+exports.deleteDrive = async (req, res) => {
+    try {
+        const { id } = req.params;
+        await pool.query('DELETE FROM blood_drives WHERE id = ? AND org_id = ?', [id, req.user.id]);
+        await addOrgLog(req.user.id, 'DRIVE_DELETE', `Drive #${id}`, `Cancelled and removed blood drive #${id}`);
+        res.json({ message: 'Blood drive cancelled successfully' });
+    } catch (err) {
+        console.error('Org deleteDrive Error:', err);
+        res.status(500).json({ error: 'Server error', details: err.message });
+    }
+};
+
+exports.addDriveInventory = async (req, res) => {
+    try {
+        const { blood_group, units } = req.body;
+        if (!blood_group || !units) return res.status(400).json({ error: 'Blood group and units are required' });
+
+        // Check if blood group exists for this org, otherwise create
+        const [exists] = await pool.query('SELECT * FROM inventory WHERE org_id = ? AND blood_group = ?', [req.user.id, blood_group]);
+        
+        if (exists.length > 0) {
+            await pool.query('UPDATE inventory SET units = units + ? WHERE org_id = ? AND blood_group = ?', [units, req.user.id, blood_group]);
+        } else {
+            await pool.query('INSERT INTO inventory (org_id, blood_group, units) VALUES (?, ?, ?)', [req.user.id, blood_group, units]);
+        }
+
+        await addOrgLog(req.user.id, 'INVENTORY_ADD', blood_group, `Added ${units} units of ${blood_group} to inventory from blood drive`);
+        res.json({ message: 'Inventory updated successfully' });
+    } catch (err) {
+        console.error('Org addDriveInventory Error:', err);
         res.status(500).json({ error: 'Server error', details: err.message });
     }
 };
