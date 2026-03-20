@@ -168,7 +168,7 @@ export default function OrgDashboard() {
     const pendingDistrictRef = useRef(null);
     const [sidebarOpen, setSidebarOpen] = useState(true);
     const [user, setUser] = useState(null);
-    const [stats, setStats] = useState({ total_units: 0, active_requests: 0, verified_count: 0 });
+    const [stats, setStats] = useState({ total_units: 0, active_requests: 0, verified_count: 0, total_donations: 0 });
     const [inventory, setInventory] = useState([]);
     const [history, setHistory] = useState([]);
     const [requests, setRequests] = useState([]);
@@ -3280,7 +3280,7 @@ export default function OrgDashboard() {
                                 </button>
                             </div>
 
-                            <form onSubmit={handleCreateDrive} className="p-10 space-y-8 max-h-[70vh] overflow-y-auto scrollbar-hide">
+                            <form onSubmit={handleSubmitDrive} className="p-10 space-y-8 max-h-[70vh] overflow-y-auto scrollbar-hide">
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                                     <div className="col-span-2 space-y-3">
                                         <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-4">Event Narrative</label>
