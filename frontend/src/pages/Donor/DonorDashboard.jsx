@@ -1247,7 +1247,7 @@ const Dashboard = () => {
             {loadingDrives ? (
                <div className="md:col-span-2 text-center py-20 text-gray-400 font-black uppercase tracking-[0.3em] animate-pulse">Loading Camps...</div>
             ) : bloodDrives.length === 0 ? (
-              <div className="md:col-span-2 py-20 text-center bg-gray-50/50 rounded-[3rem] border-2 border-dashed border-gray-100">
+              <div className="md:col-span-2 py-20 text-center bg-white rounded-[3rem] border-2 border-dashed border-gray-100 shadow-sm transition-all hover:border-red-100">
                 <div className="w-20 h-20 bg-white rounded-3xl flex items-center justify-center mx-auto mb-6 shadow-sm">
                   <i className="fas fa-calendar-times text-gray-200 text-4xl"></i>
                 </div>
@@ -1647,28 +1647,44 @@ const Dashboard = () => {
               </div>
             ) : (
               <>
-                {/* Visual Hero Section */}
-                <div className="relative overflow-hidden rounded-[3rem] p-12 mesh-gradient shadow-2xl shadow-indigo-200 mb-10 group">
-                  {/* Floating Abstract Blobs */}
-                  <div className="absolute top-0 right-0 w-80 h-80 bg-white/10 rounded-full blur-[80px] -translate-y-1/2 translate-x-1/4 animate-float"></div>
-                  <div className="absolute bottom-0 left-0 w-60 h-60 bg-purple-500/20 rounded-full blur-[60px] translate-y-1/4 -translate-x-1/4 animate-float" style={{ animationDelay: '2s' }}></div>
+                {/* Premium Personalized Hero Section */}
+                <div className="relative overflow-hidden rounded-[3rem] p-12 bg-white border border-gray-100 shadow-2xl shadow-gray-200/50 mb-10 group">
+                  {/* Subtle Decorative Elements */}
+                  <div className="absolute top-0 right-0 w-96 h-96 bg-red-50/50 rounded-full blur-[100px] -translate-y-1/2 translate-x-1/4 animate-float"></div>
+                  <div className="absolute bottom-0 left-0 w-72 h-72 bg-blue-50/50 rounded-full blur-[80px] translate-y-1/4 -translate-x-1/4 animate-float" style={{ animationDelay: '2s' }}></div>
                   
-                  <div className="relative z-10 text-center py-4">
-                    <h1 className="text-6xl font-black text-white mb-4 tracking-tighter drop-shadow-2xl">
-                      Donor Dashboard
-                    </h1>
-                    <div className="flex items-center justify-center gap-3">
-                      <div className="h-px w-12 bg-white/30"></div>
-                      <p className="text-white/90 text-lg font-bold uppercase tracking-[0.2em]">Empowering Heroes</p>
-                      <div className="h-px w-12 bg-white/30"></div>
-                    </div>
-                  </div>
+                  {/* Floating Icons for "Filling" the section */}
+                  <div className="absolute top-10 left-10 text-red-100 opacity-20 animate-float" style={{ animationDelay: '1s' }}><i className="fas fa-heart text-6xl"></i></div>
+                  <div className="absolute bottom-10 right-20 text-blue-100 opacity-20 animate-float" style={{ animationDelay: '3s' }}><i className="fas fa-tint text-6xl"></i></div>
+                  <div className="absolute top-1/2 right-10 text-rose-100 opacity-20 animate-float" style={{ animationDelay: '0.5s' }}><i className="fas fa-hand-holding-heart text-5xl"></i></div>
 
-                  {/* Decorative Bottom Wave */}
-                  <div className="absolute bottom-0 left-0 w-full leading-none z-10 opacity-20">
-                    <svg viewBox="0 0 1200 120" preserveAspectRatio="none" className="w-full h-12 fill-white">
-                      <path d="M321.39,56.44c58-10.79,114.16-30.13,172-41.86,82.39-16.72,168.19-17.73,250.45-.39C823.78,31,906.67,72,985.66,92.83c70.05,18.48,146.53,26.09,214.34,3V120H0V95.8C59.71,118.43,147.3,126,211.52,111Z"></path>
-                    </svg>
+                  <div className="relative z-10 flex flex-col md:flex-row items-center justify-between gap-8">
+                    <div className="text-left">
+                      <div className="inline-flex items-center gap-2 px-4 py-2 bg-red-50 text-red-600 rounded-full text-[10px] font-black uppercase tracking-[0.2em] mb-4">
+                        <span className="relative flex h-2 w-2">
+                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                          <span className="relative inline-flex rounded-full h-2 w-2 bg-red-600"></span>
+                        </span>
+                        Impact Dashboard active
+                      </div>
+                      <h1 className="text-5xl font-black text-gray-900 mb-2 tracking-tighter">
+                        Hi, <span className="bg-gradient-to-r from-red-600 to-rose-600 bg-clip-text text-transparent">{user?.full_name?.split(' ')[0] || 'Hero'}!</span> 👋
+                      </h1>
+                      <p className="text-gray-500 text-lg font-bold tracking-tight">
+                        You've helped save <span className="text-red-600">{stats.livesSaved || 0} lives</span> through your contributions.
+                      </p>
+                    </div>
+
+                    <div className="flex items-center gap-3">
+                      <button 
+                        id="donor-logout-hero" 
+                        onClick={handleLogout} 
+                        className="px-8 py-4 bg-gray-900 text-white rounded-[2rem] font-black text-sm transition-all hover:bg-black hover:scale-105 active:scale-95 shadow-xl shadow-gray-200 flex items-center gap-2 group/btn"
+                      >
+                        <i className="fas fa-power-off group-hover/btn:rotate-12 transition-transform"></i>
+                        <span>Logout</span>
+                      </button>
+                    </div>
                   </div>
                 </div>
 
@@ -1722,19 +1738,6 @@ const Dashboard = () => {
                   </div>
                 </div>
 
-                {/* Hello User Section */}
-                <div className="modern-card p-8 bg-white overflow-hidden relative">
-                  <div className="flex items-center justify-between relative z-10">
-                    <div>
-                      <h1 className="text-3xl font-black text-gray-800 uppercase">Hello, {user?.full_name || 'Donor'}</h1>
-                      <p className="text-gray-500 font-bold mt-2 text-base tracking-wide">Great to have you here saving lives!</p>
-                    </div>
-                    <button id="donor-logout" onClick={handleLogout} className="bg-red-600 hover:bg-red-700 text-white px-8 py-3.5 rounded-full font-black text-sm transition-all shadow-xl hover:shadow-red-200 transform hover:-translate-y-1 flex items-center gap-2">
-                      <i className="fas fa-power-off"></i>
-                      <span>Logout</span>
-                    </button>
-                  </div>
-                </div>
 
                 {/* Profile & Recovery Row */}
                 <div className="grid lg:grid-cols-3 gap-5">
