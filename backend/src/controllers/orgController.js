@@ -886,8 +886,27 @@ exports.updateDriveStatus = async (req, res) => {
 exports.deleteDrive = async (req, res) => {
     try {
         const { id } = req.params;
-        await pool.query('DELETE FROM blood_drives WHERE id = ? AND org_id = ?', [id, req.user.id]);
-        await addOrgLog(req.user.id, 'DRIVE_DELETE', `Drive #${id}`, `Cancelled and removed blood drive #${id}`);
+        const orgId = req.user.id;
+
+        // First, fetch all blood units collected for this drive
+        const [collections] = await pool.query(
+            'SELECT blood_group, units FROM drive_collections WHERE drive_id = ?',
+            [id]
+        );
+
+        // For each collected blood group, subtract from the main blood_inventory
+        for (const col of collections) {
+            await pool.query(
+                `UPDATE blood_inventory 
+                 SET units = GREATEST(0, units - ?), last_updated = CURRENT_TIMESTAMP 
+                 WHERE org_id = ? AND blood_group = ?`,
+                [col.units, orgId, col.blood_group]
+            );
+        }
+
+        // Now delete the drive (cascade will remove drive_collections too)
+        await pool.query('DELETE FROM blood_drives WHERE id = ? AND org_id = ?', [id, orgId]);
+        await addOrgLog(orgId, 'DRIVE_DELETE', `Drive #${id}`, `Cancelled blood drive #${id} and reversed ${collections.length} blood group collection(s) from inventory`);
         res.json({ message: 'Blood drive cancelled successfully' });
     } catch (err) {
         console.error('Org deleteDrive Error:', err);
@@ -941,7 +960,7 @@ exports.getDriveInventory = async (req, res) => {
     try {
         const { id } = req.params;
         const [collections] = await pool.query(
-            'SELECT blood_group, units, created_at FROM drive_collections WHERE drive_id = ? ORDER BY blood_group ASC',
+            'SELECT blood_group, units AS total_units, created_at FROM drive_collections WHERE drive_id = ? ORDER BY blood_group ASC',
             [id]
         );
         res.json(collections);

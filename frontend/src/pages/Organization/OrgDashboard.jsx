@@ -278,6 +278,7 @@ export default function OrgDashboard() {
         }
         fetchStats();
         fetchActivity();
+        fetchInventory(); // Preload so Units Stock shows correctly on home tab
         fetchOrgProfile();
         fetchNotifications();
     }, []);
@@ -1699,32 +1700,46 @@ export default function OrgDashboard() {
                                     <div className="space-y-4">
                                         {(() => {
                                             const lowStockItems = BLOOD_GROUPS.map(type => {
-                                                const item = stats.inventory_breakdown?.find(i => i.blood_group === type);
-                                                const units = item ? item.units : 0;
-                                                const threshold = item ? item.min_threshold : 5;
+                                                // Use `inventory` state (preloaded on mount) for live, accurate data
+                                                const item = inventory.find(i => i.blood_group === type);
+                                                const units = item ? Number(item.units) : 0;
+                                                const threshold = item ? Number(item.min_threshold) : 5;
                                                 return { blood_group: type, units, min_threshold: threshold };
-                                            }).filter(item => item.units < item.min_threshold);
+                                            }).filter(item => Number(item.units) < Number(item.min_threshold));
 
                                             if (lowStockItems.length > 0) {
-                                                return lowStockItems.slice(0, 4).map((item, i) => (
-                                                    <div key={i} className="p-6 bg-red-50/50 border border-red-100 rounded-[2rem] flex items-center justify-between group animate-in slide-in-from-left-2 duration-300">
-                                                        <div className="flex items-center gap-5">
-                                                            <div className="w-14 h-14 rounded-2xl bg-white border border-red-100 flex flex-col items-center justify-center shadow-lg shadow-red-500/5">
-                                                                <span className="text-red-600 font-black text-lg">{item.blood_group}</span>
+                                                return (
+                                                    <>
+                                                        {lowStockItems.slice(0, 4).map((item, i) => (
+                                                            <div key={i} className="p-6 bg-red-50/50 border border-red-100 rounded-[2rem] flex items-center justify-between group animate-in slide-in-from-left-2 duration-300">
+                                                                <div className="flex items-center gap-5">
+                                                                    <div className="w-14 h-14 rounded-2xl bg-white border border-red-100 flex flex-col items-center justify-center shadow-lg shadow-red-500/5">
+                                                                        <span className="text-red-600 font-black text-lg">{item.blood_group}</span>
+                                                                    </div>
+                                                                    <div>
+                                                                        <p className="font-black text-gray-900">Critical Drop Detected</p>
+                                                                        <p className="text-[10px] font-bold text-red-500 uppercase tracking-widest mt-1 flex items-center gap-2">
+                                                                            <i className="fas fa-exclamation-triangle"></i>
+                                                                            {item.units}U Available <span className="opacity-40">•</span> Target: {item.min_threshold}U
+                                                                        </p>
+                                                                    </div>
+                                                                </div>
+                                                                <button onClick={() => setActiveTab('inventory')} className="px-6 py-3 bg-red-600 text-white text-[10px] font-black rounded-xl uppercase tracking-widest hover:bg-red-700 transition-all shadow-lg active:scale-95">
+                                                                    Restock
+                                                                </button>
                                                             </div>
-                                                            <div>
-                                                                <p className="font-black text-gray-900">Critical Drop Detected</p>
-                                                                <p className="text-[10px] font-bold text-red-500 uppercase tracking-widest mt-1 flex items-center gap-2">
-                                                                    <i className="fas fa-exclamation-triangle"></i>
-                                                                    {item.units}U Available <span className="opacity-40">•</span> Target: {item.min_threshold}U
-                                                                </p>
-                                                            </div>
-                                                        </div>
-                                                        <button onClick={() => setActiveTab('emergency')} className="px-6 py-3 bg-red-600 text-white text-[10px] font-black rounded-xl uppercase tracking-widest hover:bg-red-700 transition-all shadow-lg active:scale-95">
-                                                            Restock
-                                                        </button>
-                                                    </div>
-                                                ));
+                                                        ))}
+                                                        {lowStockItems.length > 4 && (
+                                                            <button
+                                                                onClick={() => setActiveTab('inventory')}
+                                                                className="w-full py-4 border-2 border-dashed border-red-100 rounded-2xl text-red-500 text-[10px] font-black uppercase tracking-widest hover:bg-red-50 transition-all flex items-center justify-center gap-2"
+                                                            >
+                                                                <i className="fas fa-plus-circle"></i>
+                                                                {lowStockItems.length - 4} More Critical Stocks — View Inventory
+                                                            </button>
+                                                        )}
+                                                    </>
+                                                );
                                             }
 
                                             return (
@@ -1752,7 +1767,7 @@ export default function OrgDashboard() {
                                         </button>
                                     </div>
                                     <div className="space-y-6 flex-1">
-                                        {activity.length > 0 ? activity.map((act, i) => {
+                                        {activity.length > 0 ? activity.slice(0, 4).map((act, i) => {
                                             let icon = 'fa-list-ul';
                                             let color = 'bg-gray-500';
                                             if (act.action_type === 'INVENTORY_ADD') { icon = 'fa-tint'; color = 'bg-red-600'; }
@@ -1769,7 +1784,7 @@ export default function OrgDashboard() {
                                                         <div className={`w-12 h-12 rounded-2xl flex items-center justify-center text-white shadow-lg transition-transform group-hover:scale-110 duration-300 ${color}`}>
                                                             <i className={`fas ${icon} text-sm`}></i>
                                                         </div>
-                                                        {i !== activity.length - 1 && <div className="w-0.5 grow bg-gray-100 my-2"></div>}
+                                                        {i !== Math.min(activity.length, 4) - 1 && <div className="w-0.5 grow bg-gray-100 my-2"></div>}
                                                     </div>
                                                     <div className="pb-8 pt-1">
                                                         <p className="text-sm font-black text-gray-800 leading-tight mb-1 group-hover:text-red-600 transition-colors">
@@ -1791,6 +1806,15 @@ export default function OrgDashboard() {
                                             </div>
                                         )}
                                     </div>
+                                    {activity.length > 4 && (
+                                        <button
+                                            onClick={() => setActiveTab('history')}
+                                            className="w-full py-4 bg-gray-50 hover:bg-gray-100 text-gray-500 font-black rounded-2xl transition-all text-[10px] uppercase tracking-widest flex items-center justify-center gap-2 border border-gray-100"
+                                        >
+                                            <i className="fas fa-history"></i>
+                                            Show All Activity Logs
+                                        </button>
+                                    )}
                                 </div>
                             </div>
                         </div>
