@@ -117,11 +117,25 @@ exports.getStats = async (req, res) => {
             return res.status(403).json({ error: 'Account not verified. Please contact administrator.' });
         }
 
-        const [inventory] = await pool.query('SELECT SUM(units) as total_units FROM blood_inventory WHERE org_id = ?', [orgId]);
-        const [requests] = await pool.query('SELECT COUNT(*) as active_requests FROM emergency_requests WHERE status = ?', ['Active']);
+        const [donations] = await pool.query(
+            'SELECT COUNT(*) as cnt FROM donations WHERE org_id = ?',
+            [orgId]
+        );
+        const [active_requests] = await pool.query(
+            'SELECT COUNT(*) as cnt FROM emergency_requests WHERE status = "Active" AND org_id = ?',
+            [orgId]
+        );
+        const [total_units] = await pool.query(
+            'SELECT SUM(units) as total FROM blood_inventory WHERE org_id = ?',
+            [orgId]
+        );
+        const [members] = await pool.query(
+            'SELECT COUNT(*) as cnt FROM org_members WHERE org_id = ?',
+            [orgId]
+        );
+
+        // Original queries that were not replaced by the snippet, but still needed for the full response
         const [verifications] = await pool.query('SELECT COUNT(*) as verified_count FROM donor_verifications WHERE org_id = ? AND status = ?', [orgId, 'Verified']);
-        // Fix total_donations: count valid donations from the donations table
-        const [donations] = await pool.query('SELECT COUNT(*) as total_donations FROM donations WHERE org_id = ?', [orgId]);
         const [breakdown] = await pool.query('SELECT blood_group, units, min_threshold FROM blood_inventory WHERE org_id = ?', [orgId]);
         const [endedDrives] = await pool.query(
             'SELECT COUNT(*) as count FROM blood_drives WHERE org_id = ? AND CAST(CONCAT(end_date, " ", end_time) AS DATETIME) < NOW()',
@@ -129,12 +143,16 @@ exports.getStats = async (req, res) => {
         );
 
         res.json({
-            total_units: inventory[0].total_units || 0,
-            active_requests: requests[0].active_requests || 0,
-            verified_count: verifications[0].verified_count || 0,
-            total_donations: donations[0].total_donations || 0, // Should show 0 if count is 0
-            ended_count: endedDrives[0].count || 0,
-            inventory_breakdown: breakdown
+            success: true,
+            data: {
+                donations: donations[0].cnt,
+                active_requests: active_requests[0].cnt,
+                total_units: Number(total_units[0].total) || 0,
+                members: members[0].cnt,
+                verified_count: verifications[0].verified_count || 0,
+                ended_count: endedDrives[0].count || 0,
+                inventory_breakdown: breakdown
+            }
         });
     } catch (err) {
         console.error('Org getStats Error:', err);
@@ -880,13 +898,24 @@ exports.addDriveInventory = async (req, res) => {
         const { blood_group, units } = req.body;
         if (!blood_group || !units) return res.status(400).json({ error: 'Blood group and units are required' });
 
+        const orgId = req.user.id;
+
         // Check if blood group exists for this org, otherwise create
-        const [exists] = await pool.query('SELECT * FROM inventory WHERE org_id = ? AND blood_group = ?', [req.user.id, blood_group]);
-        
-        if (exists.length > 0) {
-            await pool.query('UPDATE inventory SET units = units + ? WHERE org_id = ? AND blood_group = ?', [units, req.user.id, blood_group]);
+        const [inventoryResult] = await pool.query(
+            'SELECT id FROM blood_inventory WHERE org_id = ? AND blood_group = ?',
+            [orgId, blood_group]
+        );
+
+        if (inventoryResult.length > 0) {
+            await pool.query(
+                'UPDATE blood_inventory SET units = units + ?, last_updated = CURRENT_TIMESTAMP WHERE id = ?',
+                [units, inventoryResult[0].id]
+            );
         } else {
-            await pool.query('INSERT INTO inventory (org_id, blood_group, units) VALUES (?, ?, ?)', [req.user.id, blood_group, units]);
+            await pool.query(
+                'INSERT INTO blood_inventory (org_id, blood_group, units) VALUES (?, ?, ?)',
+                [orgId, blood_group, units]
+            );
         }
 
         // Also update drive_collections if drive_id is provided
