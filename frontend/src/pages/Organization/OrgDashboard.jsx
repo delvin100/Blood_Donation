@@ -634,7 +634,7 @@ export default function OrgDashboard() {
             const res = await axios.get('/api/organization/stats', {
                 headers: { Authorization: `Bearer ${token} ` }
             });
-            setStats(res.data);
+            setStats(res.data.data);
         } catch (err) {
             if (err.response && (err.response.status === 401 || err.response.status === 404)) {
                 localStorage.removeItem('token');
@@ -1286,8 +1286,8 @@ export default function OrgDashboard() {
         { id: 'emergency', label: 'Emergency Requests', icon: 'fa-ambulance' },
         { id: 'verification', label: 'Add to Organisation', icon: 'fa-user-plus' },
         { id: 'members', label: 'Our Members', icon: 'fa-users' },
-        { id: 'history', label: 'Activity Logs', icon: 'fa-list-ul' },
         { id: 'drives', label: 'Blood Drives', icon: 'fa-campground' },
+        { id: 'history', label: 'Activity Logs', icon: 'fa-list-ul' },
         { id: 'profile', label: 'Profile', icon: 'fa-id-card' },
 
     ];
@@ -1832,7 +1832,9 @@ export default function OrgDashboard() {
                                         <div className="text-center md:text-left">
                                             <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1.5 opacity-60">Network Volume</p>
                                             <div className="flex items-baseline gap-2">
-                                                <span className="text-4xl font-black text-gray-900 tracking-tighter">{stats.total_units}</span>
+                                                <span className="text-4xl font-black text-gray-900 tracking-tighter">
+                                                    {inventory.reduce((sum, item) => sum + (item.units || 0), 0)}
+                                                </span>
                                                 <span className="text-xs font-bold text-gray-400 uppercase tracking-widest">Units</span>
                                             </div>
                                         </div>

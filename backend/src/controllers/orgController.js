@@ -145,7 +145,7 @@ exports.getStats = async (req, res) => {
         res.json({
             success: true,
             data: {
-                donations: donations[0].cnt,
+                total_donations: donations[0].cnt,
                 active_requests: active_requests[0].cnt,
                 total_units: Number(total_units[0].total) || 0,
                 members: members[0].cnt,

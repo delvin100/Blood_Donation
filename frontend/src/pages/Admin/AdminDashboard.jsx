@@ -1120,7 +1120,7 @@ function DashboardHome({ stats, data, setActiveTab }) {
                 <div className="bg-white rounded-3xl p-8 shadow-xl shadow-gray-200/50 border border-white">
                     <h3 className="text-xl font-bold text-gray-800 mb-8 pl-2 border-l-4 border-red-500">Inventory Distribution</h3>
                     <div className="h-72">
-                        {inventoryData.length > 0 ? (
+                        {inventoryData.length > 0 && inventoryData.some(d => d.value > 0) ? (
                             <ResponsiveContainer width="100%" height="100%">
                                 <PieChart>
                                     <Pie
@@ -1145,7 +1145,10 @@ function DashboardHome({ stats, data, setActiveTab }) {
                                 </PieChart>
                             </ResponsiveContainer>
                         ) : (
-                            <div className="flex h-full items-center justify-center text-gray-300 font-medium">No inventory data available</div>
+                            <div className="flex h-full flex-col items-center justify-center text-gray-300 font-medium">
+                                <i className="fas fa-tint-slash text-5xl mb-4 opacity-20"></i>
+                                <p>No blood units currently available</p>
+                            </div>
                         )}
                     </div>
                 </div>
@@ -1201,7 +1204,12 @@ function DashboardHome({ stats, data, setActiveTab }) {
                                 <Badge status={req.status === 'Active' ? 'warning' : 'success'}>{req.status}</Badge>
                             </div>
                         ))}
-                        {data.requests.length === 0 && <p className="text-center text-gray-400 py-6 font-medium">No recent requests</p>}
+                        {data.requests.length === 0 && (
+                            <div className="flex flex-col items-center justify-center h-48 text-gray-400">
+                                <i className="fas fa-clipboard-list text-4xl text-gray-200 mb-3"></i>
+                                <p className="font-medium text-gray-400">No recent requests</p>
+                            </div>
+                        )}
                     </div>
                 </div>
 
@@ -1504,12 +1512,20 @@ function InventoryMatrixView({ inventory = [], allOrganizations = [], allData = 
                     <div key={bg} className="bg-white p-4 rounded-2xl shadow-sm border border-white hover:shadow-md transition-all group flex-1 min-w-[120px]">
                         <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-1 group-hover:text-red-500 transition-colors">{bg}</label>
                         <div className="flex items-baseline gap-1">
-                            <span className="text-2xl font-black text-gray-800">{totals[bg] || 0}</span>
+                            <span className={`text-2xl font-black ${totals[bg] > 0 ? 'text-gray-800' : 'text-gray-300'}`}>{totals[bg] || 0}</span>
                             <span className="text-[10px] font-bold text-gray-400 uppercase">Units</span>
                         </div>
                     </div>
                 ))}
             </div>
+
+            {Object.values(totals).reduce((a, b) => a + b, 0) === 0 && (
+                <div className="bg-red-50 border border-red-100 rounded-3xl p-8 text-center animate-pulse-slow">
+                    <i className="fas fa-exclamation-triangle text-red-500 text-3xl mb-3"></i>
+                    <h4 className="text-red-800 font-black uppercase tracking-tight">Critical: Zero Inventory</h4>
+                    <p className="text-red-600 text-sm font-medium">There are currently no blood units available across all registered organizations.</p>
+                </div>
+            )}
 
             <div className="bg-white rounded-3xl shadow-xl shadow-gray-200/50 border border-white overflow-hidden">
                 <div className="p-6 border-b border-gray-100 flex justify-between items-center bg-gray-50/30">
