@@ -1206,7 +1206,11 @@ export default function OrgDashboard() {
             });
             toast.success("Inventory updated successfully");
             setShowInventoryModal(false);
+            // Sync all relevant tabs with the new data
             fetchStats();
+            fetchInventory();
+            fetchHistory();
+            fetchActivity();
         } catch (err) {
             toast.error(err.response?.data?.error || "Failed to update inventory");
         }
@@ -1751,11 +1755,13 @@ export default function OrgDashboard() {
                                         {activity.length > 0 ? activity.map((act, i) => {
                                             let icon = 'fa-list-ul';
                                             let color = 'bg-gray-500';
-                                            if (act.action_type === 'INVENTORY_SYNC') { icon = 'fa-burn'; color = 'bg-orange-500'; }
+                                            if (act.action_type === 'INVENTORY_ADD') { icon = 'fa-tint'; color = 'bg-red-600'; }
+                                            else if (act.action_type === 'INVENTORY_SYNC') { icon = 'fa-burn'; color = 'bg-orange-500'; }
                                             else if (act.action_type.includes('REQUEST')) { icon = 'fa-ambulance'; color = 'bg-blue-500'; }
                                             else if (act.action_type === 'DONATION') { icon = 'fa-hand-holding-heart'; color = 'bg-red-500'; }
                                             else if (act.action_type === 'VERIFICATION') { icon = 'fa-check-circle'; color = 'bg-emerald-500'; }
                                             else if (act.action_type.includes('MEMBER')) { icon = 'fa-users'; color = 'bg-indigo-500'; }
+                                            else if (act.action_type.includes('DRIVE')) { icon = 'fa-campground'; color = 'bg-amber-500'; }
 
                                             return (
                                                 <div key={i} className="flex gap-5 group">
@@ -2236,12 +2242,14 @@ export default function OrgDashboard() {
                                                         <td className="p-6">
                                                             <span className={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-tight 
                                                                 ${item.action_type === 'DONATION' ? 'bg-red-50 text-red-700' :
+                                                                    item.action_type === 'INVENTORY_ADD' ? 'bg-rose-50 text-rose-700' :
                                                                     item.action_type === 'VERIFICATION' ? 'bg-emerald-50 text-emerald-700' :
                                                                         item.action_type.includes('MEMBER') ? 'bg-blue-50 text-blue-700' :
                                                                             item.action_type.includes('REQUEST') ? 'bg-orange-50 text-orange-700' :
                                                                                 item.action_type.includes('DRIVE') ? 'bg-amber-50 text-amber-700' :
                                                                                     'bg-gray-50 text-gray-700'}`}>
                                                                 <i className={`fas ${item.action_type === 'DONATION' ? 'fa-burn' :
+                                                                    item.action_type === 'INVENTORY_ADD' ? 'fa-tint' :
                                                                     item.action_type === 'VERIFICATION' ? 'fa-check-circle' :
                                                                         item.action_type === 'MEMBER_ADD' ? 'fa-user-plus' :
                                                                             item.action_type === 'MEMBER_REMOVE' ? 'fa-user-minus' :
@@ -2489,8 +2497,15 @@ export default function OrgDashboard() {
                                                                     <div className={`w-14 h-14 rounded-2xl flex items-center justify-center text-xl shadow-inner ${dynamicStatus === 'Active' ? 'bg-orange-100 text-orange-600' : 'bg-gray-100 text-gray-400'}`}>
                                                                         <i className={`fas ${dynamicStatus === 'Active' ? 'fa-satellite-dish animate-pulse' : 'fa-campground'}`}></i>
                                                                     </div>
-                                                                    <div>
-                                                                        <p className="font-black text-gray-900 text-lg">{drive.event_name}</p>
+                                                                    <div 
+                                                                        className={`cursor-pointer group ${dynamicStatus !== 'Upcoming' ? 'hover:scale-105 transition-all' : ''}`}
+                                                                        onClick={() => {
+                                                                            if (dynamicStatus !== 'Upcoming') {
+                                                                                fetchCampDetails(drive);
+                                                                            }
+                                                                        }}
+                                                                    >
+                                                                        <p className={`font-black text-gray-900 text-lg transition-colors ${dynamicStatus !== 'Upcoming' ? 'group-hover:text-red-500' : ''}`}>{drive.event_name}</p>
                                                                         <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest truncate max-w-[200px]">{drive.description || 'No description provided'}</p>
                                                                     </div>
                                                                 </div>
@@ -3623,7 +3638,7 @@ export default function OrgDashboard() {
                             <div className="p-10 border-b border-gray-50 flex items-center justify-between bg-gray-50/50">
                                 <div>
                                     <h3 className="text-2xl font-black text-gray-900 tracking-tight">Camp Collection Details</h3>
-                                    <p className="text-gray-400 font-bold text-[10px] uppercase tracking-widest mt-1">Event: {selectedCampForDetails?.event_name}</p>
+                                    <h4 className="text-lg font-black text-red-600 mt-1">{selectedCampForDetails?.event_name}</h4>
                                 </div>
                                 <button
                                     onClick={() => setShowCampDetailsModal(false)}
@@ -3633,14 +3648,43 @@ export default function OrgDashboard() {
                                 </button>
                             </div>
 
-                            <div className="p-10">
+                            <div className="px-10 py-6 bg-slate-50/50 border-b border-gray-100">
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                    <div className="space-y-4">
+                                        <div>
+                                            <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Time & Date Info</p>
+                                            <p className="text-sm font-bold text-gray-900 flex items-center gap-2">
+                                                <i className="far fa-calendar-alt text-red-500"></i>
+                                                {selectedCampForDetails && new Date(selectedCampForDetails.start_date).toLocaleDateString()} at {selectedCampForDetails?.start_time.substring(0, 5)} 
+                                                <span className="text-gray-300 px-1">to</span> 
+                                                {selectedCampForDetails && new Date(selectedCampForDetails.end_date).toLocaleDateString()} at {selectedCampForDetails?.end_time.substring(0, 5)}
+                                            </p>
+                                        </div>
+                                        <div>
+                                            <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Precise Location</p>
+                                            <p className="text-sm font-bold text-gray-700 flex items-start gap-2">
+                                                <i className="fas fa-map-marker-alt text-red-500 mt-0.5"></i>
+                                                {selectedCampForDetails?.location}
+                                            </p>
+                                        </div>
+                                    </div>
+                                    <div className="space-y-2">
+                                        <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Drive Description</p>
+                                        <p className="text-sm font-medium text-gray-600 leading-relaxed bg-white p-4 rounded-xl shadow-sm border border-gray-100 max-h-32 overflow-y-auto">
+                                            {selectedCampForDetails?.description || 'No description provided for this drive.'}
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="p-10 h-[400px] overflow-y-auto">
                                 {campInventoryLoading ? (
                                     <div className="py-20 text-center">
                                         <i className="fas fa-circle-notch fa-spin text-4xl text-gray-200"></i>
                                     </div>
                                 ) : (
-                                    <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-                                        {['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'].map(bg => {
+                                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-6">
+                                        {['A+', 'A-', 'A1+', 'A1-', 'A1B+', 'A1B-', 'A2+', 'A2-', 'A2B+', 'A2B-', 'AB+', 'AB-', 'B+', 'B-', 'Bombay Blood Group', 'INRA', 'O+', 'O-'].map(bg => {
                                             const bloodData = selectedCampInventory.find(item => item.blood_group === bg);
                                             const units = bloodData ? bloodData.total_units : 0;
                                             return (
@@ -3693,16 +3737,21 @@ export default function OrgDashboard() {
                             <form onSubmit={handleLogInventory} className="p-10 space-y-8">
                                 <div className="space-y-3">
                                     <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-4">Blood Group</label>
-                                    <select
-                                        required
-                                        className="w-full px-8 py-5 bg-gray-50 border-2 border-transparent rounded-2xl font-bold text-gray-900 outline-none focus:border-red-500/20 focus:bg-white transition-all shadow-inner"
-                                        value={inventoryForm.blood_group}
-                                        onChange={e => setInventoryForm({ ...inventoryForm, blood_group: e.target.value })}
-                                    >
-                                        {['A+', 'A-', 'A1+', 'A1-', 'A1B+', 'A1B-', 'A2+', 'A2-', 'A2B+', 'A2B-', 'AB+', 'AB-', 'B+', 'B-', 'Bombay Blood Group', 'INRA', 'O+', 'O-'].map(bg => (
-                                            <option key={bg} value={bg}>{bg}</option>
-                                        ))}
-                                    </select>
+                                    <div className="relative">
+                                        <select
+                                            required
+                                            className="w-full pl-8 pr-12 py-5 bg-gray-50 border-2 border-transparent rounded-2xl font-bold text-gray-900 outline-none focus:border-red-500/20 focus:bg-white transition-all shadow-inner appearance-none relative z-10 cursor-pointer"
+                                            value={inventoryForm.blood_group}
+                                            onChange={e => setInventoryForm({ ...inventoryForm, blood_group: e.target.value })}
+                                        >
+                                            {['A+', 'A-', 'A1+', 'A1-', 'A1B+', 'A1B-', 'A2+', 'A2-', 'A2B+', 'A2B-', 'AB+', 'AB-', 'B+', 'B-', 'Bombay Blood Group', 'INRA', 'O+', 'O-'].map(bg => (
+                                                <option key={bg} value={bg}>{bg}</option>
+                                            ))}
+                                        </select>
+                                        <div className="absolute right-6 top-1/2 -translate-y-1/2 pointer-events-none z-20 text-gray-400">
+                                            <i className="fas fa-chevron-down text-sm"></i>
+                                        </div>
+                                    </div>
                                 </div>
 
                                 <div className="space-y-3">
