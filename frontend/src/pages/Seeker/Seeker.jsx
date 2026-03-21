@@ -484,26 +484,43 @@ const Seeker = () => {
             </section>
 
             <main className="container mx-auto px-6 pb-20">
-                {/* Mobile App Banner */}
-                <div className="max-w-6xl mx-auto mb-12">
-                    <div className="bg-gradient-to-r from-red-600 to-rose-500 rounded-[3rem] p-6 md:p-10 shadow-2xl shadow-red-200 relative overflow-hidden group">
-                        <div className="absolute top-0 right-0 w-64 h-64 bg-white opacity-10 rounded-full -translate-y-16 translate-x-16 blur-2xl group-hover:scale-110 transition-transform duration-700"></div>
-                        <div className="relative z-10 flex flex-col md:flex-row items-center justify-between gap-8">
-                            <div className="flex items-center gap-6">
-                                <div className="w-16 h-16 bg-white/20 backdrop-blur-md rounded-2xl flex items-center justify-center text-white shadow-lg animate-float">
-                                    <i className="fas fa-mobile-screen-button text-3xl"></i>
-                                </div>
-                                <div className="text-white">
-                                    <h3 className="text-2xl font-black uppercase tracking-tight">Need Help on the Go?</h3>
-                                    <p className="text-red-50/80 font-bold text-sm">Download our mobile app for instant donor matching & GPS tracking</p>
-                                </div>
+                {/* Mobile App Banner - Stylish Redesign */}
+                <div className="max-w-6xl mx-auto mb-16">
+                    <div className="bg-red-600 rounded-[4rem] p-4 md:p-6 shadow-2xl shadow-red-200 relative overflow-hidden group">
+                        {/* Decorative Background for Left Side */}
+                        <div className="absolute top-0 left-0 w-1/3 h-full bg-black/5 backdrop-blur-3xl -skew-x-12 -translate-x-12"></div>
+                        <div className="absolute -top-24 -left-24 w-64 h-64 bg-white/10 rounded-full blur-3xl"></div>
+                        
+                        <div className="relative z-10 flex flex-col md:flex-row items-center gap-10">
+                            {/* Left Side: Mockup with stylish bg */}
+                            <div className="md:w-1/3 flex justify-center relative">
+                                <div className="absolute inset-0 bg-white/20 blur-[60px] rounded-full animate-pulse"></div>
+                                <img 
+                                    src="/images/app-mockup.png" 
+                                    alt="eBloodBank App" 
+                                    className="w-40 md:w-48 relative z-10 drop-shadow-[0_20px_50px_rgba(0,0,0,0.3)] group-hover:scale-105 transition-transform duration-700" 
+                                />
                             </div>
-                            <button 
-                                onClick={() => setIsDownloadModalOpen(true)}
-                                className="bg-white text-red-600 px-8 py-4 rounded-2xl font-black text-xs uppercase tracking-[0.2em] shadow-xl hover:bg-gray-50 transition-all hover:scale-105 active:scale-95 group/btn"
-                            >
-                                Get the App <i className="fas fa-arrow-right ml-2 group-hover/btn:translate-x-1 transition-transform"></i>
-                            </button>
+
+                            {/* Right Side: Content */}
+                            <div className="md:w-2/3 text-center md:text-left py-6 pr-6">
+                                <div className="inline-flex items-center gap-2 bg-white/20 backdrop-blur-md px-4 py-2 rounded-full text-[10px] font-black uppercase tracking-[0.2em] mb-4 border border-white/10 text-white">
+                                    <span className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></span>
+                                    Now Available on Mobile
+                                </div>
+                                <h3 className="text-3xl md:text-4xl font-black text-white uppercase tracking-tight mb-4 leading-tight">
+                                    Need Help on the Go?
+                                </h3>
+                                <p className="text-red-50/80 font-bold text-lg mb-8 leading-relaxed max-w-xl">
+                                    Download our mobile app <span className="text-white italic">eBloodBank</span> for instant donor matching & GPS tracking.
+                                </p>
+                                <button 
+                                    onClick={() => setIsDownloadModalOpen(true)}
+                                    className="bg-white text-red-600 px-10 py-5 rounded-2xl font-black text-xs uppercase tracking-[0.2em] shadow-xl hover:bg-red-50 transition-all hover:scale-105 active:scale-95 group/btn"
+                                >
+                                    Get the App <i className="fas fa-arrow-right ml-2 group-hover/btn:translate-x-1 transition-transform"></i>
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -837,8 +854,8 @@ const Seeker = () => {
 
                                 {/* Right Side: Links & QR */}
                                 <div className="md:w-1/2 text-center">
-                                    <h3 className="text-3xl font-black text-gray-900 uppercase tracking-tight mb-4 leading-tight">
-                                        Download <br /><span className="text-red-600 italic">eBloodBank</span>
+                                    <h3 className="text-3xl font-black text-gray-900 tracking-tight mb-4 leading-tight">
+                                        <span className="uppercase">Download</span> <br /><span className="text-red-600 italic">eBloodBank</span>
                                     </h3>
                                     <p className="text-gray-500 font-bold text-sm mb-8">Scan to download or use the store buttons below.</p>
                                     

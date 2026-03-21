@@ -1345,55 +1345,73 @@ const Dashboard = () => {
     'mobile-app': {
       title: 'eBloodBank Mobile',
       content: (
-        <div className="space-y-8 animate-in slide-in-from-bottom-4 duration-500">
-          <div className="modern-card p-10 bg-gradient-to-br from-red-600 to-rose-700 rounded-[2.5rem] shadow-2xl relative overflow-hidden group">
-            {/* Decorative background elements */}
-            <div className="absolute top-0 right-0 w-64 h-64 bg-white opacity-10 rounded-full -translate-y-16 translate-x-16 blur-2xl group-hover:scale-110 transition-transform duration-700"></div>
-            <div className="absolute bottom-0 left-0 w-48 h-48 bg-black opacity-10 rounded-full translate-y-24 -translate-x-12 blur-3xl"></div>
+        <div className="animate-in fade-in zoom-in-95 duration-500">
+          <div className="bg-[#dc2626] rounded-[3.5rem] p-8 md:p-12 relative overflow-hidden group shadow-2xl shadow-red-500/20">
+            {/* Background Accents like Image 2/4/766 style */}
+            <div className="absolute -top-24 -right-24 w-96 h-96 bg-white/10 rounded-full blur-[100px]"></div>
+            <div className="absolute -bottom-24 -left-24 w-80 h-80 bg-black/10 rounded-full blur-[80px]"></div>
 
             <div className="flex flex-col lg:flex-row items-center gap-12 relative z-10">
-              {/* Phone Mockup */}
-              <div className="w-full lg:w-2/5 flex justify-center">
+              {/* Left Side: Mockup with Glow */}
+              <div className="lg:w-2/5 flex justify-center relative">
+                <div className="absolute inset-0 bg-white/20 blur-[80px] rounded-full animate-pulse"></div>
                 <img
                   src="/images/app-mockup.png"
-                  alt="Mobile App"
-                  className="w-48 md:w-56 drop-shadow-[0_20px_40px_rgba(0,0,0,0.3)] animate-float"
+                  alt="eBloodBank Mobile App"
+                  className="w-48 md:w-64 relative z-10 drop-shadow-[0_30px_60px_rgba(0,0,0,0.4)] transition-transform duration-700 group-hover:scale-105"
                 />
               </div>
 
-              {/* Content */}
-              <div className="w-full lg:w-3/5 text-center lg:text-left text-white">
-                <div className="inline-flex items-center gap-2 bg-white/20 backdrop-blur-md px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest mb-4 border border-white/10">
-                  <span className="w-1.5 h-1.5 bg-green-400 rounded-full animate-pulse"></span>
+              {/* Right Side: Content based on Image 766 */}
+              <div className="lg:w-3/5 text-center lg:text-left text-white">
+                <div className="inline-flex items-center gap-3 bg-white/15 backdrop-blur-xl px-5 py-2.5 rounded-full text-[11px] font-black uppercase tracking-[0.2em] mb-8 border border-white/20 shadow-xl">
+                  <span className="w-2.5 h-2.5 bg-green-400 rounded-full animate-pulse shadow-[0_0_15px_rgba(74,222,128,0.5)]"></span>
                   Live on App Store & Play Store
                 </div>
-                <h3 className="text-3xl md:text-5xl font-black mb-6 leading-tight tracking-tight uppercase">
-                  Take the Power <br />In Your <span className="text-white/80">Pocket</span>
+
+                <h3 className="text-4xl md:text-6xl font-black mb-8 leading-[1.05] tracking-tighter uppercase max-w-lg">
+                  Take the <span className="text-white/90">Power</span> <br />
+                  In Your <span className="text-white/80">Pocket</span>
                 </h3>
-                <p className="text-red-50/80 font-bold mb-10 leading-relaxed text-sm">
+
+                <p className="text-red-50/90 font-bold text-lg mb-12 leading-relaxed max-w-xl opacity-90">
                   Get instant emergency alerts, track your donations in real-time, and manage your profile with our award-winning mobile experience.
                 </p>
 
-                <div className="flex flex-col sm:flex-row items-center gap-4 justify-center lg:justify-start">
-                  <div className="bg-white p-6 rounded-3xl shadow-xl hover:scale-105 transition-transform group/qr">
-                    <img src="/images/qr-code.png" alt="Scan Me" className="w-44 h-44" />
-                    <p className="text-[10px] font-black text-gray-400 text-center mt-3 uppercase tracking-[0.2em] group-hover/qr:text-red-500 transition-colors">Scan to Download</p>
+                {/* Bottom Section: QR & Store Buttons */}
+                <div className="flex flex-col sm:flex-row items-center gap-8 justify-center lg:justify-start">
+                  <div className="bg-white p-5 rounded-[2.5rem] shadow-2xl transform hover:scale-110 transition-all duration-500 group/qr relative">
+                    <div className="absolute -top-3 -right-3 w-8 h-8 bg-black text-white rounded-full flex items-center justify-center text-xs animate-bounce shadow-lg">
+                      <i className="fas fa-arrow-down"></i>
+                    </div>
+                    <img src="/images/qr-code.png" alt="Scan to Download" className="w-32 h-32 md:w-40 md:h-40" />
+                    <div className="absolute inset-0 border-2 border-red-500/10 rounded-[2.5rem] pointer-events-none"></div>
                   </div>
 
-                  <div className="flex flex-col gap-3 w-full sm:w-auto">
-                    <button className="flex items-center gap-3 bg-white text-gray-900 px-6 py-3 rounded-xl hover:bg-gray-50 transition-all font-black text-xs uppercase tracking-widest shadow-lg shadow-black/10">
-                      <i className="fab fa-apple text-lg"></i> App Store
-                    </button>
-                    <button className="flex items-center gap-3 bg-gray-900 border border-white/10 text-white px-6 py-3 rounded-xl hover:bg-black transition-all font-black text-xs uppercase tracking-widest shadow-lg shadow-black/20">
-                      <i className="fab fa-google-play text-lg text-white"></i> Play Store
-                    </button>
+                  <div className="flex flex-col gap-4 w-full sm:w-auto">
+                    <a href="#" className="flex items-center gap-4 bg-white text-gray-900 px-8 py-4 rounded-2xl hover:bg-gray-50 transition-all font-black text-xs uppercase tracking-widest shadow-xl group/btn">
+                      <div className="w-10 h-10 bg-gray-900 rounded-xl flex items-center justify-center text-white group-hover/btn:bg-red-600 transition-colors">
+                        <i className="fab fa-apple text-xl"></i>
+                      </div>
+                      <div className="text-left">
+                        <span className="text-[9px] block text-gray-400 leading-none mb-1">Download on</span>
+                        <span className="text-base leading-none">App Store</span>
+                      </div>
+                    </a>
+                    <a href="#" className="flex items-center gap-4 bg-gray-900 border border-white/10 text-white px-8 py-4 rounded-2xl hover:bg-black transition-all font-black text-xs uppercase tracking-widest shadow-xl group/btn2">
+                      <div className="w-10 h-10 bg-white/10 rounded-xl flex items-center justify-center group-hover/btn2:bg-red-600 transition-colors">
+                        <i className="fab fa-google-play text-lg"></i>
+                      </div>
+                      <div className="text-left">
+                        <span className="text-[9px] block text-gray-400 leading-none mb-1">Get it on</span>
+                        <span className="text-base leading-none">Google Play</span>
+                      </div>
+                    </a>
                   </div>
                 </div>
               </div>
             </div>
           </div>
-          
-          {/* Feature cards removed per user request */}
         </div>
       )
     }
@@ -2300,7 +2318,14 @@ const Dashboard = () => {
         </div>
         {showCompleteProfile && <CompleteProfileModal onClose={() => setShowCompleteProfile(false)} onSuccess={fetchDashboardData} user={user} />}
         {showEditProfile && <EditProfileModal isOpen={showEditProfile} onClose={() => setShowEditProfile(false)} user={user} onUpdate={fetchDashboardData} />}
-        {modalInfo && <InfoModal onClose={() => setModalInfo(null)} title={modalInfo.title} content={modalInfo.content} />}
+        {modalInfo && (
+          <InfoModal 
+            onClose={() => setModalInfo(null)} 
+            title={modalInfo.title} 
+            content={modalInfo.content} 
+            maxWidth={activeInfo?.key === 'mobile-app' || modalInfo.title === 'eBloodBank Mobile' ? 'max-w-5xl' : 'max-w-2xl'}
+          />
+        )}
 
         {
           editingDonation && (

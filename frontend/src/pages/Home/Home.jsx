@@ -217,7 +217,7 @@ export default function Home() {
         <section id="about" className="py-16 section-gradient-1">
           <div className="container mx-auto px-6">
             <div className="max-w-6xl mx-auto">
-              <div className="text-center mb-16">
+              <div className="text-center mb-10">
                 <h2 className="text-4xl font-bold text-gray-800 mb-6">Why Choose eBloodBank?</h2>
                 <p className="text-xl text-gray-600 max-w-3xl mx-auto">
                   We're more than just a platform - we're a community dedicated to saving lives through blood donation.
@@ -263,7 +263,7 @@ export default function Home() {
         <section className="py-16 section-gradient-2">
           <div className="container mx-auto px-6">
             <div className="max-w-6xl mx-auto">
-              <div className="text-center mb-16">
+              <div className="text-center mb-10">
                 <h2 className="text-4xl font-bold text-gray-800 mb-6">How It Works</h2>
                 <p className="text-xl text-gray-600">Simple steps to save lives</p>
               </div>
@@ -320,7 +320,7 @@ export default function Home() {
         {/* Main Action Cards */}
         <section id="action-cards" className="py-16 section-gradient-3">
           <div className="container mx-auto px-6">
-            <div className="text-center mb-12">
+            <div className="text-center mb-10">
               <h2 className="text-4xl font-bold text-gray-800 mb-6">Get Started Today</h2>
               <p className="text-xl text-gray-600">Choose how you want to help save lives</p>
             </div>
@@ -440,7 +440,7 @@ export default function Home() {
         {/* About Section */}
         <section id="aboutt" className="py-16 bg-gray-50">
           <div className="container mx-auto px-6">
-            <div className="max-w-4xl mx-auto text-center">
+            <div className="max-w-4xl mx-auto text-center mb-4">
               <h2 className="text-4xl font-bold text-gray-800 mb-8">About eBloodBank</h2>
               <p className="text-lg text-gray-600 mb-8">
                 We believe that in moments of need, strangers can become the closest friends.
@@ -467,75 +467,71 @@ export default function Home() {
           </div>
         </section>
 
-        {/* Mobile App Download Section */}
-        <section id="mobile-app" className="py-24 download-app-section relative overflow-hidden">
+        {/* Mobile App Download Section - Redesigned to match Image 2 */}
+        <section id="mobile-app" className="section-padding download-app-section relative overflow-hidden">
           {/* Decorative Blobs */}
           <div className="decorative-blob w-[500px] h-[500px] -top-24 -left-24 opacity-20"></div>
           <div className="decorative-blob w-[400px] h-[400px] -bottom-24 -right-24 opacity-10"></div>
 
           <div className="container mx-auto px-6 relative z-10">
-            <div className="download-app-card p-12 md:p-20 flex flex-col lg:flex-row items-center justify-between gap-16">
+            <div className="download-app-card p-12 md:p-16 flex flex-col lg:flex-row items-center justify-between gap-12">
               {/* Left Content */}
               <div className="lg:w-1/2 text-white text-center lg:text-left">
-                <div className="inline-flex items-center gap-2 bg-white/20 backdrop-blur-md px-4 py-2 rounded-full text-[10px] font-black uppercase tracking-[0.2em] mb-6 border border-white/10">
+                <div className="app-badge">
                   <span className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></span>
                   Now Available on Mobile
                 </div>
 
                 <h2 className="text-4xl md:text-6xl font-black uppercase tracking-tight mb-8 leading-[1.1]">
                   Download Our <br />
-                  <span className="text-transparent bg-clip-text bg-gradient-to-r from-white via-white/80 to-white/60">App Right Now</span>
+                  <span className="text-white">App Right Now</span>
                 </h2>
 
-                <p className="text-lg md:text-xl text-red-50/80 font-medium mb-12 leading-relaxed opacity-90 max-w-xl">
+                <p className="text-lg text-red-50/90 font-medium mb-12 leading-relaxed max-w-xl">
                   Welcome to the future of life-saving innovation. Get real-time updates on urgent blood needs, track your donations, and find nearby camps instantly.
                 </p>
 
-                <div className="flex flex-col sm:flex-row items-center gap-6 justify-center lg:justify-start">
-                  <a href="#" className="download-btn group bg-white text-gray-900 px-8 py-5 rounded-[2rem] flex items-center gap-4 transition-all hover:scale-105 active:scale-95 shadow-xl shadow-black/10">
-                    <div className="w-12 h-12 bg-gray-900 rounded-xl flex items-center justify-center text-white group-hover:bg-red-600 transition-colors">
-                      <i className="fab fa-apple text-2xl"></i>
-                    </div>
+                <div className="flex flex-col sm:flex-row items-center gap-4 justify-center lg:justify-start">
+                  <a href="#" className="app-store-btn">
+                    <i className="fab fa-apple text-3xl"></i>
                     <div className="text-left">
-                      <div className="text-[10px] font-black uppercase tracking-widest text-gray-400">Download on</div>
-                      <div className="text-lg font-black leading-none">App Store</div>
+                      <div className="text-[10px] font-bold uppercase tracking-widest text-gray-400 leading-none mb-1">Download on</div>
+                      <div className="text-xl font-black leading-none">App Store</div>
                     </div>
                   </a>
 
-                  <a href="#" className="download-btn group bg-gray-900 text-white px-8 py-5 rounded-[2rem] flex items-center gap-4 border border-white/10 transition-all hover:scale-105 active:scale-95 shadow-xl shadow-black/20">
-                    <div className="w-12 h-12 bg-white/10 rounded-xl flex items-center justify-center group-hover:bg-red-600 transition-colors">
-                      <i className="fab fa-google-play text-xl"></i>
-                    </div>
+                  <a href="#" className="app-store-btn !bg-gray-900 border border-white/10">
+                    <i className="fab fa-google-play text-2xl"></i>
                     <div className="text-left">
-                      <div className="text-[10px] font-black uppercase tracking-widest text-gray-400">Get it on</div>
-                      <div className="text-lg font-black leading-none">Google Play</div>
+                      <div className="text-[10px] font-bold uppercase tracking-widest text-gray-400 leading-none mb-1">Get it on</div>
+                      <div className="text-xl font-black leading-none">Google Play</div>
                     </div>
                   </a>
                 </div>
               </div>
 
-              {/* Right Mockup & QR */}
-              <div className="lg:w-1/2 flex flex-col md:flex-row items-center justify-center gap-12 mockup-container">
-                <div className="relative group">
-                  <div className="absolute inset-0 bg-white/20 blur-[100px] rounded-full group-hover:bg-white/30 transition-all duration-700"></div>
+              {/* Right Mockup & QR - Grouped like Image 2 */}
+              <div className="lg:w-1/2 flex flex-col md:flex-row items-center justify-center gap-10 mockup-container">
+                <div className="relative group/mockup">
+                  <div className="absolute inset-0 bg-white/20 blur-[100px] rounded-full group-hover/mockup:bg-white/30 transition-all duration-700"></div>
                   <img
                     src="/images/app-mockup.png"
                     alt="eBloodBank Mobile App Mockup"
-                    className="w-[280px] md:w-[320px] mockup-image relative z-10 animate-float"
+                    className="w-[280px] md:w-[320px] mockup-image relative z-10"
                   />
                 </div>
 
                 <div className="flex flex-col items-center gap-4">
-                  <div className="qr-container bg-white p-6 shadow-2xl relative group">
+                  <div className="qr-container bg-white p-5 shadow-2xl rounded-[2.5rem] relative group/qr scale-110">
                     <img
                       src="/images/qr-code.png"
                       alt="Scan to Download"
                       className="w-32 h-32 md:w-40 md:h-40"
                     />
-                    <div className="absolute top-4 left-4 w-4 h-4 border-t-2 border-l-2 border-red-500"></div>
-                    <div className="absolute bottom-4 right-4 w-4 h-4 border-b-2 border-r-2 border-red-500"></div>
+                    <div className="absolute top-4 left-4 w-4 h-4 border-t-2 border-l-2 border-red-500 rounded-tl-sm"></div>
+                    <div className="absolute bottom-4 right-4 w-4 h-4 border-b-2 border-r-2 border-red-500 rounded-br-sm"></div>
                   </div>
-                  <div className="text-white text-center">
+                  <div className="text-white text-center mt-2">
                     <div className="text-[10px] font-black uppercase tracking-[0.3em] mb-1">Scan to Download</div>
                     <div className="text-[9px] font-bold text-red-100/60 uppercase tracking-widest italic group-hover:text-white transition-colors">Compatible with iOS & Android</div>
                   </div>
@@ -545,30 +541,30 @@ export default function Home() {
           </div>
         </section>
 
-        {/* Contact Section */}
-        <section id="contact" className="py-24 contact-section relative overflow-hidden">
+        {/* Contact Section - Redesigned to match Image 1 */}
+        <section id="contact" className="section-padding contact-section relative overflow-hidden">
           <div className="container mx-auto px-6 relative z-10">
             <div className="contact-curved-card">
               <div className="text-center">
-                <h2 className="text-4xl font-bold mb-8">Get In Touch</h2>
-                <p className="text-xl mb-12 opacity-90 max-w-2xl mx-auto">Have questions? Need help? We're here for you 24/7 to support your life-saving journey.</p>
-                <div className="flex flex-col md:flex-row justify-center items-center gap-8 md:gap-12">
-                  <div className="flex items-center gap-4 bg-white/10 backdrop-blur-md px-8 py-4 rounded-2xl border border-white/10 hover:bg-white/20 transition-all group">
-                    <div className="w-12 h-12 bg-white text-red-600 rounded-xl flex items-center justify-center shadow-lg group-hover:rotate-12 transition-transform">
-                      <i className="fas fa-envelope text-xl"></i>
+                <h2 className="text-5xl font-black text-gray-900 mb-6 tracking-tight">Get In Touch</h2>
+                <p className="text-lg text-gray-500 mb-16 font-medium max-w-2xl mx-auto leading-relaxed">Have questions? Need help? We're here for you 24/7 to support your life-saving journey.</p>
+                <div className="flex flex-col md:flex-row justify-center items-center gap-8 md:gap-16">
+                  <div className="contact-info-box group">
+                    <div className="contact-icon-wrapper group-hover:scale-110 transition-transform">
+                      <i className="fas fa-envelope"></i>
                     </div>
                     <div className="text-left">
-                      <p className="text-[10px] font-black uppercase tracking-widest text-red-100/60">Email Support</p>
-                      <p className="font-bold">ebloodbankoriginal@gmail.com</p>
+                      <p className="text-[10px] font-black uppercase tracking-widest text-red-500 mb-1">Email Support</p>
+                      <p className="font-bold text-gray-800">ebloodbankoriginal@gmail.com</p>
                     </div>
                   </div>
-                  <div className="flex items-center gap-4 bg-white/10 backdrop-blur-md px-8 py-4 rounded-2xl border border-white/10 hover:bg-white/20 transition-all group">
-                    <div className="w-12 h-12 bg-white text-red-600 rounded-xl flex items-center justify-center shadow-lg group-hover:rotate-12 transition-transform">
-                      <i className="fas fa-phone-alt text-xl"></i>
+                  <div className="contact-info-box group">
+                    <div className="contact-icon-wrapper group-hover:scale-110 transition-transform">
+                      <i className="fas fa-phone-alt"></i>
                     </div>
                     <div className="text-left">
-                      <p className="text-[10px] font-black uppercase tracking-widest text-red-100/60">Phone Support</p>
-                      <p className="font-bold">+91 8567329419</p>
+                      <p className="text-[10px] font-black uppercase tracking-widest text-red-500 mb-1">Phone Support</p>
+                      <p className="font-bold text-gray-800">+91 8567329419</p>
                     </div>
                   </div>
                 </div>
