@@ -146,6 +146,7 @@ export default function Home() {
               <a href="#home" className="hover:text-red-200 transition-colors">Home</a>
               <Link to={getDonorRedirectPath()} className="hover:text-red-200 transition-colors">Donors</Link>
               <Link to="/seeker" className="hover:text-red-200 transition-colors">Seekers</Link>
+              <a href="#mobile-app" className="hover:text-red-200 transition-colors">Mobile App</a>
               <a href="#aboutt" className="hover:text-red-200 transition-colors">About</a>
               <a href="#contact" className="hover:text-red-200 transition-colors">Contact</a>
             </nav>
@@ -466,31 +467,8 @@ export default function Home() {
           </div>
         </section>
 
-        {/* Contact Section */}
-        <section id="contact" className="py-16 gradient-bg text-white">
-          <div className="container mx-auto px-6 text-center">
-            <h2 className="text-4xl font-bold mb-8">Get In Touch</h2>
-            <p className="text-xl mb-8">Have questions? Need help? We're here for you 24/7.</p>
-            <div className="flex flex-row justify-center items-center space-x-8">
-              <div className="flex items-center space-x-2">
-                <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-                  <path d="M20 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z" />
-                </svg>
-                <span>ebloodbankoriginal@gmail.com</span>
-              </div>
-              <div className="flex items-center space-x-2">
-                <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-                  <path d="M6.62 10.79c1.44 2.83 3.76 5.14 6.59 6.59l2.2-2.2c.27-.27.67-.36 1.02-.24 1.12.37 2.33.57 3.57.57.55 0 1 .45 1 1V20c0 .55-.45 1-1 1-9.39 0-17-7.61-17-17 0-.55.45-1 1-1h3.5c.55 0 1 .45 1 1 0 1.25.2 2.45.57 3.57.11.35.03.74-.25 1.02l-2.2 2.2z" />
-                </svg>
-                <span>8567329419</span>
-              </div>
-            </div>
-          </div>
-        </section>
-      </main>
-
         {/* Mobile App Download Section */}
-        <section className="py-24 download-app-section relative overflow-hidden">
+        <section id="mobile-app" className="py-24 download-app-section relative overflow-hidden">
           {/* Decorative Blobs */}
           <div className="decorative-blob w-[500px] h-[500px] -top-24 -left-24 opacity-20"></div>
           <div className="decorative-blob w-[400px] h-[400px] -bottom-24 -right-24 opacity-10"></div>
@@ -499,17 +477,17 @@ export default function Home() {
             <div className="download-app-card p-12 md:p-20 flex flex-col lg:flex-row items-center justify-between gap-16">
               {/* Left Content */}
               <div className="lg:w-1/2 text-white text-center lg:text-left">
-                <div className="inline-flex items-center gap-2 bg-white/20 backdrop-blur-md px-4 py-2 rounded-full text-[10px] font-black uppercase tracking-[0.2em] mb-6 border border-white/10 animate-fade-in-up">
+                <div className="inline-flex items-center gap-2 bg-white/20 backdrop-blur-md px-4 py-2 rounded-full text-[10px] font-black uppercase tracking-[0.2em] mb-6 border border-white/10">
                   <span className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></span>
                   Now Available on Mobile
                 </div>
 
-                <h2 className="text-4xl md:text-6xl font-black uppercase tracking-tight mb-8 leading-[1.1] animate-fade-in-up">
+                <h2 className="text-4xl md:text-6xl font-black uppercase tracking-tight mb-8 leading-[1.1]">
                   Download Our <br />
                   <span className="text-transparent bg-clip-text bg-gradient-to-r from-white via-white/80 to-white/60">App Right Now</span>
                 </h2>
 
-                <p className="text-lg md:text-xl text-red-50/80 font-medium mb-12 leading-relaxed animate-fade-in-up opacity-90 max-w-xl">
+                <p className="text-lg md:text-xl text-red-50/80 font-medium mb-12 leading-relaxed opacity-90 max-w-xl">
                   Welcome to the future of life-saving innovation. Get real-time updates on urgent blood needs, track your donations, and find nearby camps instantly.
                 </p>
 
@@ -539,12 +517,11 @@ export default function Home() {
               {/* Right Mockup & QR */}
               <div className="lg:w-1/2 flex flex-col md:flex-row items-center justify-center gap-12 mockup-container">
                 <div className="relative group">
-                  {/* Glowing background for phone */}
                   <div className="absolute inset-0 bg-white/20 blur-[100px] rounded-full group-hover:bg-white/30 transition-all duration-700"></div>
                   <img
                     src="/images/app-mockup.png"
                     alt="eBloodBank Mobile App Mockup"
-                    className="w-[280px] md:w-[320px] mockup-image relative z-10"
+                    className="w-[280px] md:w-[320px] mockup-image relative z-10 animate-float"
                   />
                 </div>
 
@@ -555,7 +532,6 @@ export default function Home() {
                       alt="Scan to Download"
                       className="w-32 h-32 md:w-40 md:h-40"
                     />
-                    {/* Corner accents */}
                     <div className="absolute top-4 left-4 w-4 h-4 border-t-2 border-l-2 border-red-500"></div>
                     <div className="absolute bottom-4 right-4 w-4 h-4 border-b-2 border-r-2 border-red-500"></div>
                   </div>
@@ -568,6 +544,39 @@ export default function Home() {
             </div>
           </div>
         </section>
+
+        {/* Contact Section */}
+        <section id="contact" className="py-24 contact-section relative overflow-hidden">
+          <div className="container mx-auto px-6 relative z-10">
+            <div className="contact-curved-card">
+              <div className="text-center">
+                <h2 className="text-4xl font-bold mb-8">Get In Touch</h2>
+                <p className="text-xl mb-12 opacity-90 max-w-2xl mx-auto">Have questions? Need help? We're here for you 24/7 to support your life-saving journey.</p>
+                <div className="flex flex-col md:flex-row justify-center items-center gap-8 md:gap-12">
+                  <div className="flex items-center gap-4 bg-white/10 backdrop-blur-md px-8 py-4 rounded-2xl border border-white/10 hover:bg-white/20 transition-all group">
+                    <div className="w-12 h-12 bg-white text-red-600 rounded-xl flex items-center justify-center shadow-lg group-hover:rotate-12 transition-transform">
+                      <i className="fas fa-envelope text-xl"></i>
+                    </div>
+                    <div className="text-left">
+                      <p className="text-[10px] font-black uppercase tracking-widest text-red-100/60">Email Support</p>
+                      <p className="font-bold">ebloodbankoriginal@gmail.com</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-4 bg-white/10 backdrop-blur-md px-8 py-4 rounded-2xl border border-white/10 hover:bg-white/20 transition-all group">
+                    <div className="w-12 h-12 bg-white text-red-600 rounded-xl flex items-center justify-center shadow-lg group-hover:rotate-12 transition-transform">
+                      <i className="fas fa-phone-alt text-xl"></i>
+                    </div>
+                    <div className="text-left">
+                      <p className="text-[10px] font-black uppercase tracking-widest text-red-100/60">Phone Support</p>
+                      <p className="font-bold">+91 8567329419</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+      </main>
 
       {/* Footer */}
       <footer className="bg-black text-white py-12">

@@ -34,6 +34,35 @@ const calculateDonorAvailability = async (donorId, connection = null) => {
         // Keep database in sync
         await db.query('UPDATE donors SET availability = ?, last_donation_date = ? WHERE id = ?', [status, lastDonationDate, donorId]);
 
+        // Logic to trigger notification when donor becomes available
+        if (status === 'Available' && lastDonationDate) {
+            // Check if they already have an eligibility notification for this last donation
+            // We use the last donation date as a reference
+            const [existing] = await db.query(
+                "SELECT id FROM notifications WHERE recipient_id = ? AND recipient_type = 'Donor' AND type = 'ELIGIBILITY' AND title LIKE ?",
+                [donorId, `%Ready to Save Lives Again%`]
+            );
+
+            if (existing.length === 0) {
+                // Check if they had a donation in the last 100 days (to avoid spamming very old donors)
+                const hundredDaysAgo = new Date();
+                hundredDaysAgo.setDate(hundredDaysAgo.getDate() - 100);
+                
+                if (lastDonationDate > hundredDaysAgo) {
+                    await db.query(
+                        "INSERT INTO notifications (recipient_id, recipient_type, type, title, message) VALUES (?, ?, ?, ?, ?)",
+                        [
+                            donorId, 
+                            'Donor', 
+                            'ELIGIBILITY', 
+                            'Ready to Save Lives Again! 🩸', 
+                            'Great news! Your 90-day rest period is over. You are now eligible to donate blood and help those in need. Visit a nearby center today!'
+                        ]
+                    );
+                }
+            }
+        }
+
         return {
             status,
             lastDonationDate,

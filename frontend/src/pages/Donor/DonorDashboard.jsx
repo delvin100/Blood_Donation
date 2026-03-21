@@ -1375,9 +1375,9 @@ const Dashboard = () => {
                 </p>
 
                 <div className="flex flex-col sm:flex-row items-center gap-4 justify-center lg:justify-start">
-                  <div className="bg-white p-4 rounded-2xl shadow-xl hover:scale-105 transition-transform group/qr">
-                    <img src="/images/qr-code.png" alt="Scan Me" className="w-24 h-24" />
-                    <p className="text-[8px] font-black text-gray-400 text-center mt-2 uppercase tracking-widest group-hover/qr:text-red-500 transition-colors">Scan to Download</p>
+                  <div className="bg-white p-6 rounded-3xl shadow-xl hover:scale-105 transition-transform group/qr">
+                    <img src="/images/qr-code.png" alt="Scan Me" className="w-44 h-44" />
+                    <p className="text-[10px] font-black text-gray-400 text-center mt-3 uppercase tracking-[0.2em] group-hover/qr:text-red-500 transition-colors">Scan to Download</p>
                   </div>
 
                   <div className="flex flex-col gap-3 w-full sm:w-auto">
@@ -1393,21 +1393,7 @@ const Dashboard = () => {
             </div>
           </div>
           
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {[
-              { title: 'Offline Access', icon: 'fa-map-marked-alt', desc: 'Find centers without internet.' },
-              { title: 'Push Alerts', icon: 'fa-bell', desc: 'Instant SOS notifications.' },
-              { title: 'Digital ID', icon: 'fa-id-card', desc: 'Your donor card in your pocket.' },
-            ].map((feature, i) => (
-              <div key={i} className="bg-white border border-gray-100 p-5 rounded-[2rem] shadow-sm hover:shadow-md transition-shadow">
-                <div className="w-10 h-10 bg-red-50 text-red-500 rounded-xl flex items-center justify-center mb-3">
-                  <i className={`fas ${feature.icon}`}></i>
-                </div>
-                <h4 className="font-black text-gray-800 text-sm mb-1 uppercase tracking-tight">{feature.title}</h4>
-                <p className="text-xs text-gray-500 font-medium">{feature.desc}</p>
-              </div>
-            ))}
-          </div>
+          {/* Feature cards removed per user request */}
         </div>
       )
     }
@@ -2009,9 +1995,18 @@ const Dashboard = () => {
                             <span className="text-[10px] font-black text-rose-400 uppercase tracking-[0.2em] leading-none mt-1">Active Broadcasts</span>
                           </div>
                         </span>
-                        <div className="flex items-center gap-2 bg-rose-50 px-3 py-1.5 rounded-full border border-rose-100">
-                          <span className="w-2 h-2 rounded-full bg-rose-500 animate-ping"></span>
-                          <span className="text-[10px] font-black text-rose-600 uppercase tracking-widest">Live Pulse</span>
+                        <div className="flex items-center gap-4">
+                          <button 
+                            onClick={() => openInfo('mobile-app')}
+                            className="bg-gray-100 hover:bg-red-50 text-gray-400 hover:text-red-500 p-2.5 rounded-xl transition-all group"
+                            title="Download Mobile App"
+                          >
+                            <i className="fas fa-mobile-screen-button text-sm group-hover:animate-bounce"></i>
+                          </button>
+                          <div className="flex items-center gap-2 bg-rose-50 px-3 py-1.5 rounded-full border border-rose-100">
+                            <span className="w-2 h-2 rounded-full bg-rose-500 animate-ping"></span>
+                            <span className="text-[10px] font-black text-rose-600 uppercase tracking-widest">Live Pulse</span>
+                          </div>
                         </div>
                       </h3>
 

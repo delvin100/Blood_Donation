@@ -836,26 +836,26 @@ const Seeker = () => {
                                 </div>
 
                                 {/* Right Side: Links & QR */}
-                                <div className="md:w-1/2 text-center md:text-left">
+                                <div className="md:w-1/2 text-center">
                                     <h3 className="text-3xl font-black text-gray-900 uppercase tracking-tight mb-4 leading-tight">
                                         Download <br /><span className="text-red-600 italic">eBloodBank</span>
                                     </h3>
                                     <p className="text-gray-500 font-bold text-sm mb-8">Scan to download or use the store buttons below.</p>
                                     
-                                    <div className="flex flex-col items-center md:items-start gap-6">
-                                        <div className="bg-white p-4 rounded-3xl shadow-xl border border-gray-100 inline-block hover:scale-105 transition-transform group/qr">
-                                            <img src="/images/qr-code.png" alt="QR Code" className="w-28 h-28" />
-                                            <div className="text-center mt-3">
-                                                <span className="text-[10px] font-black text-gray-300 uppercase tracking-widest group-hover/qr:text-red-500 transition-colors">Scan Now</span>
+                                    <div className="flex flex-col items-center gap-8">
+                                        <div className="bg-white p-6 rounded-[2.5rem] shadow-2xl border border-gray-100 hover:scale-105 transition-transform group/qr">
+                                            <img src="/images/qr-code.png" alt="QR Code" className="w-48 h-48" />
+                                            <div className="text-center mt-4">
+                                                <span className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] group-hover/qr:text-red-500 transition-colors">Scan to Download</span>
                                             </div>
                                         </div>
 
-                                        <div className="flex flex-col gap-3 w-full">
-                                            <button className="flex items-center justify-center gap-3 bg-gray-900 hover:bg-black text-white px-6 py-4 rounded-2xl transition-all shadow-xl shadow-gray-200 font-black text-xs uppercase tracking-widest group/btn">
+                                        <div className="flex flex-col sm:flex-row gap-3 w-full">
+                                            <button className="flex-1 flex items-center justify-center gap-3 bg-gray-900 hover:bg-black text-white px-6 py-4 rounded-2xl transition-all shadow-xl shadow-gray-200 font-black text-xs uppercase tracking-widest group/btn">
                                                 <i className="fab fa-apple text-xl"></i>
                                                 <span>App Store</span>
                                             </button>
-                                            <button className="flex items-center justify-center gap-3 bg-white border-2 border-gray-100 hover:border-red-500 hover:bg-red-50 text-gray-900 px-6 py-4 rounded-2xl transition-all font-black text-xs uppercase tracking-widest group/btn">
+                                            <button className="flex-1 flex items-center justify-center gap-3 bg-white border-2 border-gray-100 hover:border-red-500 hover:bg-red-50 text-gray-900 px-6 py-4 rounded-2xl transition-all font-black text-xs uppercase tracking-widest group/btn">
                                                 <i className="fab fa-google-play text-lg text-red-500"></i>
                                                 <span>Play Store</span>
                                             </button>
