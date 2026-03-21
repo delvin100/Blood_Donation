@@ -33,6 +33,7 @@ router.delete('/admins/:id', verifyAdminToken, adminController.deleteAdmin);
 router.get('/donors/:id', verifyAdminToken, adminController.getDonorDetails);
 router.get('/organizations/:id', verifyAdminToken, adminController.getOrgDetails);
 router.get('/reports/:id', verifyAdminToken, adminController.getReportDetails);
+router.get('/drives/:id', verifyAdminToken, adminController.getDriveDetails);
 
 router.delete('/donors/:id', verifyAdminToken, adminController.deleteDonor);
 router.delete('/organizations/:id', verifyAdminToken, adminController.deleteOrganization);

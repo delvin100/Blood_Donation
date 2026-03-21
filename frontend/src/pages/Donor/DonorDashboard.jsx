@@ -1346,62 +1346,62 @@ const Dashboard = () => {
       title: 'eBloodBank Mobile',
       content: (
         <div className="animate-in fade-in zoom-in-95 duration-500">
-          <div className="bg-[#dc2626] rounded-[3rem] p-6 md:p-10 relative overflow-hidden group shadow-2xl shadow-red-500/20">
+          <div className="bg-[#dc2626] rounded-[2.5rem] p-5 md:p-8 relative overflow-hidden group shadow-2xl shadow-red-500/20">
             {/* Background Accents like Image 2/4/766 style */}
             <div className="absolute -top-24 -right-24 w-96 h-96 bg-white/10 rounded-full blur-[100px]"></div>
             <div className="absolute -bottom-24 -left-24 w-80 h-80 bg-black/10 rounded-full blur-[80px]"></div>
 
-            <div className="flex flex-col lg:flex-row items-center gap-8 relative z-10">
+            <div className="flex flex-col lg:flex-row items-center gap-6 relative z-10">
               {/* Left Side: Mockup with Glow */}
               <div className="lg:w-2/5 flex justify-center relative">
                 <div className="absolute inset-0 bg-white/20 blur-[80px] rounded-full animate-pulse"></div>
                 <img
                   src="/images/app-mockup.png"
                   alt="eBloodBank Mobile App"
-                  className="w-56 md:w-80 relative z-10 drop-shadow-[0_30px_60px_rgba(0,0,0,0.4)] transition-transform duration-700 group-hover:scale-105"
+                  className="w-44 md:w-56 relative z-10 drop-shadow-[0_30px_60px_rgba(0,0,0,0.4)] transition-transform duration-700 group-hover:scale-105"
                 />
               </div>
 
               {/* Right Side: Content based on Image 766 */}
               <div className="lg:w-3/5 text-center lg:text-left text-white">
-                <div className="inline-flex items-center gap-3 bg-white/15 backdrop-blur-xl px-5 py-2.5 rounded-full text-[11px] font-black uppercase tracking-[0.2em] mb-6 border border-white/20 shadow-xl">
-                  <span className="w-2.5 h-2.5 bg-green-400 rounded-full animate-pulse shadow-[0_0_15px_rgba(74,222,128,0.5)]"></span>
-                  Live on App Store & Play Store
+                <div className="inline-flex items-center gap-3 bg-white/15 backdrop-blur-xl px-5 py-2 rounded-full text-[10px] font-black uppercase tracking-[0.2em] mb-4 border border-white/20 shadow-xl">
+                  <span className="w-2 h-2 bg-green-400 rounded-full animate-pulse shadow-[0_0_15px_rgba(74,222,128,0.5)]"></span>
+                  Ready on Stores
                 </div>
 
-                <h3 className="text-4xl md:text-5xl font-black mb-6 leading-[1.05] tracking-tighter uppercase max-w-lg">
-                  Take the <span className="text-white/90">Power</span> <br />
-                  In Your <span className="text-white/80">Pocket</span>
+                <h3 className="text-3xl md:text-4xl font-black mb-4 leading-[1.05] tracking-tighter uppercase max-w-lg">
+                  Power <span className="text-white/90">In Your</span> <br />
+                  <span className="text-white/80">Pocket</span>
                 </h3>
 
-                <p className="text-red-50/90 font-bold text-base mb-8 leading-relaxed max-w-xl opacity-90">
-                  Get instant emergency alerts, track your donations in real-time, and manage your profile with our award-winning experience.
+                <p className="text-red-50/90 font-bold text-sm mb-6 leading-relaxed max-w-xl opacity-90">
+                  Instant alerts & real-time tracking. Manage your legacy on the go.
                 </p>
 
                 {/* Bottom Section: QR & Store Buttons */}
-                <div className="flex flex-col sm:flex-row items-center gap-8 justify-center lg:justify-start">
-                  <div className="bg-white p-5 rounded-[2rem] shadow-2xl transform hover:scale-110 transition-all duration-500 group/qr relative">
-                    <img src="/images/qr-code.png" alt="Scan to Download" className="w-28 h-28 md:w-32 md:h-32" />
+                <div className="flex flex-col sm:flex-row items-center gap-6 justify-center lg:justify-start">
+                  <div className="bg-white p-4 rounded-[2rem] shadow-2xl transform hover:scale-110 transition-all duration-500 group/qr relative shrink-0">
+                    <img src="/images/qr-code.png" alt="Scan to Download" className="w-32 h-32 md:w-40 md:h-40" />
                     <div className="absolute inset-0 border-2 border-red-500/10 rounded-[2rem] pointer-events-none"></div>
                   </div>
 
-                  <div className="flex flex-col gap-4 w-full sm:w-auto">
-                    <a href="#" className="flex items-center gap-4 bg-white text-gray-900 px-8 py-4 rounded-2xl hover:bg-gray-50 transition-all font-black text-xs uppercase tracking-widest shadow-xl group/btn">
-                      <div className="w-10 h-10 bg-gray-900 rounded-xl flex items-center justify-center text-white group-hover/btn:bg-red-600 transition-colors">
-                        <i className="fab fa-apple text-xl"></i>
+                  <div className="flex flex-col gap-3 w-full sm:w-auto">
+                    <a href="#" className="flex items-center gap-3 bg-white text-gray-900 px-6 py-3 rounded-2xl hover:bg-gray-50 transition-all font-black text-[10px] uppercase tracking-widest shadow-xl group/btn">
+                      <div className="w-8 h-8 bg-gray-900 rounded-xl flex items-center justify-center text-white group-hover/btn:bg-red-600 transition-colors">
+                        <i className="fab fa-apple text-lg"></i>
                       </div>
                       <div className="text-left">
-                        <span className="text-[9px] block text-gray-400 leading-none mb-1">Download on</span>
-                        <span className="text-base leading-none">App Store</span>
+                        <span className="text-[8px] block text-gray-400 leading-none mb-1">Download on</span>
+                        <span className="text-sm leading-none">App Store</span>
                       </div>
                     </a>
-                    <a href="#" className="flex items-center gap-4 bg-gray-900 border border-white/10 text-white px-8 py-4 rounded-2xl hover:bg-black transition-all font-black text-xs uppercase tracking-widest shadow-xl group/btn2">
-                      <div className="w-10 h-10 bg-white/10 rounded-xl flex items-center justify-center group-hover/btn2:bg-red-600 transition-colors">
-                        <i className="fab fa-google-play text-lg"></i>
+                    <a href="#" className="flex items-center gap-3 bg-gray-900 border border-white/10 text-white px-6 py-3 rounded-2xl hover:bg-black transition-all font-black text-[10px] uppercase tracking-widest shadow-xl group/btn2">
+                      <div className="w-8 h-8 bg-white/10 rounded-xl flex items-center justify-center group-hover/btn2:bg-red-600 transition-colors">
+                        <i className="fab fa-google-play text-base"></i>
                       </div>
                       <div className="text-left">
-                        <span className="text-[9px] block text-gray-400 leading-none mb-1">Get it on</span>
-                        <span className="text-base leading-none">Google Play</span>
+                        <span className="text-[8px] block text-gray-400 leading-none mb-1">Get it on</span>
+                        <span className="text-sm leading-none">Google Play</span>
                       </div>
                     </a>
                   </div>

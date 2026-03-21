@@ -797,14 +797,32 @@ export default function AdminDashboard() {
 
 function OrgDetailView({ org, onBack, onVerify, onDelete }) {
     const [showAllMembers, setShowAllMembers] = useState(false);
-    const [showAllInventory, setShowAllInventory] = useState(false);
     const [showAllRequests, setShowAllRequests] = useState(false);
+    const [showAllEvents, setShowAllEvents] = useState(false);
+    const [selectedEvent, setSelectedEvent] = useState(null);
+    const [eventLoading, setEventLoading] = useState(false);
 
     if (!org) return null;
 
     const displayedMembers = showAllMembers ? org.members : org.members?.slice(0, 5);
     const displayedInventory = showAllInventory ? org.inventory : org.inventory?.slice(0, 5);
     const displayedRequests = showAllRequests ? org.requests : org.requests?.slice(0, 5);
+    const displayedEvents = showAllEvents ? org.drives : org.drives?.slice(0, 5);
+
+    const handleViewEvent = async (eventId) => {
+        setEventLoading(true);
+        try {
+            const response = await axios.get(`http://localhost:5000/api/admin/drives/${eventId}`, {
+                headers: { Authorization: `Bearer ${localStorage.getItem('adminToken')}` }
+            });
+            setSelectedEvent(response.data);
+        } catch (error) {
+            console.error('Error fetching event details:', error);
+            toast.error('Failed to load event details');
+        } finally {
+            setEventLoading(false);
+        }
+    };
 
     return (
         <div className="space-y-6 animate-fade-in-up">
@@ -1074,6 +1092,141 @@ function OrgDetailView({ org, onBack, onVerify, onDelete }) {
                     )}
                 </div>
             </div>
+
+            {/* Events Held Section */}
+            <div className="bg-white rounded-3xl shadow-xl shadow-gray-200/50 border border-white overflow-hidden">
+                <div className="p-8 border-b border-gray-100 flex justify-between items-center">
+                    <h3 className="font-black text-gray-900 uppercase tracking-tight">Events Held</h3>
+                    <Badge status="info">{org.drives?.length || 0} Total Events</Badge>
+                </div>
+                <div className="overflow-x-auto">
+                    <table className="min-w-full text-sm text-gray-600">
+                        <thead className="bg-gray-50/50 text-gray-400 font-bold uppercase tracking-wider text-[10px]">
+                            <tr>
+                                <th className="px-8 py-4 text-left">Event Name</th>
+                                <th className="px-8 py-4 text-center">Location</th>
+                                <th className="px-8 py-4 text-center">Date</th>
+                                <th className="px-8 py-4 text-center">Units Collected</th>
+                                <th className="px-8 py-4 text-center">Status</th>
+                                <th className="px-8 py-4 text-right">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody className="divide-y divide-gray-100">
+                            {displayedEvents && displayedEvents.length > 0 ? (
+                                displayedEvents.map(drive => (
+                                    <tr key={drive.id} className="hover:bg-gray-50/50 transition-colors">
+                                        <td className="px-8 py-5 font-bold text-gray-900">{drive.event_name}</td>
+                                        <td className="px-8 py-5 text-center">{drive.location}</td>
+                                        <td className="px-8 py-5 text-center font-medium">
+                                            {new Date(drive.start_date).toLocaleDateString()}
+                                        </td>
+                                        <td className="px-8 py-5 text-center font-black text-blue-600">
+                                            {drive.collected_units || 0} Units
+                                        </td>
+                                        <td className="px-8 py-5 text-center">
+                                            <Badge status={
+                                                drive.status === 'Completed' ? 'success' :
+                                                drive.status === 'Active' ? 'warning' :
+                                                drive.status === 'Cancelled' ? 'danger' : 'info'
+                                            }>
+                                                {drive.status}
+                                            </Badge>
+                                        </td>
+                                        <td className="px-8 py-5 text-right">
+                                            <button
+                                                onClick={() => handleViewEvent(drive.id)}
+                                                className="px-4 py-2 bg-blue-50 text-blue-600 rounded-xl hover:bg-blue-600 hover:text-white font-bold transition-all text-xs"
+                                            >
+                                                {eventLoading && selectedEvent?.id === drive.id ? <i className="fas fa-spinner fa-spin"></i> : 'View Details'}
+                                            </button>
+                                        </td>
+                                    </tr>
+                                ))
+                            ) : (
+                                <tr>
+                                    <td colSpan="6" className="px-8 py-12 text-center text-gray-400">
+                                        <i className="fas fa-calendar-times mb-2 text-2xl opacity-20 block"></i>
+                                        <p className="font-bold uppercase tracking-widest text-[10px]">No events recorded</p>
+                                    </td>
+                                </tr>
+                            )}
+                        </tbody>
+                    </table>
+                </div>
+                {org.drives?.length > 5 && (
+                    <div className="p-4 bg-gray-50/50 border-t border-gray-100 text-center">
+                        <button
+                            onClick={() => setShowAllEvents(!showAllEvents)}
+                            className="text-xs font-black text-blue-600 hover:text-blue-700 uppercase tracking-widest flex items-center gap-2 mx-auto"
+                        >
+                            {showAllEvents ? 'Show Less' : `Show All ${org.drives.length} Events`}
+                            <i className={`fas fa-chevron-${showAllEvents ? 'up' : 'down'}`}></i>
+                        </button>
+                    </div>
+                )}
+            </div>
+
+            {/* Event Detail Modal */}
+            {selectedEvent && (
+                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in shadow-2xl">
+                    <div className="bg-white rounded-[2.5rem] w-full max-w-2xl overflow-hidden shadow-2xl animate-scale-up border border-white">
+                        <div className="bg-gradient-to-br from-gray-900 to-blue-900 p-8 text-white relative">
+                            <button
+                                onClick={() => setSelectedEvent(null)}
+                                className="absolute top-6 right-6 w-10 h-10 rounded-full bg-white/10 flex items-center justify-center hover:bg-white/20 transition-all border border-white/10"
+                            >
+                                <i className="fas fa-times"></i>
+                            </button>
+                            <div className="inline-block px-3 py-1 bg-blue-500/20 text-blue-200 border-none uppercase tracking-widest text-[10px] font-bold rounded-full mb-4">Event Archive</div>
+                            <h2 className="text-3xl font-black tracking-tight">{selectedEvent.event_name}</h2>
+                            <div className="flex flex-wrap items-center gap-4 mt-4 text-blue-100 font-bold text-sm">
+                                <span className="flex items-center gap-2"><i className="fas fa-calendar text-blue-400"></i> {new Date(selectedEvent.start_date).toLocaleDateString()}</span>
+                                <span className="flex items-center gap-2"><i className="fas fa-map-marker-alt text-blue-400"></i> {selectedEvent.location}</span>
+                            </div>
+                        </div>
+
+                        <div className="p-8">
+                            <h4 className="text-gray-900 font-black uppercase tracking-tight text-xs mb-6 flex items-center gap-2">
+                                <span className="w-6 h-6 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center text-[10px]"><i className="fas fa-tint"></i></span>
+                                Blood Group Collection Breakdown
+                            </h4>
+
+                            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                                {selectedEvent.breakdown && selectedEvent.breakdown.length > 0 ? (
+                                    selectedEvent.breakdown.map(item => (
+                                        <div key={item.blood_group} className="bg-gray-50 rounded-2xl p-4 border border-gray-100/50 hover:border-blue-200 transition-all group">
+                                            <div className="text-red-600 font-black text-xl mb-1 group-hover:scale-110 transition-transform">{item.blood_group}</div>
+                                            <div className="text-2xl font-black text-gray-900">{item.total_units}</div>
+                                            <div className="text-[10px] font-black text-gray-400 uppercase">Units</div>
+                                        </div>
+                                    ))
+                                ) : (
+                                    <div className="col-span-full py-8 text-center text-gray-400 font-bold uppercase tracking-widest text-[10px] bg-gray-50 rounded-2xl border border-dashed border-gray-200">
+                                        No breakdown data available
+                                    </div>
+                                )}
+                            </div>
+
+                            <div className="mt-8 p-4 bg-blue-50 rounded-2xl border border-blue-100">
+                                <div className="flex justify-between items-center mb-2">
+                                    <span className="text-[10px] font-black text-blue-600 uppercase tracking-widest">Total Collected</span>
+                                    <span className="px-3 py-1 bg-green-100 text-green-700 rounded-lg text-xs font-black">{selectedEvent.collected_units || 0} Units</span>
+                                </div>
+                                <div className="text-xs text-blue-900/60 font-medium leading-relaxed">
+                                    {selectedEvent.description || 'No additional event description available in archives.'}
+                                </div>
+                            </div>
+
+                            <button
+                                onClick={() => setSelectedEvent(null)}
+                                className="w-full mt-8 py-4 bg-gray-900 text-white rounded-2xl font-black uppercase tracking-widest text-xs hover:bg-gray-800 transition-all shadow-lg shadow-gray-900/10"
+                            >
+                                Close Details
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

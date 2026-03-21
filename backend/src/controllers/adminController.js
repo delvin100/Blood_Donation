@@ -205,12 +205,34 @@ exports.getOrgDetails = async (req, res) => {
             ORDER BY om.joined_at DESC
         `, [req.params.id]);
         const [requestRows] = await pool.query('SELECT * FROM emergency_requests WHERE org_id = ? ORDER BY created_at DESC', [req.params.id]);
+        const [driveRows] = await pool.query('SELECT * FROM blood_drives WHERE org_id = ? ORDER BY start_date DESC', [req.params.id]);
 
         const org = orgRows[0];
         org.inventory = inventoryRows;
         org.members = memberRows;
         org.requests = requestRows;
+        org.drives = driveRows;
         res.json(org);
+    } catch (err) {
+        res.status(500).json({ error: 'Server error' });
+    }
+};
+
+exports.getDriveDetails = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const [drive] = await pool.query('SELECT * FROM blood_drives WHERE id = ?', [id]);
+        if (drive.length === 0) return res.status(404).json({ error: 'Drive not found' });
+
+        const [collections] = await pool.query(
+            'SELECT blood_group, units AS total_units FROM drive_collections WHERE drive_id = ? ORDER BY blood_group ASC',
+            [id]
+        );
+
+        res.json({
+            ...drive[0],
+            breakdown: collections
+        });
     } catch (err) {
         res.status(500).json({ error: 'Server error' });
     }

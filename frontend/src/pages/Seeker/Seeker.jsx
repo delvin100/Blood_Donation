@@ -485,43 +485,29 @@ const Seeker = () => {
 
             <main className="container mx-auto px-6 pb-20">
                 {/* Mobile App Banner - Stylish Redesign */}
-                <div className="max-w-6xl mx-auto mb-16">
-                    <div className="bg-[#dc2626] rounded-[3.5rem] p-8 md:p-12 shadow-2xl shadow-red-500/20 relative overflow-hidden group">
+                <div className="max-w-4xl mx-auto mb-16 px-4">
+                    <div className="bg-[#dc2626] rounded-[3rem] p-8 md:p-10 shadow-2xl shadow-red-500/10 relative overflow-hidden group border border-white/10">
                         {/* Subtle Background Accents */}
-                        <div className="absolute -top-24 -right-24 w-96 h-96 bg-white/10 rounded-full blur-[100px]"></div>
-                        <div className="absolute -bottom-24 -left-24 w-80 h-80 bg-black/10 rounded-full blur-[80px]"></div>
+                        <div className="absolute -top-24 -right-24 w-64 h-64 bg-white/10 rounded-full blur-[80px]"></div>
+                        <div className="absolute -bottom-24 -left-24 w-64 h-64 bg-black/10 rounded-full blur-[80px]"></div>
                         
-                        <div className="relative z-10 flex flex-col md:flex-row items-center gap-12">
-                            {/* Left Side: Mockup */}
-                            <div className="md:w-1/3 flex justify-center relative">
-                                <div className="absolute inset-0 bg-white/20 blur-[80px] rounded-full animate-pulse"></div>
-                                <img 
-                                    src="/images/app-mockup.png" 
-                                    alt="eBloodBank App" 
-                                    className="w-48 md:w-60 relative z-10 drop-shadow-[0_30px_60px_rgba(0,0,0,0.4)] group-hover:scale-105 transition-transform duration-700" 
-                                />
+                        <div className="relative z-10 text-center">
+                            <div className="inline-flex items-center gap-2 bg-white/10 backdrop-blur-xl px-4 py-2 rounded-full text-[10px] font-black uppercase tracking-[0.2em] mb-6 border border-white/20 text-white">
+                                <span className="w-2 h-2 bg-green-400 rounded-full animate-pulse shadow-[0_0_10px_rgba(74,222,128,0.5)]"></span>
+                                Mobile App is Live
                             </div>
-
-                            {/* Right Side: Content */}
-                            <div className="md:w-2/3 text-center md:text-left">
-                                <div className="inline-flex items-center gap-2 bg-white/15 backdrop-blur-xl px-5 py-2.5 rounded-full text-[11px] font-black uppercase tracking-[0.2em] mb-6 border border-white/20 text-white shadow-xl">
-                                    <span className="w-2.5 h-2.5 bg-green-400 rounded-full animate-pulse shadow-[0_0_15px_rgba(74,222,128,0.5)]"></span>
-                                    Now Available on Mobile
-                                </div>
-                                <h3 className="text-4xl md:text-5xl font-black text-white uppercase tracking-tighter mb-6 leading-tight">
-                                    Need Help on the Go?
-                                </h3>
-                                <p className="text-red-50/90 font-bold text-lg mb-10 leading-relaxed max-w-xl opacity-90">
-                                    Download our mobile app <span className="text-white italic">eBloodBank</span> for instant donor matching & GPS tracking.
-                                </p>
-                                <button 
-                                    onClick={() => setIsDownloadModalOpen(true)}
-                                    className="bg-white text-[#dc2626] px-12 py-5 rounded-[2rem] font-black text-xs uppercase tracking-[0.2em] shadow-2xl hover:bg-gray-50 transition-all hover:scale-105 active:scale-95 group/btn flex items-center justify-center gap-3 mx-auto md:mx-0"
-                                >
-                                    <span>Get the App</span>
-                                    <i className="fas fa-arrow-right text-xs group-hover/btn:translate-x-1 transition-transform"></i>
-                                </button>
-                            </div>
+                            <h3 className="text-3xl md:text-4xl font-black text-white uppercase tracking-tighter mb-4 leading-tight">
+                                Download eBloodBank App
+                            </h3>
+                            <p className="text-red-50/80 font-bold text-base mb-8 leading-relaxed max-w-xl mx-auto opacity-90">
+                                Get instant donor matching & GPS tracking in your pocket.
+                            </p>
+                            <button 
+                                onClick={() => setIsDownloadModalOpen(true)}
+                                className="bg-white text-[#dc2626] px-12 py-5 rounded-[2rem] font-black text-xs uppercase tracking-[0.2em] shadow-xl hover:bg-gray-50 transition-all hover:scale-105 active:scale-95 group/btn flex items-center justify-center gap-3 mx-auto"
+                            >
+                                <span>Get the App</span>
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -839,8 +825,8 @@ const Seeker = () => {
                             <i className="fas fa-times"></i>
                         </button>
 
-                        <div className="p-12 lg:p-16">
-                            <div className="flex flex-col md:flex-row items-center gap-12">
+                        <div className="p-8 lg:p-12">
+                            <div className="flex flex-col md:flex-row items-center gap-10">
                                 {/* Left Side: Mockup */}
                                 <div className="md:w-1/2 flex justify-center">
                                     <div className="relative group/mockup">
@@ -848,7 +834,7 @@ const Seeker = () => {
                                         <img 
                                             src="/images/app-mockup.png" 
                                             alt="App Mockup" 
-                                            className="w-64 md:w-80 relative z-10 drop-shadow-[0_30px_60px_rgba(0,0,0,0.3)] animate-float" 
+                                            className="w-72 md:w-96 relative z-10 drop-shadow-[0_40px_80px_rgba(0,0,0,0.4)] animate-float" 
                                         />
                                     </div>
                                 </div>
@@ -859,22 +845,22 @@ const Seeker = () => {
                                         <span className="uppercase tracking-tighter">Download</span> <br />
                                         <span className="text-red-600 italic">eBloodBank</span> <span className="uppercase tracking-tighter">App</span>
                                     </h3>
-                                    <p className="text-gray-500 font-bold text-sm mb-8">Scan to download or use the store buttons below.</p>
+                                    <p className="text-gray-500 font-bold text-sm mb-8">Scan to download or use the store buttons.</p>
                                     
-                                    <div className="flex flex-col items-center gap-8">
-                                        <div className="bg-white p-6 rounded-[2.5rem] shadow-2xl border border-gray-100 hover:scale-105 transition-transform group/qr">
-                                            <img src="/images/qr-code.png" alt="QR Code" className="w-48 h-48" />
-                                            <div className="text-center mt-4">
-                                                <span className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] group-hover/qr:text-red-500 transition-colors">Scan to Download</span>
+                                    <div className="flex flex-col items-center gap-6">
+                                        <div className="bg-white p-6 rounded-[2.5rem] shadow-2xl border border-gray-100 hover:scale-105 transition-transform group/qr shrink-0">
+                                            <img src="/images/qr-code.png" alt="QR Code" className="w-40 h-40 md:w-48 md:h-48" />
+                                            <div className="text-center mt-3">
+                                                <span className="text-[9px] font-black text-gray-400 uppercase tracking-[0.2em]">Scan for Instant Access</span>
                                             </div>
                                         </div>
 
-                                        <div className="flex flex-col sm:flex-row gap-3 w-full">
-                                            <button className="flex-1 flex items-center justify-center gap-3 bg-gray-900 hover:bg-black text-white px-6 py-4 rounded-2xl transition-all shadow-xl shadow-gray-200 font-black text-xs uppercase tracking-widest group/btn">
+                                        <div className="flex flex-col gap-3 w-full">
+                                            <button className="w-full flex items-center justify-center gap-3 bg-gray-900 hover:bg-black text-white px-6 py-4 rounded-2xl transition-all shadow-xl shadow-gray-200 font-black text-xs uppercase tracking-widest group/btn">
                                                 <i className="fab fa-apple text-xl"></i>
                                                 <span>App Store</span>
                                             </button>
-                                            <button className="flex-1 flex items-center justify-center gap-3 bg-white border-2 border-gray-100 hover:border-red-500 hover:bg-red-50 text-gray-900 px-6 py-4 rounded-2xl transition-all font-black text-xs uppercase tracking-widest group/btn">
+                                            <button className="w-full flex items-center justify-center gap-3 bg-white border-2 border-gray-100 hover:border-red-500 hover:bg-red-50 text-gray-900 px-6 py-4 rounded-2xl transition-all font-black text-xs uppercase tracking-widest group/btn">
                                                 <i className="fab fa-google-play text-lg text-red-500"></i>
                                                 <span>Play Store</span>
                                             </button>
