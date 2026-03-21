@@ -799,6 +799,7 @@ function OrgDetailView({ org, onBack, onVerify, onDelete }) {
     const [showAllMembers, setShowAllMembers] = useState(false);
     const [showAllRequests, setShowAllRequests] = useState(false);
     const [showAllEvents, setShowAllEvents] = useState(false);
+    const [showAllInventory, setShowAllInventory] = useState(false);
     const [selectedEvent, setSelectedEvent] = useState(null);
     const [eventLoading, setEventLoading] = useState(false);
 

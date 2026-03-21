@@ -461,7 +461,14 @@ const Seeker = () => {
                             <p className="text-red-100 text-xs font-medium">Connecting Donors, Saving Lives</p>
                         </div>
                     </div>
-                    <div className="flex items-center space-x-6">
+                    <div className="flex items-center gap-3">
+                        <button
+                            onClick={() => setIsDownloadModalOpen(true)}
+                            className="text-sm font-black bg-white text-[#dc2626] hover:bg-gray-100 px-5 py-2 rounded-full transition-all flex items-center gap-2 shadow-md hover:scale-105 active:scale-95"
+                        >
+                            <i className="fas fa-mobile-alt"></i>
+                            <span className="hidden sm:inline uppercase tracking-wider text-xs">Get the App</span>
+                        </button>
                         <button onClick={() => setIsCompatibilityModalOpen(true)} className="text-sm font-bold bg-white/10 hover:bg-white/20 px-4 py-2 rounded-full transition-all flex items-center gap-2">
                             <i className="fas fa-info-circle"></i>
                             <span className="hidden sm:inline">Compatibility Guide</span>
@@ -484,34 +491,6 @@ const Seeker = () => {
             </section>
 
             <main className="container mx-auto px-6 pb-20">
-                {/* Mobile App Banner - Stylish Redesign */}
-                <div className="max-w-4xl mx-auto mb-16 px-4">
-                    <div className="bg-[#dc2626] rounded-[3rem] p-8 md:p-10 shadow-2xl shadow-red-500/10 relative overflow-hidden group border border-white/10">
-                        {/* Subtle Background Accents */}
-                        <div className="absolute -top-24 -right-24 w-64 h-64 bg-white/10 rounded-full blur-[80px]"></div>
-                        <div className="absolute -bottom-24 -left-24 w-64 h-64 bg-black/10 rounded-full blur-[80px]"></div>
-                        
-                        <div className="relative z-10 text-center">
-                            <div className="inline-flex items-center gap-2 bg-white/10 backdrop-blur-xl px-4 py-2 rounded-full text-[10px] font-black uppercase tracking-[0.2em] mb-6 border border-white/20 text-white">
-                                <span className="w-2 h-2 bg-green-400 rounded-full animate-pulse shadow-[0_0_10px_rgba(74,222,128,0.5)]"></span>
-                                Mobile App is Live
-                            </div>
-                            <h3 className="text-3xl md:text-4xl font-black text-white uppercase tracking-tighter mb-4 leading-tight">
-                                Download eBloodBank App
-                            </h3>
-                            <p className="text-red-50/80 font-bold text-base mb-8 leading-relaxed max-w-xl mx-auto opacity-90">
-                                Get instant donor matching & GPS tracking in your pocket.
-                            </p>
-                            <button 
-                                onClick={() => setIsDownloadModalOpen(true)}
-                                className="bg-white text-[#dc2626] px-12 py-5 rounded-[2rem] font-black text-xs uppercase tracking-[0.2em] shadow-xl hover:bg-gray-50 transition-all hover:scale-105 active:scale-95 group/btn flex items-center justify-center gap-3 mx-auto"
-                            >
-                                <span>Get the App</span>
-                            </button>
-                        </div>
-                    </div>
-                </div>
-
                 <div id="search-panel" className="max-w-6xl mx-auto">
                     {/* Search Panel */}
                     <div className="bg-white p-8 md:p-12 rounded-[2.5rem] shadow-2xl shadow-gray-200/50 mb-16 border border-white/60">
@@ -834,7 +813,7 @@ const Seeker = () => {
                                         <img 
                                             src="/images/app-mockup.png" 
                                             alt="App Mockup" 
-                                            className="w-72 md:w-96 relative z-10 drop-shadow-[0_40px_80px_rgba(0,0,0,0.4)] animate-float" 
+                                            className="w-80 md:w-[22rem] relative z-10 drop-shadow-[0_40px_80px_rgba(0,0,0,0.4)] animate-float" 
                                         />
                                     </div>
                                 </div>

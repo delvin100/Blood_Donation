@@ -1,7 +1,8 @@
 import React from 'react';
 
-const InfoModal = ({ title, content, onClose, maxWidth = "max-w-2xl" }) => {
+const InfoModal = ({ title, content, onClose, maxWidth }) => {
     if (!content) return null;
+    const mw = maxWidth ?? (title === 'eBloodBank Mobile' ? 'max-w-xl' : 'max-w-2xl');
 
     return (
         <div
@@ -9,7 +10,7 @@ const InfoModal = ({ title, content, onClose, maxWidth = "max-w-2xl" }) => {
             onClick={onClose}
         >
             <div
-                className={`modern-card ${maxWidth} w-full bg-white shadow-[0_30px_70px_rgba(0,0,0,0.2)] overflow-hidden flex flex-col max-h-[90vh] animate-in zoom-in-95 duration-300 rounded-[3rem] border-0`}
+                className={`modern-card ${mw} w-full bg-white shadow-[0_30px_70px_rgba(0,0,0,0.2)] overflow-hidden flex flex-col max-h-[90vh] animate-in zoom-in-95 duration-300 rounded-[3rem] border-0`}
                 onClick={e => e.stopPropagation()}
             >
                 {/* Header - Refined Premium Style matching Image 766 */}
