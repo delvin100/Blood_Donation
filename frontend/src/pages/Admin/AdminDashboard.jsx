@@ -803,6 +803,16 @@ function OrgDetailView({ org, onBack, onVerify, onDelete }) {
     const [selectedEvent, setSelectedEvent] = useState(null);
     const [eventLoading, setEventLoading] = useState(false);
 
+    // Lock body scroll when event detail modal is open
+    useEffect(() => {
+        if (selectedEvent) {
+            document.body.style.overflow = 'hidden';
+        } else {
+            document.body.style.overflow = '';
+        }
+        return () => { document.body.style.overflow = ''; };
+    }, [selectedEvent]);
+
     if (!org) return null;
 
     const displayedMembers = showAllMembers ? org.members : org.members?.slice(0, 5);
@@ -826,11 +836,9 @@ function OrgDetailView({ org, onBack, onVerify, onDelete }) {
     };
 
     const getDriveStatus = (drive) => {
-        const now = new Date();
-        const start = new Date(drive.start_date);
-        const end = drive.end_date ? new Date(drive.end_date) : null;
-        if (end && now > end) return 'Ended';
-        if (now >= start && (!end || now <= end)) return 'Active';
+        const s = (drive.status || '').toLowerCase();
+        if (s === 'active' || s === 'in progress' || s === 'ongoing') return 'Active';
+        if (s === 'completed' || s === 'ended' || s === 'done') return 'Ended';
         return 'Upcoming';
     };
 

@@ -807,7 +807,7 @@ const Seeker = () => {
 
                         <div className="flex flex-col md:flex-row min-h-[520px]">
                             {/* Left Side: Mockup — light background */}
-                            <div className="md:w-[45%] bg-gradient-to-br from-gray-50 to-red-50/30 flex items-end justify-center pt-10 pb-0 overflow-hidden">
+                            <div className="md:w-[45%] bg-gradient-to-br from-gray-50 to-red-50/30 flex items-center justify-center py-10 overflow-hidden">
                                 <div className="relative group/mockup flex-shrink-0">
                                     <div className="absolute inset-0 bg-red-500/10 blur-[60px] rounded-full group-hover/mockup:bg-red-500/20 transition-all duration-700"></div>
                                     <img 
@@ -823,8 +823,8 @@ const Seeker = () => {
                                 {/* Title spanning full right width */}
                                 <h3 className="text-4xl font-black text-gray-900 tracking-tight mb-2 leading-[1.1] pr-8">
                                     <span className="uppercase tracking-tighter block">Download</span>
-                                    <span className="text-red-600 italic">eBloodBank</span>{' '}
-                                    <span className="uppercase tracking-tighter">App</span>
+                                    <span className="text-red-600 italic">eBloodBank</span>
+                                    <span className="uppercase tracking-tighter block">App</span>
                                 </h3>
                                 <p className="text-gray-500 font-bold text-sm mb-7">Scan to download or use the store buttons.</p>
                                 

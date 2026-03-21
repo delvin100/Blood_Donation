@@ -205,7 +205,14 @@ exports.getOrgDetails = async (req, res) => {
             ORDER BY om.joined_at DESC
         `, [req.params.id]);
         const [requestRows] = await pool.query('SELECT * FROM emergency_requests WHERE org_id = ? ORDER BY created_at DESC', [req.params.id]);
-        const [driveRows] = await pool.query('SELECT * FROM blood_drives WHERE org_id = ? ORDER BY start_date DESC', [req.params.id]);
+        const [driveRows] = await pool.query(`
+            SELECT bd.*, COALESCE(SUM(dc.units), 0) AS total_units
+            FROM blood_drives bd
+            LEFT JOIN drive_collections dc ON dc.drive_id = bd.id
+            WHERE bd.org_id = ?
+            GROUP BY bd.id
+            ORDER BY bd.start_date DESC
+        `, [req.params.id]);
 
         const org = orgRows[0];
         org.inventory = inventoryRows;
