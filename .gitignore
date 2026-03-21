@@ -57,4 +57,6 @@ mobile/android/
 *.ntvs*
 *.njsproj
 *.sln
-*.sw?
+*.sw? 
+# Firebase Config
+mobile/google-services.json
