@@ -861,8 +861,8 @@ function OrgDetailView({ org, onBack, onVerify, onDelete }) {
                                 const st = getDriveStatus(viewingEvent);
                                 return (
                                     <span className={`px-5 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest border transition-all shadow-sm
-                                        ${st === 'Ended' ? 'bg-green-50 text-green-700 border-green-100' : 
-                                          st === 'Active' ? 'bg-amber-50 text-amber-700 border-amber-100' : 
+                                        ${st === 'Ended' ? 'bg-red-50 text-red-700 border-red-100' : 
+                                          st === 'Active' ? 'bg-green-50 text-green-700 border-green-100' : 
                                           'bg-blue-50 text-blue-700 border-blue-100'}`}>
                                         <i className={`fas ${st === 'Ended' ? 'fa-check-circle' : st === 'Active' ? 'fa-satellite-dish animate-pulse' : 'fa-clock'} mr-2`}></i>
                                         {st} Status
@@ -1308,18 +1308,18 @@ function OrgDetailView({ org, onBack, onVerify, onDelete }) {
                                             </td>
                                             <td className="px-8 py-5 text-center">
                                                 <Badge status={
-                                                    driveStatus === 'Ended' ? 'success' :
-                                                    driveStatus === 'Active' ? 'warning' : 'info'
+                                                    driveStatus === 'Ended' ? 'danger' :
+                                                    driveStatus === 'Active' ? 'success' : 'info'
                                                 }>
                                                     {driveStatus}
                                                 </Badge>
                                             </td>
                                             <td className="px-8 py-5 text-center">
-                                                <button
+                                                 <button
                                                     onClick={() => handleViewEvent(drive.id)}
                                                     className="px-4 py-2 bg-blue-50 text-blue-600 rounded-xl hover:bg-blue-600 hover:text-white font-bold transition-all text-xs"
                                                 >
-                                                    {eventLoading && selectedEvent?.id === drive.id ? <i className="fas fa-spinner fa-spin"></i> : 'View Details'}
+                                                    {eventLoading && viewingEvent?.id === drive.id ? <i className="fas fa-spinner fa-spin"></i> : 'View Details'}
                                                 </button>
                                             </td>
                                         </tr>

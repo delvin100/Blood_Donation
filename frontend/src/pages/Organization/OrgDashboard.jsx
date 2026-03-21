@@ -2519,7 +2519,7 @@ export default function OrgDashboard() {
                                                     
                                                     if (now > end) {
                                                         dynamicStatus = 'Ended';
-                                                        statusColor = 'bg-gray-50 text-gray-500 border-gray-100';
+                                                        statusColor = 'bg-red-50 text-red-600 border-red-100';
                                                     } else if (now >= start) {
                                                         dynamicStatus = 'Active';
                                                         statusColor = 'bg-emerald-50 text-emerald-600 border-emerald-100';
