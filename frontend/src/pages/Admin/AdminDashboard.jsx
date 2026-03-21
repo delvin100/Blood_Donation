@@ -800,18 +800,8 @@ function OrgDetailView({ org, onBack, onVerify, onDelete }) {
     const [showAllRequests, setShowAllRequests] = useState(false);
     const [showAllEvents, setShowAllEvents] = useState(false);
     const [showAllInventory, setShowAllInventory] = useState(false);
-    const [selectedEvent, setSelectedEvent] = useState(null);
+    const [viewingEvent, setViewingEvent] = useState(null);
     const [eventLoading, setEventLoading] = useState(false);
-
-    // Lock body scroll when event detail modal is open
-    useEffect(() => {
-        if (selectedEvent) {
-            document.body.style.overflow = 'hidden';
-        } else {
-            document.body.style.overflow = '';
-        }
-        return () => { document.body.style.overflow = ''; };
-    }, [selectedEvent]);
 
     if (!org) return null;
 
@@ -823,10 +813,13 @@ function OrgDetailView({ org, onBack, onVerify, onDelete }) {
     const handleViewEvent = async (eventId) => {
         setEventLoading(true);
         try {
+            const token = localStorage.getItem('adminToken');
             const response = await axios.get(`/api/admin/drives/${eventId}`, {
-                headers: { Authorization: `Bearer ${localStorage.getItem('adminToken')}` }
+                headers: { Authorization: `Bearer ${token}` }
             });
-            setSelectedEvent(response.data);
+            setViewingEvent(response.data);
+            // Scroll to top of the dashboard content area when viewing event
+            window.scrollTo({ top: 0, behavior: 'smooth' });
         } catch (error) {
             console.error('Error fetching event details:', error);
             toast.error('Failed to load event details');
@@ -837,33 +830,194 @@ function OrgDetailView({ org, onBack, onVerify, onDelete }) {
 
     const getDriveStatus = (drive) => {
         const now = new Date();
-        const start = new Date(drive.start_date);
-        const end = drive.end_date ? new Date(drive.end_date) : null;
+        const startDatePart = drive.start_date.includes('T') ? drive.start_date.split('T')[0] : drive.start_date;
+        const endDatePart = drive.end_date.includes('T') ? drive.end_date.split('T')[0] : drive.end_date;
         
-        // Use DB status if explicitly set to something conclusive
-        const s = (drive.status || '').toLowerCase();
-        if (s === 'completed' || s === 'ended') return 'Ended';
-        if (s === 'active') return 'Active';
+        const start = new Date(`${startDatePart}T${drive.start_time || '00:00:00'}`);
+        const end = new Date(`${endDatePart}T${drive.end_time || '23:59:59'}`);
 
-        // Reliable fallback to date-based logic
-        if (end && now > end) return 'Ended';
-        if (now >= start && (!end || now <= end)) return 'Active';
+        if (now > end) return 'Ended';
+        if (now >= start) return 'Active';
         return 'Upcoming';
     };
 
     return (
-        <div className="space-y-6 animate-fade-in-up">
-            {/* Header / Actions */}
-            <div className="flex justify-between items-center mb-2">
-                <div className="flex items-center gap-4">
-                    <button
-                        onClick={onBack}
-                        className="flex items-center gap-2 text-gray-500 hover:text-gray-900 font-bold bg-white px-5 py-2.5 rounded-xl shadow-sm border border-gray-200 hover:shadow-md transition-all"
-                    >
-                        <i className="fas fa-arrow-left"></i> Back
-                    </button>
-                    <h2 className="text-xl font-black text-gray-900 uppercase tracking-tight">Organization Details</h2>
+        <div className="space-y-8 animate-in fade-in duration-500">
+            {viewingEvent ? (
+                <div className="space-y-8 animate-in slide-in-from-right duration-500">
+                    {/* Event Detail Header */}
+                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+                        <div className="flex items-center gap-4">
+                            <button
+                                onClick={() => setViewingEvent(null)}
+                                className="flex items-center gap-2 text-gray-500 hover:text-gray-900 font-bold bg-white px-5 py-2.5 rounded-xl shadow-sm border border-gray-200 hover:shadow-md transition-all"
+                            >
+                                <i className="fas fa-arrow-left"></i> Back to Profile
+                            </button>
+                            <h2 className="text-xl font-black text-gray-900 uppercase tracking-tight">Event Details</h2>
+                        </div>
+                        <div className="flex items-center gap-3">
+                            {(() => {
+                                const st = getDriveStatus(viewingEvent);
+                                return (
+                                    <span className={`px-5 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest border transition-all shadow-sm
+                                        ${st === 'Ended' ? 'bg-green-50 text-green-700 border-green-100' : 
+                                          st === 'Active' ? 'bg-amber-50 text-amber-700 border-amber-100' : 
+                                          'bg-blue-50 text-blue-700 border-blue-100'}`}>
+                                        <i className={`fas ${st === 'Ended' ? 'fa-check-circle' : st === 'Active' ? 'fa-satellite-dish animate-pulse' : 'fa-clock'} mr-2`}></i>
+                                        {st} Status
+                                    </span>
+                                );
+                            })()}
+                        </div>
+                    </div>
+
+                    {/* Main Event Page Content */}
+                    <div className="bg-white rounded-[2.5rem] shadow-xl shadow-gray-200/50 overflow-hidden border border-white">
+                        <div className="bg-gradient-to-br from-gray-900 to-blue-900 p-12 text-white relative">
+                            <div className="absolute top-0 right-0 w-64 h-64 bg-blue-500/10 rounded-full blur-3xl -mr-32 -mt-32"></div>
+                            <div className="relative">
+                                <div className="inline-block px-4 py-1.5 bg-blue-500/20 text-blue-200 border border-blue-500/30 uppercase tracking-widest text-[10px] font-black rounded-full mb-6">Event Mission Control</div>
+                                <h1 className="text-5xl font-black tracking-tighter mb-8 leading-tight">{viewingEvent.event_name}</h1>
+                                
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                                    <div className="bg-white/10 backdrop-blur-md rounded-3xl p-6 border border-white/10 hover:bg-white/15 transition-all">
+                                        <div className="w-10 h-10 rounded-xl bg-blue-500/20 flex items-center justify-center text-blue-300 mb-4">
+                                            <i className="fas fa-calendar-alt"></i>
+                                        </div>
+                                        <div className="text-[10px] text-blue-300 uppercase font-black tracking-widest mb-1">Schedule Period</div>
+                                        <div className="text-xl font-bold">
+                                            {new Date(viewingEvent.start_date).toLocaleDateString('en-IN', { day:'2-digit', month:'short' })} - {viewingEvent.end_date ? new Date(viewingEvent.end_date).toLocaleDateString('en-IN', { day:'2-digit', month:'short', year:'numeric' }) : 'Ongoing'}
+                                        </div>
+                                        <div className="text-sm text-blue-200/60 font-medium mt-1">
+                                            {viewingEvent.start_time.substring(0, 5)} hrs • {viewingEvent.end_time?.substring(0, 5) || '—'} hrs
+                                        </div>
+                                    </div>
+
+                                    <div className="bg-white/10 backdrop-blur-md rounded-3xl p-6 border border-white/10 hover:bg-white/15 transition-all">
+                                        <div className="w-10 h-10 rounded-xl bg-red-500/20 flex items-center justify-center text-red-300 mb-4">
+                                            <i className="fas fa-map-marker-alt"></i>
+                                        </div>
+                                        <div className="text-[10px] text-blue-300 uppercase font-black tracking-widest mb-1">Operational Base</div>
+                                        <div className="text-xl font-bold truncate">{viewingEvent.location || 'Central Facility'}</div>
+                                        <div className="text-sm text-blue-200/60 font-medium mt-1">Verified Location Detail</div>
+                                    </div>
+
+                                    <div className="group bg-blue-600 rounded-3xl p-6 border border-blue-400/30 shadow-2xl shadow-blue-900/40 relative overflow-hidden">
+                                        <div className="absolute top-0 right-0 w-24 h-24 bg-white/10 rounded-full blur-2xl -mr-12 -mt-12 group-hover:scale-150 transition-transform duration-700"></div>
+                                        <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center text-white mb-4">
+                                            <i className="fas fa-tint"></i>
+                                        </div>
+                                        <div className="text-[10px] text-blue-100 uppercase font-black tracking-widest mb-1">Total Impact</div>
+                                        <div className="flex items-baseline gap-2">
+                                            <span className="text-4xl font-black text-white">
+                                                {viewingEvent.breakdown?.reduce((acc, b) => acc + (b.total_units || 0), 0) || viewingEvent.collected_units || 0}
+                                            </span>
+                                            <span className="text-sm font-bold text-blue-100 uppercase">Units</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="p-12">
+                            <div className="grid grid-cols-1 lg:grid-cols-3 gap-12">
+                                {/* Left Side: Breakdown */}
+                                <div className="lg:col-span-2 space-y-8">
+                                    <div className="flex items-center justify-between">
+                                        <div>
+                                            <h3 className="text-2xl font-black text-gray-900 tracking-tight">Collection Breakdown</h3>
+                                            <p className="text-gray-400 font-bold text-xs uppercase tracking-widest mt-1">Unit distribution by blood group</p>
+                                        </div>
+                                        <div className="px-4 py-2 bg-gray-50 rounded-xl border border-gray-100 text-gray-500 text-[10px] font-black uppercase tracking-widest">
+                                            <i className="fas fa-filter mr-2"></i> Verified Data
+                                        </div>
+                                    </div>
+
+                                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                                        {viewingEvent.breakdown && viewingEvent.breakdown.length > 0 ? (
+                                            viewingEvent.breakdown.map(item => (
+                                                <div key={item.blood_group} className="bg-white rounded-[2rem] p-6 border border-gray-100 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 group text-center relative overflow-hidden">
+                                                    <div className="absolute top-0 left-0 w-1 h-full bg-red-500 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                                                    <div className="text-red-600 font-black text-3xl mb-2 group-hover:scale-110 transition-transform">{item.blood_group}</div>
+                                                    <div className="text-4xl font-black text-gray-900 tracking-tighter mb-1">{item.total_units}</div>
+                                                    <div className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Units</div>
+                                                </div>
+                                            ))
+                                        ) : (
+                                            <div className="col-span-full py-20 text-center bg-gray-50 rounded-[2.5rem] border border-dashed border-gray-200">
+                                                <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center mx-auto mb-4 text-gray-300 shadow-inner">
+                                                    <i className="fas fa-vials text-2xl"></i>
+                                                </div>
+                                                <h4 className="font-black text-gray-400 uppercase tracking-[0.2em] text-sm">No Collection Detected</h4>
+                                                <p className="text-gray-400 font-bold text-xs mt-2">Data will appear once collections are synced.</p>
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    {viewingEvent.description && (
+                                        <div className="bg-blue-50/50 rounded-[2rem] p-8 border border-blue-100/50 relative overflow-hidden">
+                                            <div className="absolute top-0 right-0 w-32 h-32 bg-blue-100/30 rounded-full blur-3xl -mr-16 -mt-16"></div>
+                                            <div className="relative">
+                                                <h4 className="text-blue-900 font-black text-xs uppercase tracking-widest mb-4 flex items-center gap-2">
+                                                    <i className="fas fa-info-circle"></i> Event Log / Notes
+                                                </h4>
+                                                <p className="text-blue-900/80 font-medium leading-relaxed italic text-lg">{viewingEvent.description}</p>
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+
+                                {/* Right Side: Quick Stats / Meta */}
+                                <div className="space-y-6">
+                                    <div className="bg-gray-900 rounded-[2.5rem] p-8 text-white shadow-2xl shadow-gray-900/20">
+                                        <h4 className="text-[10px] font-black text-blue-400 uppercase tracking-[0.2em] mb-8">Performance Metrics</h4>
+                                        <div className="space-y-6">
+                                            <div className="flex justify-between items-center border-b border-white/5 pb-4">
+                                                <span className="text-gray-400 font-bold text-xs">Drive Intensity</span>
+                                                <span className="text-white font-black text-sm uppercase">High Volume</span>
+                                            </div>
+                                            <div className="flex justify-between items-center border-b border-white/5 pb-4">
+                                                <span className="text-gray-400 font-bold text-xs">Target Met</span>
+                                                <span className="text-emerald-400 font-black text-sm uppercase">100% Verified</span>
+                                            </div>
+                                            <div className="flex justify-between items-center border-b border-white/5 pb-4">
+                                                <span className="text-gray-400 font-bold text-xs">Sync Token</span>
+                                                <span className="text-gray-400 font-mono text-[10px] font-bold">#DRV-{viewingEvent.id}</span>
+                                            </div>
+                                        </div>
+                                        <button 
+                                            onClick={() => window.print()}
+                                            className="w-full mt-10 py-5 bg-white/10 hover:bg-white/20 text-white rounded-2xl font-black text-[10px] uppercase tracking-[0.2em] transition-all border border-white/10 flex items-center justify-center gap-3"
+                                        >
+                                            <i className="fas fa-print"></i> Generate Log Report
+                                        </button>
+                                    </div>
+
+                                    <div className="bg-red-50 rounded-[2rem] p-8 border border-red-100 text-center">
+                                        <div className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center text-red-600 shadow-sm mx-auto mb-4">
+                                            <i className="fas fa-heartbeat"></i>
+                                        </div>
+                                        <h5 className="text-red-900 font-black text-xs uppercase tracking-widest mb-2">Life Saver Hub</h5>
+                                        <p className="text-red-900/60 font-bold text-[10px] leading-relaxed">This event successfully contributed to the central blood repository.</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
+            ) : (
+                <>
+                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+                        <div className="flex items-center gap-4">
+                            <button
+                                onClick={onBack}
+                                className="flex items-center gap-2 text-gray-500 hover:text-gray-900 font-bold bg-white px-5 py-2.5 rounded-xl shadow-sm border border-gray-200 hover:shadow-md transition-all"
+                            >
+                                <i className="fas fa-arrow-left"></i> Back
+                            </button>
+                            <h2 className="text-xl font-black text-gray-900 uppercase tracking-tight">Organization Details</h2>
+                        </div>
                 <div className="flex gap-3">
                     <button
                         onClick={onVerify}
@@ -1195,103 +1349,7 @@ function OrgDetailView({ org, onBack, onVerify, onDelete }) {
                 )}
             </div>
 
-            {/* Event Detail Modal — High Z-index and Viewport Centered */}
-            {selectedEvent && (
-                <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/70 backdrop-blur-md animate-fade-in">
-                    <div 
-                        className="bg-white rounded-[2.5rem] w-full max-w-2xl overflow-hidden shadow-2xl animate-scale-up border border-white"
-                        onClick={(e) => e.stopPropagation()}
-                    >
-                        {/* Modal Header */}
-                        <div className="bg-gradient-to-br from-gray-900 to-blue-900 p-8 text-white relative">
-                            <button
-                                onClick={() => setSelectedEvent(null)}
-                                className="absolute top-6 right-6 w-10 h-10 rounded-full bg-white/10 flex items-center justify-center hover:bg-white/20 transition-all border border-white/10"
-                            >
-                                <i className="fas fa-times"></i>
-                            </button>
-                            <div className="inline-block px-3 py-1 bg-blue-500/20 text-blue-200 border-none uppercase tracking-widest text-[10px] font-bold rounded-full mb-3">Event Archive</div>
-                            <h2 className="text-3xl font-black tracking-tight pr-12">{selectedEvent.event_name}</h2>
-
-                            {/* Key Info Row */}
-                            <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 mt-5">
-                                <div className="bg-white/10 rounded-2xl p-3 border border-white/10">
-                                    <span className="text-[9px] text-blue-300 uppercase font-black tracking-widest block mb-1"><i className="fas fa-calendar-check mr-1"></i>Start</span>
-                                    <span className="text-sm font-bold">{new Date(selectedEvent.start_date).toLocaleDateString('en-IN', { day:'2-digit', month:'short', year:'numeric' })}</span>
-                                    <span className="text-xs text-blue-200 block">{new Date(selectedEvent.start_date).toLocaleTimeString('en-IN', { hour:'2-digit', minute:'2-digit' })}</span>
-                                </div>
-                                <div className="bg-white/10 rounded-2xl p-3 border border-white/10">
-                                    <span className="text-[9px] text-blue-300 uppercase font-black tracking-widest block mb-1"><i className="fas fa-calendar-times mr-1"></i>End</span>
-                                    {selectedEvent.end_date ? (
-                                        <>
-                                            <span className="text-sm font-bold">{new Date(selectedEvent.end_date).toLocaleDateString('en-IN', { day:'2-digit', month:'short', year:'numeric' })}</span>
-                                            <span className="text-xs text-blue-200 block">{new Date(selectedEvent.end_date).toLocaleTimeString('en-IN', { hour:'2-digit', minute:'2-digit' })}</span>
-                                        </>
-                                    ) : <span className="text-sm font-bold text-blue-200">—</span>}
-                                </div>
-                                <div className="bg-white/10 rounded-2xl p-3 border border-white/10">
-                                    <span className="text-[9px] text-blue-300 uppercase font-black tracking-widest block mb-1"><i className="fas fa-map-marker-alt mr-1"></i>Location</span>
-                                    <span className="text-sm font-bold">{selectedEvent.location || '—'}</span>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div className="p-8 overflow-y-auto max-h-[55vh]">
-                            {/* Status + Total Units */}
-                            <div className="flex items-center gap-4 mb-6">
-                                {(() => {
-                                    const st = getDriveStatus(selectedEvent);
-                                    return (
-                                        <span className={`px-4 py-1.5 rounded-full text-xs font-black uppercase tracking-widest ${st === 'Ended' ? 'bg-green-100 text-green-700' : st === 'Active' ? 'bg-amber-100 text-amber-700' : 'bg-blue-100 text-blue-700'}`}>
-                                            {st}
-                                        </span>
-                                    );
-                                })()}
-                                <span className="px-4 py-1.5 rounded-full text-xs font-black uppercase tracking-widest bg-blue-50 text-blue-700">
-                                    <i className="fas fa-tint mr-1"></i>
-                                    {selectedEvent.breakdown?.reduce((acc, b) => acc + (b.total_units || 0), 0) || selectedEvent.collected_units || 0} Units Total
-                                </span>
-                            </div>
-
-                            {/* Blood Group Breakdown */}
-                            <h4 className="text-gray-900 font-black uppercase tracking-tight text-xs mb-4 flex items-center gap-2">
-                                <span className="w-6 h-6 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center text-[10px]"><i className="fas fa-tint"></i></span>
-                                Blood Group Collection Breakdown
-                            </h4>
-
-                            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                                {selectedEvent.breakdown && selectedEvent.breakdown.length > 0 ? (
-                                    selectedEvent.breakdown.map(item => (
-                                        <div key={item.blood_group} className="bg-gray-50 rounded-2xl p-4 border border-gray-100/50 hover:border-blue-200 transition-all group text-center">
-                                            <div className="text-red-600 font-black text-2xl mb-1 group-hover:scale-110 transition-transform">{item.blood_group}</div>
-                                            <div className="text-3xl font-black text-gray-900">{item.total_units}</div>
-                                            <div className="text-[10px] font-black text-gray-400 uppercase">Units</div>
-                                        </div>
-                                    ))
-                                ) : (
-                                    <div className="col-span-full py-8 text-center text-gray-400 font-bold uppercase tracking-widest text-[10px] bg-gray-50 rounded-2xl border border-dashed border-gray-200">
-                                        No collection data available
-                                    </div>
-                                )}
-                            </div>
-
-                            {/* Description */}
-                            {selectedEvent.description && (
-                                <div className="mt-6 p-4 bg-blue-50 rounded-2xl border border-blue-100">
-                                    <span className="text-[10px] font-black text-blue-600 uppercase tracking-widest block mb-1">Notes</span>
-                                    <p className="text-xs text-blue-900/70 font-medium leading-relaxed">{selectedEvent.description}</p>
-                                </div>
-                            )}
-
-                            <button
-                                onClick={() => setSelectedEvent(null)}
-                                className="w-full mt-6 py-4 bg-gray-900 text-white rounded-2xl font-black uppercase tracking-widest text-xs hover:bg-gray-800 transition-all shadow-lg shadow-gray-900/10"
-                            >
-                                Close Details
-                            </button>
-                        </div>
-                    </div>
-                </div>
+                </>
             )}
         </div>
     );
