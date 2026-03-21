@@ -97,12 +97,16 @@ const Chatbot = ({ user, stats }) => {
         setTimeout(() => handleSendMessage(), 0);
     };
 
-    // Quick Reply Options
     const quickReplies = [
         "Am I eligible?",
+        "How to prepare?",
         "Blood compatibility",
-        "How to donate?",
-        "Update profile"
+        "Post-donation care",
+        "What are badges?",
+        "Community camps",
+        "Why donate blood?",
+        "Is it safe?",
+        "How often can I donate?"
     ];
 
 

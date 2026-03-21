@@ -441,6 +441,28 @@ const getStaticResponse = (input, user, stats, lastIntent) => {
         };
     }
 
+    // 4.5 New Questions: Safety, Benefits, Frequency
+    if (lowerInput.includes("why donate") || lowerInput.includes("benefit") || lowerInput.includes("advantages")) {
+        return {
+            text: `Donating blood is amazing for you and others! ❤️\n1. It saves up to 3 lives!\n2. It naturally stimulates your body to produce fresh, new blood cells.\n3. It burns calories and improves cardiovascular health.\nWould you like to find a camp nearby?`,
+            intent: null
+        };
+    }
+
+    if (lowerInput.includes("safe") || lowerInput.includes("hurt") || lowerInput.includes("pain") || lowerInput.includes("risk")) {
+        return {
+            text: `Yes, donating blood is completely 100% safe! 🛡️\nRegistered camps use brand new, sterile, completely disposable equipment for every single donor. You might feel a tiny pinch for a second, but the feeling of saving a life lasts forever!`,
+            intent: null
+        };
+    }
+
+    if (lowerInput.includes("how often") || lowerInput.includes("frequency") || lowerInput.includes("when can i donate again")) {
+        return {
+            text: `To keep you healthy, your body needs a rest period! ⏳\nYou can safely donate whole blood every 90 days (about 3 months). The system automatically tracks your rest period and will notify you when you are eligible again!`,
+            intent: null
+        };
+    }
+
     // 5. Preparation & Aftercare
     if (lowerInput.includes("prepare") || lowerInput.includes("before") || lowerInput.includes("eat") || lowerInput.includes("drink")) {
         return {
@@ -550,9 +572,9 @@ exports.chat = async (req, res) => {
 
         // Specific handling for Quota Exceeded (429)
         if (err.status === 429 || err.message?.includes('quota')) {
-            return res.status(429).json({
-                error: 'AI Quota Exceeded',
-                text: "I'm currently receiving a high volume of requests, and my AI brain's monthly quota is reached! 🤖 However, I can still assist you with: \n\n✅ Eligibility & Compatibility \n✅ Profile Management \n✅ Emergency Guidance \n\nI'll be fully back online once my quota resets! 🌟"
+            return res.json({
+                text: "I'm currently receiving a high volume of requests, and my AI brain's monthly quota is reached! 🤖 However, I can still assist you with:\n\n✅ Eligibility & Compatibility\n✅ Pre-donation Prep & Post Care\n✅ Badges & Rewards\n✅ Emergency Guidance\n\nTry asking me about these topics directly! 🌟",
+                intent: null
             });
         }
 

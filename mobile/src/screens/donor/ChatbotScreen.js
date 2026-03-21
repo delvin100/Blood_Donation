@@ -108,9 +108,14 @@ const ChatbotScreen = ({ navigation, route }) => {
 
     const quickReplies = [
         "Am I eligible?",
+        "How to prepare?",
         "Blood compatibility",
-        "How to donate?",
-        "Update profile"
+        "Post-donation care",
+        "What are badges?",
+        "Community camps",
+        "Why donate blood?",
+        "Is it safe?",
+        "How often can I donate?"
     ];
 
 
@@ -181,7 +186,12 @@ const ChatbotScreen = ({ navigation, route }) => {
 
             <View style={styles.footer}>
                 {!isTyping && messages[messages.length - 1]?.type === 'bot' && (
-                    <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.quickRepliesContainer}>
+                    <ScrollView 
+                        horizontal 
+                        showsHorizontalScrollIndicator={false} 
+                        style={styles.quickRepliesContainer}
+                        contentContainerStyle={{ paddingRight: 30 }}
+                    >
                         {quickReplies.map((reply, index) => (
                             <TouchableOpacity
                                 key={index}
