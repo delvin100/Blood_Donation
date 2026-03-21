@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-hot-toast';
@@ -43,6 +43,7 @@ export default function AdminDashboard() {
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false); // Mobile Menu State
     const [isSubmittingAdmin, setIsSubmittingAdmin] = useState(false); // New state for Add Admin
     const [user, setUser] = useState(null); // Added user state
+    const mainRef = useRef(null);
 
     // Modern Modal State
     const [isModalOpen, setIsModalOpen] = useState(false);
@@ -347,7 +348,7 @@ export default function AdminDashboard() {
             </div>
 
             {/* Main Content */}
-            <main className="flex-1 overflow-y-auto z-10 flex flex-col relative w-full">
+            <main ref={mainRef} className="flex-1 overflow-y-auto z-10 flex flex-col relative w-full">
                 {/* Mobile Header Toggle */}
                 <div className="md:hidden p-4 flex items-center justify-between pb-0">
                     <button onClick={() => setIsMobileMenuOpen(true)} className="p-2 bg-white rounded-xl shadow-sm border border-gray-100 text-gray-700">
@@ -818,8 +819,10 @@ function OrgDetailView({ org, onBack, onVerify, onDelete }) {
                 headers: { Authorization: `Bearer ${token}` }
             });
             setViewingEvent(response.data);
-            // Scroll to top of the dashboard content area when viewing event
-            window.scrollTo({ top: 0, behavior: 'smooth' });
+            // Scroll to top of the dashboard main content area when viewing event
+            if (mainRef.current) {
+                mainRef.current.scrollTo({ top: 0, behavior: 'smooth' });
+            }
         } catch (error) {
             console.error('Error fetching event details:', error);
             toast.error('Failed to load event details');
@@ -922,8 +925,8 @@ function OrgDetailView({ org, onBack, onVerify, onDelete }) {
 
                         <div className="p-12">
                             <div className="grid grid-cols-1 lg:grid-cols-3 gap-12">
-                                {/* Left Side: Breakdown */}
-                                <div className="lg:col-span-2 space-y-8">
+                                {/* Left Side: Breakdown - Expanded to full width */}
+                                <div className="lg:col-span-3 space-y-8">
                                     <div className="flex items-center justify-between">
                                         <div>
                                             <h3 className="text-2xl font-black text-gray-900 tracking-tight">Collection Breakdown</h3>
@@ -934,7 +937,7 @@ function OrgDetailView({ org, onBack, onVerify, onDelete }) {
                                         </div>
                                     </div>
 
-                                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                                    <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-6">
                                         {viewingEvent.breakdown && viewingEvent.breakdown.length > 0 ? (
                                             viewingEvent.breakdown.map(item => (
                                                 <div key={item.blood_group} className="bg-white rounded-[2rem] p-6 border border-gray-100 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 group text-center relative overflow-hidden">
@@ -966,40 +969,14 @@ function OrgDetailView({ org, onBack, onVerify, onDelete }) {
                                             </div>
                                         </div>
                                     )}
-                                </div>
 
-                                {/* Right Side: Quick Stats / Meta */}
-                                <div className="space-y-6">
-                                    <div className="bg-gray-900 rounded-[2.5rem] p-8 text-white shadow-2xl shadow-gray-900/20">
-                                        <h4 className="text-[10px] font-black text-blue-400 uppercase tracking-[0.2em] mb-8">Performance Metrics</h4>
-                                        <div className="space-y-6">
-                                            <div className="flex justify-between items-center border-b border-white/5 pb-4">
-                                                <span className="text-gray-400 font-bold text-xs">Drive Intensity</span>
-                                                <span className="text-white font-black text-sm uppercase">High Volume</span>
-                                            </div>
-                                            <div className="flex justify-between items-center border-b border-white/5 pb-4">
-                                                <span className="text-gray-400 font-bold text-xs">Target Met</span>
-                                                <span className="text-emerald-400 font-black text-sm uppercase">100% Verified</span>
-                                            </div>
-                                            <div className="flex justify-between items-center border-b border-white/5 pb-4">
-                                                <span className="text-gray-400 font-bold text-xs">Sync Token</span>
-                                                <span className="text-gray-400 font-mono text-[10px] font-bold">#DRV-{viewingEvent.id}</span>
-                                            </div>
-                                        </div>
+                                    <div className="flex justify-center pt-8 border-t border-gray-100">
                                         <button 
                                             onClick={() => window.print()}
-                                            className="w-full mt-10 py-5 bg-white/10 hover:bg-white/20 text-white rounded-2xl font-black text-[10px] uppercase tracking-[0.2em] transition-all border border-white/10 flex items-center justify-center gap-3"
+                                            className="px-10 py-5 bg-gray-900 hover:bg-black text-white rounded-2xl font-black text-xs uppercase tracking-[0.2em] transition-all shadow-xl shadow-gray-200 flex items-center justify-center gap-3 active:scale-95"
                                         >
                                             <i className="fas fa-print"></i> Generate Log Report
                                         </button>
-                                    </div>
-
-                                    <div className="bg-red-50 rounded-[2rem] p-8 border border-red-100 text-center">
-                                        <div className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center text-red-600 shadow-sm mx-auto mb-4">
-                                            <i className="fas fa-heartbeat"></i>
-                                        </div>
-                                        <h5 className="text-red-900 font-black text-xs uppercase tracking-widest mb-2">Life Saver Hub</h5>
-                                        <p className="text-red-900/60 font-bold text-[10px] leading-relaxed">This event successfully contributed to the central blood repository.</p>
                                     </div>
                                 </div>
                             </div>
