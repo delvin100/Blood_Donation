@@ -818,13 +818,13 @@ const Seeker = () => {
                                 </div>
                             </div>
 
-                            {/* Right Side: Title + QR + Buttons */}
-                            <div className="md:w-[55%] flex flex-col justify-center p-8 pr-10">
+                            {/* Right Side: Title + QR + Buttons — centered text for title */}
+                            <div className="md:w-[55%] flex flex-col justify-center items-center p-8 text-center">
                                 {/* Title spanning full right width */}
-                                <h3 className="text-4xl font-black text-gray-900 tracking-tight mb-2 leading-[1.1] pr-8">
+                                <h3 className="text-4xl font-black text-gray-900 tracking-tight mb-2 leading-[1.1]">
                                     <span className="uppercase tracking-tighter block">Download</span>
                                     <span className="text-red-600 italic">eBloodBank</span>
-                                    <span className="uppercase tracking-tighter block">App</span>
+                                    <span className="uppercase tracking-tighter block text-center">App</span>
                                 </h3>
                                 <p className="text-gray-500 font-bold text-sm mb-7">Scan to download or use the store buttons.</p>
                                 

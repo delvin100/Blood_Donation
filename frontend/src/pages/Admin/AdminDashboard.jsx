@@ -836,9 +836,18 @@ function OrgDetailView({ org, onBack, onVerify, onDelete }) {
     };
 
     const getDriveStatus = (drive) => {
+        const now = new Date();
+        const start = new Date(drive.start_date);
+        const end = drive.end_date ? new Date(drive.end_date) : null;
+        
+        // Use DB status if explicitly set to something conclusive
         const s = (drive.status || '').toLowerCase();
-        if (s === 'active' || s === 'in progress' || s === 'ongoing') return 'Active';
-        if (s === 'completed' || s === 'ended' || s === 'done') return 'Ended';
+        if (s === 'completed' || s === 'ended') return 'Ended';
+        if (s === 'active') return 'Active';
+
+        // Reliable fallback to date-based logic
+        if (end && now > end) return 'Ended';
+        if (now >= start && (!end || now <= end)) return 'Active';
         return 'Upcoming';
     };
 
@@ -1186,10 +1195,13 @@ function OrgDetailView({ org, onBack, onVerify, onDelete }) {
                 )}
             </div>
 
-            {/* Event Detail Modal */}
+            {/* Event Detail Modal — High Z-index and Viewport Centered */}
             {selectedEvent && (
-                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in shadow-2xl">
-                    <div className="bg-white rounded-[2.5rem] w-full max-w-2xl overflow-hidden shadow-2xl animate-scale-up border border-white">
+                <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/70 backdrop-blur-md animate-fade-in">
+                    <div 
+                        className="bg-white rounded-[2.5rem] w-full max-w-2xl overflow-hidden shadow-2xl animate-scale-up border border-white"
+                        onClick={(e) => e.stopPropagation()}
+                    >
                         {/* Modal Header */}
                         <div className="bg-gradient-to-br from-gray-900 to-blue-900 p-8 text-white relative">
                             <button

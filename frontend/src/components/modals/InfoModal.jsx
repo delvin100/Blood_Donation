@@ -2,7 +2,7 @@ import React from 'react';
 
 const InfoModal = ({ title, content, onClose, maxWidth }) => {
     if (!content) return null;
-    const mw = maxWidth ?? (title === 'eBloodBank Mobile' ? 'max-w-lg' : 'max-w-2xl');
+    const mw = maxWidth ?? (title === 'eBloodBank Mobile' ? 'max-w-md' : 'max-w-2xl');
 
     return (
         <div
