@@ -2,6 +2,7 @@ const pool = require('../config/database');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const admin = require('../config/firebaseAdmin');
+const { OAuth2Client } = require('google-auth-library');
 
 const client = new OAuth2Client(process.env.GOOGLE_WEB_CLIENT_ID);
 

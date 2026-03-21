@@ -6,7 +6,6 @@ const { calculateDonorAvailability } = require('../utils/donorUtils');
 const { addOrgLog } = require('../utils/logUtils');
 const https = require('https');
 const { getIndiaCoordinates } = require('../utils/matchUtils');
-const pool = require('../config/database');
 
 const JWT_SECRET = process.env.JWT_SECRET || 'secret';
 exports.register = async (req, res) => {
