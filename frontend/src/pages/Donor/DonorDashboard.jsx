@@ -1346,46 +1346,43 @@ const Dashboard = () => {
       title: 'eBloodBank Mobile',
       content: (
         <div className="animate-in fade-in zoom-in-95 duration-500">
-          <div className="bg-[#dc2626] rounded-[3.5rem] p-8 md:p-12 relative overflow-hidden group shadow-2xl shadow-red-500/20">
+          <div className="bg-[#dc2626] rounded-[3rem] p-6 md:p-10 relative overflow-hidden group shadow-2xl shadow-red-500/20">
             {/* Background Accents like Image 2/4/766 style */}
             <div className="absolute -top-24 -right-24 w-96 h-96 bg-white/10 rounded-full blur-[100px]"></div>
             <div className="absolute -bottom-24 -left-24 w-80 h-80 bg-black/10 rounded-full blur-[80px]"></div>
 
-            <div className="flex flex-col lg:flex-row items-center gap-12 relative z-10">
+            <div className="flex flex-col lg:flex-row items-center gap-8 relative z-10">
               {/* Left Side: Mockup with Glow */}
               <div className="lg:w-2/5 flex justify-center relative">
                 <div className="absolute inset-0 bg-white/20 blur-[80px] rounded-full animate-pulse"></div>
                 <img
                   src="/images/app-mockup.png"
                   alt="eBloodBank Mobile App"
-                  className="w-48 md:w-64 relative z-10 drop-shadow-[0_30px_60px_rgba(0,0,0,0.4)] transition-transform duration-700 group-hover:scale-105"
+                  className="w-56 md:w-80 relative z-10 drop-shadow-[0_30px_60px_rgba(0,0,0,0.4)] transition-transform duration-700 group-hover:scale-105"
                 />
               </div>
 
               {/* Right Side: Content based on Image 766 */}
               <div className="lg:w-3/5 text-center lg:text-left text-white">
-                <div className="inline-flex items-center gap-3 bg-white/15 backdrop-blur-xl px-5 py-2.5 rounded-full text-[11px] font-black uppercase tracking-[0.2em] mb-8 border border-white/20 shadow-xl">
+                <div className="inline-flex items-center gap-3 bg-white/15 backdrop-blur-xl px-5 py-2.5 rounded-full text-[11px] font-black uppercase tracking-[0.2em] mb-6 border border-white/20 shadow-xl">
                   <span className="w-2.5 h-2.5 bg-green-400 rounded-full animate-pulse shadow-[0_0_15px_rgba(74,222,128,0.5)]"></span>
                   Live on App Store & Play Store
                 </div>
 
-                <h3 className="text-4xl md:text-6xl font-black mb-8 leading-[1.05] tracking-tighter uppercase max-w-lg">
+                <h3 className="text-4xl md:text-5xl font-black mb-6 leading-[1.05] tracking-tighter uppercase max-w-lg">
                   Take the <span className="text-white/90">Power</span> <br />
                   In Your <span className="text-white/80">Pocket</span>
                 </h3>
 
-                <p className="text-red-50/90 font-bold text-lg mb-12 leading-relaxed max-w-xl opacity-90">
-                  Get instant emergency alerts, track your donations in real-time, and manage your profile with our award-winning mobile experience.
+                <p className="text-red-50/90 font-bold text-base mb-8 leading-relaxed max-w-xl opacity-90">
+                  Get instant emergency alerts, track your donations in real-time, and manage your profile with our award-winning experience.
                 </p>
 
                 {/* Bottom Section: QR & Store Buttons */}
                 <div className="flex flex-col sm:flex-row items-center gap-8 justify-center lg:justify-start">
-                  <div className="bg-white p-5 rounded-[2.5rem] shadow-2xl transform hover:scale-110 transition-all duration-500 group/qr relative">
-                    <div className="absolute -top-3 -right-3 w-8 h-8 bg-black text-white rounded-full flex items-center justify-center text-xs animate-bounce shadow-lg">
-                      <i className="fas fa-arrow-down"></i>
-                    </div>
-                    <img src="/images/qr-code.png" alt="Scan to Download" className="w-32 h-32 md:w-40 md:h-40" />
-                    <div className="absolute inset-0 border-2 border-red-500/10 rounded-[2.5rem] pointer-events-none"></div>
+                  <div className="bg-white p-5 rounded-[2rem] shadow-2xl transform hover:scale-110 transition-all duration-500 group/qr relative">
+                    <img src="/images/qr-code.png" alt="Scan to Download" className="w-28 h-28 md:w-32 md:h-32" />
+                    <div className="absolute inset-0 border-2 border-red-500/10 rounded-[2rem] pointer-events-none"></div>
                   </div>
 
                   <div className="flex flex-col gap-4 w-full sm:w-auto">
@@ -2003,30 +2000,23 @@ const Dashboard = () => {
                     <div className="modern-card h-full p-8 bg-white border-2 border-rose-100 shadow-2xl shadow-rose-500/5 rounded-[3rem] relative overflow-hidden">
                       <div className="absolute top-0 right-0 w-32 h-32 bg-rose-50 rounded-full blur-3xl -mr-16 -mt-16 opacity-50"></div>
 
-                      <h3 className="text-2xl font-black text-gray-900 mb-8 flex items-center justify-between relative z-10">
-                        <span className="flex items-center gap-4">
-                          <div className="w-12 h-12 bg-rose-600 text-white rounded-2xl flex items-center justify-center shadow-lg shadow-rose-200">
-                            <i className="fas fa-bullhorn text-xl"></i>
+                        <h3 className="text-2xl font-black text-gray-900 mb-8 flex items-center justify-between relative z-10">
+                          <span className="flex items-center gap-4">
+                            <div className="w-12 h-12 bg-rose-600 text-white rounded-2xl flex items-center justify-center shadow-lg shadow-rose-200">
+                              <i className="fas fa-bullhorn text-xl"></i>
+                            </div>
+                            <div className="flex flex-col">
+                              <span className="tracking-tight">Urgent Needs</span>
+                              <span className="text-[10px] font-black text-rose-400 uppercase tracking-[0.2em] leading-none mt-1">Active Broadcasts</span>
+                            </div>
+                          </span>
+                          <div className="flex items-center gap-4">
+                            <div className="flex items-center gap-2 bg-rose-50 px-3 py-1.5 rounded-full border border-rose-100">
+                              <span className="w-2 h-2 rounded-full bg-rose-500 animate-ping"></span>
+                              <span className="text-[10px] font-black text-rose-600 uppercase tracking-widest">Live Pulse</span>
+                            </div>
                           </div>
-                          <div className="flex flex-col">
-                            <span className="tracking-tight">Urgent Needs</span>
-                            <span className="text-[10px] font-black text-rose-400 uppercase tracking-[0.2em] leading-none mt-1">Active Broadcasts</span>
-                          </div>
-                        </span>
-                        <div className="flex items-center gap-4">
-                          <button 
-                            onClick={() => openInfo('mobile-app')}
-                            className="bg-gray-100 hover:bg-red-50 text-gray-400 hover:text-red-500 p-2.5 rounded-xl transition-all group"
-                            title="Download Mobile App"
-                          >
-                            <i className="fas fa-mobile-screen-button text-sm group-hover:animate-bounce"></i>
-                          </button>
-                          <div className="flex items-center gap-2 bg-rose-50 px-3 py-1.5 rounded-full border border-rose-100">
-                            <span className="w-2 h-2 rounded-full bg-rose-500 animate-ping"></span>
-                            <span className="text-[10px] font-black text-rose-600 uppercase tracking-widest">Live Pulse</span>
-                          </div>
-                        </div>
-                      </h3>
+                        </h3>
 
                       {urgentNeeds.length === 0 ? (
                         <div className="md:col-span-2 relative overflow-hidden rounded-[2.5rem] bg-gradient-to-br from-emerald-50 via-teal-50 to-emerald-50 border border-emerald-100 p-12 text-center group">
