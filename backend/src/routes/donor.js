@@ -19,5 +19,6 @@ router.delete('/notifications/clear-all', authMiddleware, donorController.clearA
 router.delete('/notifications/:id', authMiddleware, donorController.deleteNotification);
 router.post('/chat', authMiddleware, donorController.chat);
 router.get('/blood-drives', authMiddleware, donorController.getBloodDrives);
+router.put('/push-token', authMiddleware, donorController.updatePushToken);
 
 module.exports = router;

@@ -11,6 +11,7 @@ import {
     Dimensions,
     Linking,
     Platform,
+    Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -26,7 +27,10 @@ import MyOrganizationsModal from '../../components/donor/MyOrganizationsModal';
 import NotificationsModal from '../../components/donor/NotificationsModal';
 import DonationHistoryModal from '../../components/donor/DonationHistoryModal';
 import AnalysisModal from '../../components/donor/AnalysisModal';
+import BloodDrivesModal from '../../components/donor/BloodDrivesModal';
 import { formatDate } from '../../utils/dateUtils';
+import * as NotificationService from '../../utils/notificationService';
+
 
 const { width } = Dimensions.get('window');
 
@@ -41,9 +45,12 @@ const DashboardScreen = ({ navigation }) => {
     const [showNotifications, setShowNotifications] = useState(false);
     const [showDonationHistory, setShowDonationHistory] = useState(false);
     const [showAnalysis, setShowAnalysis] = useState(false);
+    const [showBloodDrives, setShowBloodDrives] = useState(false);
     const [notifications, setNotifications] = useState([]);
     const [urgentNeeds, setUrgentNeeds] = useState([]);
+    const [bloodDrives, setBloodDrives] = useState([]);
     const [urgentNeedsCount, setUrgentNeedsCount] = useState(0);
+    const [bloodDrivesCount, setBloodDrivesCount] = useState(0);
     const [timeLeft, setTimeLeft] = useState({ days: 0, hours: 0, minutes: 0, seconds: 0 });
 
     const user = data?.user;
@@ -71,6 +78,21 @@ const DashboardScreen = ({ navigation }) => {
     useEffect(() => {
         fetchDashboardData();
         fetchNotifications();
+        
+        const setupNotifications = async () => {
+            const hasPermission = await NotificationService.requestNotificationPermissions();
+            if (hasPermission) {
+                const token = await NotificationService.getExpoToken();
+                if (token) {
+                    try {
+                        await apiService.put('/donor/push-token', { token });
+                    } catch (err) {
+                        console.warn("Failed to register push token with backend", err);
+                    }
+                }
+            }
+        };
+        setupNotifications();
 
         const interval = setInterval(fetchNotifications, 30000);
         return () => clearInterval(interval);
@@ -86,14 +108,38 @@ const DashboardScreen = ({ navigation }) => {
             if (diff <= 0) {
                 setTimeLeft({ days: 0, hours: 0, minutes: 0, seconds: 0 });
                 fetchDashboardData();
+                fetchNotifications(); // Refresh notifications to show eligibility badge
+                
+                // Show a celebratory alert if it just turned eligible
+                Alert.alert(
+                    "Ready to Save Lives Again! 🩸",
+                    "Great news! Your 90-day rest period is over. You are now eligible to donate blood and help those in need.",
+                    [{ text: "Great!", onPress: () => fetchNotifications() }]
+                );
+
+                // Also send a system-level local notification (for when app is backgrounded)
+                NotificationService.sendImmediateNotification(
+                    "Ready to Save Lives Again! 🩸",
+                    "Your 90-day rest period is over. You are now eligible to donate blood."
+                );
+                
                 return false;
             } else {
+                // ... rest of the logic ...
                 setTimeLeft({
                     days: Math.floor(diff / (1000 * 60 * 60 * 24)),
                     hours: Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60)),
                     minutes: Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60)),
                     seconds: Math.floor((diff % (1000 * 60)) / 1000)
                 });
+
+                // Schedule it for the system to show even if app is closed
+                NotificationService.scheduleLocalNotification(
+                    "Ready to Save Lives Again! 🩸",
+                    "Your 90-day rest period is over. You are now eligible to donate blood.",
+                    stats.nextEligibleDate
+                );
+
                 return true;
             }
         };
@@ -135,17 +181,37 @@ const DashboardScreen = ({ navigation }) => {
         }
     };
 
+    // Update App Icon Badge whenever unread count changes
+    useEffect(() => {
+        const totalUnread = (stats.unreadNotifications || 0) + urgentNeedsCount;
+        NotificationService.setBadgeCount(totalUnread);
+    }, [stats.unreadNotifications, urgentNeedsCount]);
+
     const fetchNotifications = async () => {
         try {
-            const [notifRes, urgentRes] = await Promise.all([
+            const [notifRes, urgentRes, drivesRes] = await Promise.all([
                 apiService.get('/donor/notifications'),
-                apiService.get('/donor/urgent-needs')
+                apiService.get('/donor/urgent-needs'),
+                apiService.get('/donor/blood-drives')
             ]);
             setNotifications(notifRes.data);
             setUrgentNeeds(urgentRes.data);
             setUrgentNeedsCount(urgentRes.data.length);
+
+            // Filter valid, non-expired blood drives (match modal logic)
+            const now = new Date();
+            const validDrives = drivesRes.data.filter(item => {
+                const endDate = new Date(item.end_date);
+                if (isNaN(endDate.getTime())) return false;
+                const [h, m] = item.end_time.split(':').map(Number);
+                const end = new Date(endDate.getFullYear(), endDate.getMonth(), endDate.getDate(), h, m);
+                return now <= end;
+            });
+
+            setBloodDrives(drivesRes.data);
+            setBloodDrivesCount(validDrives.length);
         } catch (error) {
-            logError('Notifications Error', error);
+            logError('Notifications/Drives Error', error);
         }
     };
 
@@ -474,6 +540,34 @@ const DashboardScreen = ({ navigation }) => {
                     />
                 </View>
 
+                {/* Community Section */}
+                <View style={styles.sectionHeader}>
+                    <Text style={styles.sectionTitle}>Community & Events</Text>
+                </View>
+                <TouchableOpacity 
+                    style={styles.communityCard} 
+                    onPress={() => setShowBloodDrives(true)}
+                    activeOpacity={0.8}
+                >
+                    <LinearGradient
+                        colors={['#fff1f2', '#fee2e2']}
+                        style={styles.communityContent}
+                    >
+                        <View style={styles.communityIconContainer}>
+                            <Ionicons name="calendar" size={28} color="#dc2626" />
+                        </View>
+                        <View style={styles.communityTextContainer}>
+                            <Text style={styles.communityTitle}>Upcoming Camps</Text>
+                            <Text style={styles.communitySubtitle}>
+                                {bloodDrivesCount > 0 
+                                    ? `${bloodDrivesCount} active donation ${bloodDrivesCount === 1 ? 'camp' : 'camps'}` 
+                                    : 'Stay tuned for upcoming events'}
+                            </Text>
+                        </View>
+                        <Ionicons name="chevron-forward" size={20} color="#dc2626" opacity={0.5} />
+                    </LinearGradient>
+                </TouchableOpacity>
+
                 {/* Recent Donations */}
                 <View style={styles.sectionHeader}>
                     <Text style={styles.sectionTitle}>Recent Donations</Text>
@@ -583,6 +677,11 @@ const DashboardScreen = ({ navigation }) => {
                 visible={showDonationHistory}
                 onClose={() => setShowDonationHistory(false)}
                 donations={donations}
+            />
+
+            <BloodDrivesModal
+                visible={showBloodDrives}
+                onClose={() => setShowBloodDrives(false)}
             />
 
             {/* AI Assistant FAB */}
@@ -1186,7 +1285,50 @@ const styles = StyleSheet.create({
         shadowOffset: { width: 0, height: 4 },
         shadowOpacity: 0.4,
         shadowRadius: 8,
-    }
+    },
+    communityCard: {
+        marginBottom: 24,
+        borderRadius: 20,
+        overflow: 'hidden',
+        elevation: 3,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
+    },
+    communityContent: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        padding: 20,
+    },
+    communityIconContainer: {
+        width: 56,
+        height: 56,
+        borderRadius: 16,
+        backgroundColor: 'white',
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginRight: 16,
+        shadowColor: '#dc2626',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.1,
+        shadowRadius: 6,
+        elevation: 2,
+    },
+    communityTextContainer: {
+        flex: 1,
+    },
+    communityTitle: {
+        fontSize: 18,
+        fontWeight: 'bold',
+        color: '#111827',
+        marginBottom: 4,
+    },
+    communitySubtitle: {
+        fontSize: 13,
+        color: '#ef4444',
+        fontWeight: '500',
+    },
 });
 
 export default DashboardScreen;

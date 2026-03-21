@@ -1,12 +1,12 @@
 import axios from 'axios';
-import { getToken } from '../utils/storage';
+import { getToken, removeToken, removeUser } from '../utils/storage';
 
 const LOCAL_API_URL = 'http://192.168.137.1:4000/api/';
 const RENDER_API_URL = 'https://ebloodbank.onrender.com/api/';
 
 // Automatically switch between local and production
 // When building the APK (non-dev), it will use RENDER_API_URL
-const API_BASE_URL = __DEV__ ? LOCAL_API_URL : RENDER_API_URL;
+const API_BASE_URL = RENDER_API_URL;
 
 const apiService = axios.create({
     baseURL: API_BASE_URL,
@@ -69,7 +69,25 @@ apiService.interceptors.response.use(
 
         if (error.response) {
             // The request was made and the server responded with a status code 4xx/5xx
-            return Promise.reject(error.response.data);
+            const status = error.response.status;
+            const data = error.response.data;
+
+            // Handle Unauthorized (Invalid/Expired Token)
+            if (status === 401) {
+                if (__DEV__) {
+                    console.warn('[API Auth] 401 Unauthorized detected. Clearing local session.');
+                }
+                // Async cleanup (best effort)
+                removeToken().catch(() => {});
+                removeUser().catch(() => {});
+                
+                return Promise.reject({
+                    ...data,
+                    error: 'Your session has expired. Please log out and log in again.'
+                });
+            }
+
+            return Promise.reject(data);
         } else if (error.request) {
             // The request was made but no response was received (Timeout or Network Error)
             let userMessage = `Network error. Could not connect to the server.`;

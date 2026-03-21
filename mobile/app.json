@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "mobile",
+    "name": "eBloodBank",
     "slug": "mobile",
     "scheme": "ebloodbank",
     "version": "1.0.0",
@@ -8,7 +8,7 @@
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
     "splash": {
-      "image": "./assets/splash-icon.png",
+      "image": "./assets/icon.png",
       "resizeMode": "contain",
       "backgroundColor": "#ffffff"
     },
@@ -17,6 +17,7 @@
     },
     "android": {
       "package": "com.delvin.blooddonation",
+      "googleServicesFile": "./google-services.json",
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
@@ -32,12 +33,20 @@
     },
     "plugins": [
       "expo-image-picker",
-      "expo-location"
+      "expo-location",
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/icon.png",
+          "color": "#dc2626"
+        }
+      ]
     ],
     "extra": {
       "eas": {
-        "projectId": "0fbe63a6-1581-4cb7-9b6a-fd852cebf101"
+        "projectId": "f4068de3-08a6-45f9-bd57-fe91b241b803"
       }
-    }
+    },
+    "owner": "delvin1000"
   }
 }

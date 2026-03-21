@@ -90,7 +90,11 @@ const AnalysisScreen = ({ navigation, route }) => {
                 </TouchableOpacity>
             </LinearGradient>
 
-            <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+            <ScrollView 
+                style={styles.content} 
+                contentContainerStyle={styles.scrollContent}
+                showsVerticalScrollIndicator={false}
+            >
                 {/* Vitals Grid */}
                 <View style={styles.section}>
                     <View style={styles.sectionHeader}>
@@ -187,6 +191,9 @@ const styles = StyleSheet.create({
     },
     content: {
         flex: 1,
+    },
+    scrollContent: {
+        flexGrow: 1,
         padding: 20,
     },
     section: {

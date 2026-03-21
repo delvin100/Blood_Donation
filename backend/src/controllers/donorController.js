@@ -368,6 +368,20 @@ const getStaticResponse = (input, user, stats, lastIntent) => {
         };
     }
 
+    if (lastIntent === 'offer_prep_guide' && (lowerInput === 'yes' || lowerInput.includes('sure') || lowerInput.includes('yeah'))) {
+        return {
+            text: `Awesome! Here’s how to prepare, ${userName}:\n💧 Drink plenty of water (at least 500ml before).\n🥪 Eat a healthy, low-fat meal 2-3 hours prior.\n😴 Get a good night's sleep (7-9 hours).\n🆔 Don't forget your ID!\nReady to make a difference?`,
+            intent: null
+        };
+    }
+
+    if (lastIntent === 'offer_post_care' && (lowerInput === 'yes' || lowerInput.includes('sure') || lowerInput.includes('yeah'))) {
+        return {
+            text: `Post-donation care is crucial:\n🧃 Keep the bandage on for 4-5 hours.\n💧 Drink extra fluids for the next 24 hours.\n🚫 Avoid heavy lifting or strenuous workouts today.\n🍷 Skip alcohol for 24 hours.\nThank you for your life-saving gift!`,
+            intent: null
+        };
+    }
+
     if (lowerInput === 'no' || lowerInput.includes('nope') || lowerInput.includes('not now')) {
         return { text: "No problem! I'm here if you change your mind. 🩸", intent: null };
     }
@@ -427,13 +441,36 @@ const getStaticResponse = (input, user, stats, lastIntent) => {
         };
     }
 
-    // 5. Normal Actions
-    if (lowerInput.includes("donate") || lowerInput.includes("camp") || lowerInput.includes("how to")) {
-        return { text: `The donation journey: \n1. Locate a camp \n2. Confirm eligibility \n3. Donate \n4. Rest. Ready to save lives today?`, intent: null };
+    // 5. Preparation & Aftercare
+    if (lowerInput.includes("prepare") || lowerInput.includes("before") || lowerInput.includes("eat") || lowerInput.includes("drink")) {
+        return {
+            text: `Preparing well makes donation easy and safe! 🥪 I have a quick checklist of what to eat and drink before you go. Would you like to hear it?`,
+            intent: 'offer_prep_guide'
+        };
+    }
+
+    if (lowerInput.includes("after") || lowerInput.includes("post care") || lowerInput.includes("dizzy") || lowerInput.includes("rest")) {
+        return {
+            text: `Taking care of yourself after donating is just as important! 🧃 Would you like my quick 24-hour post-donation care guide?`,
+            intent: 'offer_post_care'
+        };
+    }
+
+    // 6. Milestones & Badges
+    if (lowerInput.includes("badge") || lowerInput.includes("milestone") || lowerInput.includes("reward") || lowerInput.includes("points")) {
+        return {
+            text: `Your bravery earns you badges, ${userName}! 🏆\n🥉 Bronze: 1-4 donations\n🥈 Silver: 5-9 donations\n🥇 Gold: 10+ donations\nEach donation saves up to 3 lives. Check your dashboard to see your current rank!`,
+            intent: null
+        };
+    }
+
+    // 7. Normal Actions
+    if (lowerInput.includes("donate") || lowerInput.includes("camp") || lowerInput.includes("how to") || lowerInput.includes("where")) {
+        return { text: `The donation journey: \n1. Check the 'Community' tab for local Blood Drives \n2. Confirm eligibility \n3. Donate! \nReady to check the community camps?`, intent: null };
     }
 
     if (lowerInput.includes("emergency") || lowerInput.includes("urgent")) {
-        return { text: "🚨 CRITICAL: Use the 'Find Blood' tool immediately and filter for 'Available' donors nearby. Every second counts!", intent: null };
+        return { text: "🚨 CRITICAL: Check the 'Urgent Needs' list on your dashboard immediately and filter for 'Available'. Every second counts!", intent: null };
     }
 
     if (lowerInput.includes("hi") || lowerInput.includes("hello") || lowerInput.includes("hey") || lowerInput.includes("assistant")) {
@@ -550,6 +587,23 @@ exports.getBloodDrives = async (req, res) => {
         res.json(rows);
     } catch (err) {
         console.error('getBloodDrives Error:', err);
+        res.status(500).json({ error: 'Server error', details: err.message });
+    }
+};
+
+exports.updatePushToken = async (req, res) => {
+    try {
+        const { token } = req.body;
+        const donorId = req.user.id;
+        
+        if (!token) {
+            return res.status(400).json({ error: 'Push token is required' });
+        }
+
+        await pool.query('UPDATE donors SET push_token = ? WHERE id = ?', [token, donorId]);
+        res.json({ message: 'Push token updated successfully' });
+    } catch (err) {
+        console.error('Update Push Token Error:', err);
         res.status(500).json({ error: 'Server error', details: err.message });
     }
 };

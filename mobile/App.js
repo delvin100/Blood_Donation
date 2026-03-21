@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { View, ActivityIndicator, BackHandler } from 'react-native';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { getToken } from './src/utils/storage';
@@ -98,38 +99,40 @@ export default function App() {
   };
 
   return (
-    <SafeAreaProvider>
-      <StatusBar style="dark" />
-      <View style={{ flex: 1 }}>
-        {currentScreen === 'Selection' && <SelectionScreen navigation={navigationProxy} />}
-        {currentScreen === 'Seeker' && <SeekerScreen navigation={navigationProxy} />}
-        {currentScreen === 'Login' && <LoginScreen navigation={navigationProxy} />}
-        {currentScreen === 'Register' && <RegisterScreen navigation={navigationProxy} />}
-        {currentScreen === 'Dashboard' && (
-          <DashboardScreen
-            navigation={navigationProxy}
-            route={{ params: { user: userData, stats: statsData, reports: reportsData } }}
-          />
-        )}
-        {currentScreen === 'Chatbot' && (
-          <ChatbotScreen
-            navigation={navigationProxy}
-            route={{ params: { user: userData, stats: statsData } }}
-          />
-        )}
-        {currentScreen === 'EditProfile' && (
-          <EditProfileScreen
-            navigation={navigationProxy}
-            route={{ params: { user: userData } }}
-          />
-        )}
-        {currentScreen === 'Analysis' && (
-          <AnalysisScreen
-            navigation={navigationProxy}
-            route={{ params: { user: userData, stats: statsData, reports: reportsData } }}
-          />
-        )}
-      </View>
-    </SafeAreaProvider>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <SafeAreaProvider>
+        <StatusBar style="dark" />
+        <View style={{ flex: 1 }}>
+          {currentScreen === 'Selection' && <SelectionScreen navigation={navigationProxy} />}
+          {currentScreen === 'Seeker' && <SeekerScreen navigation={navigationProxy} />}
+          {currentScreen === 'Login' && <LoginScreen navigation={navigationProxy} />}
+          {currentScreen === 'Register' && <RegisterScreen navigation={navigationProxy} />}
+          {currentScreen === 'Dashboard' && (
+            <DashboardScreen
+              navigation={navigationProxy}
+              route={{ params: { user: userData, stats: statsData, reports: reportsData } }}
+            />
+          )}
+          {currentScreen === 'Chatbot' && (
+            <ChatbotScreen
+              navigation={navigationProxy}
+              route={{ params: { user: userData, stats: statsData } }}
+            />
+          )}
+          {currentScreen === 'EditProfile' && (
+            <EditProfileScreen
+              navigation={navigationProxy}
+              route={{ params: { user: userData } }}
+            />
+          )}
+          {currentScreen === 'Analysis' && (
+            <AnalysisScreen
+              navigation={navigationProxy}
+              route={{ params: { user: userData, stats: statsData, reports: reportsData } }}
+            />
+          )}
+        </View>
+      </SafeAreaProvider>
+    </GestureHandlerRootView>
   );
 }
