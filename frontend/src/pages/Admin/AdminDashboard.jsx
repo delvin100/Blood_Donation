@@ -813,7 +813,7 @@ function OrgDetailView({ org, onBack, onVerify, onDelete }) {
     const handleViewEvent = async (eventId) => {
         setEventLoading(true);
         try {
-            const response = await axios.get(`http://localhost:5000/api/admin/drives/${eventId}`, {
+            const response = await axios.get(`/api/admin/drives/${eventId}`, {
                 headers: { Authorization: `Bearer ${localStorage.getItem('adminToken')}` }
             });
             setSelectedEvent(response.data);
@@ -823,6 +823,15 @@ function OrgDetailView({ org, onBack, onVerify, onDelete }) {
         } finally {
             setEventLoading(false);
         }
+    };
+
+    const getDriveStatus = (drive) => {
+        const now = new Date();
+        const start = new Date(drive.start_date);
+        const end = drive.end_date ? new Date(drive.end_date) : null;
+        if (end && now > end) return 'Ended';
+        if (now >= start && (!end || now <= end)) return 'Active';
+        return 'Upcoming';
     };
 
     return (
@@ -1104,45 +1113,47 @@ function OrgDetailView({ org, onBack, onVerify, onDelete }) {
                     <table className="min-w-full text-sm text-gray-600">
                         <thead className="bg-gray-50/50 text-gray-400 font-bold uppercase tracking-wider text-[10px]">
                             <tr>
-                                <th className="px-8 py-4 text-left">Event Name</th>
+                                <th className="px-8 py-4 text-center">Event Name</th>
                                 <th className="px-8 py-4 text-center">Location</th>
                                 <th className="px-8 py-4 text-center">Date</th>
                                 <th className="px-8 py-4 text-center">Units Collected</th>
                                 <th className="px-8 py-4 text-center">Status</th>
-                                <th className="px-8 py-4 text-right">Action</th>
+                                <th className="px-8 py-4 text-center">Action</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-100">
                             {displayedEvents && displayedEvents.length > 0 ? (
-                                displayedEvents.map(drive => (
-                                    <tr key={drive.id} className="hover:bg-gray-50/50 transition-colors">
-                                        <td className="px-8 py-5 font-bold text-gray-900">{drive.event_name}</td>
-                                        <td className="px-8 py-5 text-center">{drive.location}</td>
-                                        <td className="px-8 py-5 text-center font-medium">
-                                            {new Date(drive.start_date).toLocaleDateString()}
-                                        </td>
-                                        <td className="px-8 py-5 text-center font-black text-blue-600">
-                                            {drive.collected_units || 0} Units
-                                        </td>
-                                        <td className="px-8 py-5 text-center">
-                                            <Badge status={
-                                                drive.status === 'Completed' ? 'success' :
-                                                drive.status === 'Active' ? 'warning' :
-                                                drive.status === 'Cancelled' ? 'danger' : 'info'
-                                            }>
-                                                {drive.status}
-                                            </Badge>
-                                        </td>
-                                        <td className="px-8 py-5 text-right">
-                                            <button
-                                                onClick={() => handleViewEvent(drive.id)}
-                                                className="px-4 py-2 bg-blue-50 text-blue-600 rounded-xl hover:bg-blue-600 hover:text-white font-bold transition-all text-xs"
-                                            >
-                                                {eventLoading && selectedEvent?.id === drive.id ? <i className="fas fa-spinner fa-spin"></i> : 'View Details'}
-                                            </button>
-                                        </td>
-                                    </tr>
-                                ))
+                                displayedEvents.map(drive => {
+                                    const driveStatus = getDriveStatus(drive);
+                                    return (
+                                        <tr key={drive.id} className="hover:bg-gray-50/50 transition-colors">
+                                            <td className="px-8 py-5 font-bold text-gray-900 text-center">{drive.event_name}</td>
+                                            <td className="px-8 py-5 text-center">{drive.location || '—'}</td>
+                                            <td className="px-8 py-5 text-center font-medium">
+                                                {new Date(drive.start_date).toLocaleDateString()}
+                                            </td>
+                                            <td className="px-8 py-5 text-center font-black text-blue-600">
+                                                {drive.total_units ?? drive.collected_units ?? 0} Units
+                                            </td>
+                                            <td className="px-8 py-5 text-center">
+                                                <Badge status={
+                                                    driveStatus === 'Ended' ? 'success' :
+                                                    driveStatus === 'Active' ? 'warning' : 'info'
+                                                }>
+                                                    {driveStatus}
+                                                </Badge>
+                                            </td>
+                                            <td className="px-8 py-5 text-center">
+                                                <button
+                                                    onClick={() => handleViewEvent(drive.id)}
+                                                    className="px-4 py-2 bg-blue-50 text-blue-600 rounded-xl hover:bg-blue-600 hover:text-white font-bold transition-all text-xs"
+                                                >
+                                                    {eventLoading && selectedEvent?.id === drive.id ? <i className="fas fa-spinner fa-spin"></i> : 'View Details'}
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    );
+                                })
                             ) : (
                                 <tr>
                                     <td colSpan="6" className="px-8 py-12 text-center text-gray-400">
@@ -1171,6 +1182,7 @@ function OrgDetailView({ org, onBack, onVerify, onDelete }) {
             {selectedEvent && (
                 <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in shadow-2xl">
                     <div className="bg-white rounded-[2.5rem] w-full max-w-2xl overflow-hidden shadow-2xl animate-scale-up border border-white">
+                        {/* Modal Header */}
                         <div className="bg-gradient-to-br from-gray-900 to-blue-900 p-8 text-white relative">
                             <button
                                 onClick={() => setSelectedEvent(null)}
@@ -1178,49 +1190,82 @@ function OrgDetailView({ org, onBack, onVerify, onDelete }) {
                             >
                                 <i className="fas fa-times"></i>
                             </button>
-                            <div className="inline-block px-3 py-1 bg-blue-500/20 text-blue-200 border-none uppercase tracking-widest text-[10px] font-bold rounded-full mb-4">Event Archive</div>
-                            <h2 className="text-3xl font-black tracking-tight">{selectedEvent.event_name}</h2>
-                            <div className="flex flex-wrap items-center gap-4 mt-4 text-blue-100 font-bold text-sm">
-                                <span className="flex items-center gap-2"><i className="fas fa-calendar text-blue-400"></i> {new Date(selectedEvent.start_date).toLocaleDateString()}</span>
-                                <span className="flex items-center gap-2"><i className="fas fa-map-marker-alt text-blue-400"></i> {selectedEvent.location}</span>
+                            <div className="inline-block px-3 py-1 bg-blue-500/20 text-blue-200 border-none uppercase tracking-widest text-[10px] font-bold rounded-full mb-3">Event Archive</div>
+                            <h2 className="text-3xl font-black tracking-tight pr-12">{selectedEvent.event_name}</h2>
+
+                            {/* Key Info Row */}
+                            <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 mt-5">
+                                <div className="bg-white/10 rounded-2xl p-3 border border-white/10">
+                                    <span className="text-[9px] text-blue-300 uppercase font-black tracking-widest block mb-1"><i className="fas fa-calendar-check mr-1"></i>Start</span>
+                                    <span className="text-sm font-bold">{new Date(selectedEvent.start_date).toLocaleDateString('en-IN', { day:'2-digit', month:'short', year:'numeric' })}</span>
+                                    <span className="text-xs text-blue-200 block">{new Date(selectedEvent.start_date).toLocaleTimeString('en-IN', { hour:'2-digit', minute:'2-digit' })}</span>
+                                </div>
+                                <div className="bg-white/10 rounded-2xl p-3 border border-white/10">
+                                    <span className="text-[9px] text-blue-300 uppercase font-black tracking-widest block mb-1"><i className="fas fa-calendar-times mr-1"></i>End</span>
+                                    {selectedEvent.end_date ? (
+                                        <>
+                                            <span className="text-sm font-bold">{new Date(selectedEvent.end_date).toLocaleDateString('en-IN', { day:'2-digit', month:'short', year:'numeric' })}</span>
+                                            <span className="text-xs text-blue-200 block">{new Date(selectedEvent.end_date).toLocaleTimeString('en-IN', { hour:'2-digit', minute:'2-digit' })}</span>
+                                        </>
+                                    ) : <span className="text-sm font-bold text-blue-200">—</span>}
+                                </div>
+                                <div className="bg-white/10 rounded-2xl p-3 border border-white/10">
+                                    <span className="text-[9px] text-blue-300 uppercase font-black tracking-widest block mb-1"><i className="fas fa-map-marker-alt mr-1"></i>Location</span>
+                                    <span className="text-sm font-bold">{selectedEvent.location || '—'}</span>
+                                </div>
                             </div>
                         </div>
 
-                        <div className="p-8">
-                            <h4 className="text-gray-900 font-black uppercase tracking-tight text-xs mb-6 flex items-center gap-2">
+                        <div className="p-8 overflow-y-auto max-h-[55vh]">
+                            {/* Status + Total Units */}
+                            <div className="flex items-center gap-4 mb-6">
+                                {(() => {
+                                    const st = getDriveStatus(selectedEvent);
+                                    return (
+                                        <span className={`px-4 py-1.5 rounded-full text-xs font-black uppercase tracking-widest ${st === 'Ended' ? 'bg-green-100 text-green-700' : st === 'Active' ? 'bg-amber-100 text-amber-700' : 'bg-blue-100 text-blue-700'}`}>
+                                            {st}
+                                        </span>
+                                    );
+                                })()}
+                                <span className="px-4 py-1.5 rounded-full text-xs font-black uppercase tracking-widest bg-blue-50 text-blue-700">
+                                    <i className="fas fa-tint mr-1"></i>
+                                    {selectedEvent.breakdown?.reduce((acc, b) => acc + (b.total_units || 0), 0) || selectedEvent.collected_units || 0} Units Total
+                                </span>
+                            </div>
+
+                            {/* Blood Group Breakdown */}
+                            <h4 className="text-gray-900 font-black uppercase tracking-tight text-xs mb-4 flex items-center gap-2">
                                 <span className="w-6 h-6 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center text-[10px]"><i className="fas fa-tint"></i></span>
                                 Blood Group Collection Breakdown
                             </h4>
 
-                            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                                 {selectedEvent.breakdown && selectedEvent.breakdown.length > 0 ? (
                                     selectedEvent.breakdown.map(item => (
-                                        <div key={item.blood_group} className="bg-gray-50 rounded-2xl p-4 border border-gray-100/50 hover:border-blue-200 transition-all group">
-                                            <div className="text-red-600 font-black text-xl mb-1 group-hover:scale-110 transition-transform">{item.blood_group}</div>
-                                            <div className="text-2xl font-black text-gray-900">{item.total_units}</div>
+                                        <div key={item.blood_group} className="bg-gray-50 rounded-2xl p-4 border border-gray-100/50 hover:border-blue-200 transition-all group text-center">
+                                            <div className="text-red-600 font-black text-2xl mb-1 group-hover:scale-110 transition-transform">{item.blood_group}</div>
+                                            <div className="text-3xl font-black text-gray-900">{item.total_units}</div>
                                             <div className="text-[10px] font-black text-gray-400 uppercase">Units</div>
                                         </div>
                                     ))
                                 ) : (
                                     <div className="col-span-full py-8 text-center text-gray-400 font-bold uppercase tracking-widest text-[10px] bg-gray-50 rounded-2xl border border-dashed border-gray-200">
-                                        No breakdown data available
+                                        No collection data available
                                     </div>
                                 )}
                             </div>
 
-                            <div className="mt-8 p-4 bg-blue-50 rounded-2xl border border-blue-100">
-                                <div className="flex justify-between items-center mb-2">
-                                    <span className="text-[10px] font-black text-blue-600 uppercase tracking-widest">Total Collected</span>
-                                    <span className="px-3 py-1 bg-green-100 text-green-700 rounded-lg text-xs font-black">{selectedEvent.collected_units || 0} Units</span>
+                            {/* Description */}
+                            {selectedEvent.description && (
+                                <div className="mt-6 p-4 bg-blue-50 rounded-2xl border border-blue-100">
+                                    <span className="text-[10px] font-black text-blue-600 uppercase tracking-widest block mb-1">Notes</span>
+                                    <p className="text-xs text-blue-900/70 font-medium leading-relaxed">{selectedEvent.description}</p>
                                 </div>
-                                <div className="text-xs text-blue-900/60 font-medium leading-relaxed">
-                                    {selectedEvent.description || 'No additional event description available in archives.'}
-                                </div>
-                            </div>
+                            )}
 
                             <button
                                 onClick={() => setSelectedEvent(null)}
-                                className="w-full mt-8 py-4 bg-gray-900 text-white rounded-2xl font-black uppercase tracking-widest text-xs hover:bg-gray-800 transition-all shadow-lg shadow-gray-900/10"
+                                className="w-full mt-6 py-4 bg-gray-900 text-white rounded-2xl font-black uppercase tracking-widest text-xs hover:bg-gray-800 transition-all shadow-lg shadow-gray-900/10"
                             >
                                 Close Details
                             </button>
