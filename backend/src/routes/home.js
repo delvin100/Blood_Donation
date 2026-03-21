@@ -9,5 +9,6 @@ router.get('/organizations/search', homeController.searchOrganizations);
 router.get('/organizations/nearby', homeController.nearbyOrganizations);
 router.get('/organizations/:id/inventory', homeController.getPublicOrgInventory);
 router.get('/organizations/:id/emergencies', homeController.getOrgEmergencyRequests);
+router.get('/organizations/:id/events', homeController.getOrgEvents);
 
 module.exports = router;

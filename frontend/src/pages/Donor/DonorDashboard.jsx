@@ -1341,6 +1341,75 @@ const Dashboard = () => {
           </div>
         </div>
       )
+    },
+    'mobile-app': {
+      title: 'eBloodBank Mobile',
+      content: (
+        <div className="space-y-8 animate-in slide-in-from-bottom-4 duration-500">
+          <div className="modern-card p-10 bg-gradient-to-br from-red-600 to-rose-700 rounded-[2.5rem] shadow-2xl relative overflow-hidden group">
+            {/* Decorative background elements */}
+            <div className="absolute top-0 right-0 w-64 h-64 bg-white opacity-10 rounded-full -translate-y-16 translate-x-16 blur-2xl group-hover:scale-110 transition-transform duration-700"></div>
+            <div className="absolute bottom-0 left-0 w-48 h-48 bg-black opacity-10 rounded-full translate-y-24 -translate-x-12 blur-3xl"></div>
+
+            <div className="flex flex-col lg:flex-row items-center gap-12 relative z-10">
+              {/* Phone Mockup */}
+              <div className="w-full lg:w-2/5 flex justify-center">
+                <img
+                  src="/images/app-mockup.png"
+                  alt="Mobile App"
+                  className="w-48 md:w-56 drop-shadow-[0_20px_40px_rgba(0,0,0,0.3)] animate-float"
+                />
+              </div>
+
+              {/* Content */}
+              <div className="w-full lg:w-3/5 text-center lg:text-left text-white">
+                <div className="inline-flex items-center gap-2 bg-white/20 backdrop-blur-md px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest mb-4 border border-white/10">
+                  <span className="w-1.5 h-1.5 bg-green-400 rounded-full animate-pulse"></span>
+                  Live on App Store & Play Store
+                </div>
+                <h3 className="text-3xl md:text-5xl font-black mb-6 leading-tight tracking-tight uppercase">
+                  Take the Power <br />In Your <span className="text-white/80">Pocket</span>
+                </h3>
+                <p className="text-red-50/80 font-bold mb-10 leading-relaxed text-sm">
+                  Get instant emergency alerts, track your donations in real-time, and manage your profile with our award-winning mobile experience.
+                </p>
+
+                <div className="flex flex-col sm:flex-row items-center gap-4 justify-center lg:justify-start">
+                  <div className="bg-white p-4 rounded-2xl shadow-xl hover:scale-105 transition-transform group/qr">
+                    <img src="/images/qr-code.png" alt="Scan Me" className="w-24 h-24" />
+                    <p className="text-[8px] font-black text-gray-400 text-center mt-2 uppercase tracking-widest group-hover/qr:text-red-500 transition-colors">Scan to Download</p>
+                  </div>
+
+                  <div className="flex flex-col gap-3 w-full sm:w-auto">
+                    <button className="flex items-center gap-3 bg-white text-gray-900 px-6 py-3 rounded-xl hover:bg-gray-50 transition-all font-black text-xs uppercase tracking-widest shadow-lg shadow-black/10">
+                      <i className="fab fa-apple text-lg"></i> App Store
+                    </button>
+                    <button className="flex items-center gap-3 bg-gray-900 border border-white/10 text-white px-6 py-3 rounded-xl hover:bg-black transition-all font-black text-xs uppercase tracking-widest shadow-lg shadow-black/20">
+                      <i className="fab fa-google-play text-lg text-white"></i> Play Store
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {[
+              { title: 'Offline Access', icon: 'fa-map-marked-alt', desc: 'Find centers without internet.' },
+              { title: 'Push Alerts', icon: 'fa-bell', desc: 'Instant SOS notifications.' },
+              { title: 'Digital ID', icon: 'fa-id-card', desc: 'Your donor card in your pocket.' },
+            ].map((feature, i) => (
+              <div key={i} className="bg-white border border-gray-100 p-5 rounded-[2rem] shadow-sm hover:shadow-md transition-shadow">
+                <div className="w-10 h-10 bg-red-50 text-red-500 rounded-xl flex items-center justify-center mb-3">
+                  <i className={`fas ${feature.icon}`}></i>
+                </div>
+                <h4 className="font-black text-gray-800 text-sm mb-1 uppercase tracking-tight">{feature.title}</h4>
+                <p className="text-xs text-gray-500 font-medium">{feature.desc}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      )
     }
   };
 
@@ -1539,6 +1608,7 @@ const Dashboard = () => {
                     label: 'Community',
                     items: [
                       { key: 'blood-drives', icon: 'fa-calendar-check', label: 'Upcoming Camps', color: 'red' },
+                      { key: 'mobile-app', icon: 'fa-mobile-alt', label: 'Mobile App', color: 'rose' },
                     ]
                   },
                   {

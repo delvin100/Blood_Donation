@@ -18,6 +18,8 @@ const OrganizationSearch = () => {
     const [isFetchingLoc, setIsFetchingLoc] = useState(false);
     const [emergencyRequests, setEmergencyRequests] = useState([]);
     const [showEmergencies, setShowEmergencies] = useState(false);
+    const [orgEvents, setOrgEvents] = useState([]);
+    const [showEvents, setShowEvents] = useState(false);
     const [selectedOrg, setSelectedOrg] = useState(null);
     const pendingDistrictRef = React.useRef(null);
 
@@ -210,6 +212,17 @@ const OrganizationSearch = () => {
         }
     };
 
+    const fetchEvents = async (org) => {
+        setSelectedOrg(org);
+        try {
+            const res = await axios.get(`/api/home/organizations/${org.id}/events`);
+            setOrgEvents(res.data);
+            setShowEvents(true);
+        } catch (err) {
+            toast.error("Failed to load events");
+        }
+    };
+
     return (
         <div className="min-h-screen bg-gray-50 flex flex-col">
             {/* Back Button */}
@@ -397,13 +410,19 @@ const OrganizationSearch = () => {
                                 >
                                     <i className="fas fa-bullhorn"></i> Urgent Needs
                                 </button>
+                                <button
+                                    onClick={() => fetchEvents(org)}
+                                    className="bg-blue-600 text-white py-4 rounded-2xl text-[10px] font-black flex items-center justify-center gap-2 hover:bg-blue-700 transition-all uppercase tracking-widest shadow-lg shadow-blue-100"
+                                >
+                                    <i className="fas fa-calendar-check"></i> Events
+                                </button>
                                 <a
                                     href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(org.name + ' ' + org.city)}`}
                                     target="_blank"
                                     rel="noopener noreferrer"
-                                    className="col-span-2 bg-gray-50 text-gray-600 py-4 rounded-2xl text-[10px] font-black flex items-center justify-center gap-2 hover:bg-gray-100 transition-all border border-gray-100 uppercase tracking-widest"
+                                    className="bg-gray-50 text-gray-600 py-4 rounded-2xl text-[10px] font-black flex items-center justify-center gap-2 hover:bg-gray-100 transition-all border border-gray-100 uppercase tracking-widest"
                                 >
-                                    <i className="fas fa-directions"></i> Get Directions
+                                    <i className="fas fa-directions"></i> Directions
                                 </a>
                             </div>
                         </div>
@@ -489,6 +508,104 @@ const OrganizationSearch = () => {
                                     </div>
                                     <h4 className="text-xl font-black text-gray-800 mb-2 uppercase tracking-tight">Status: Stable</h4>
                                     <p className="text-gray-500 font-bold">No active emergency requests found for this facility.</p>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Events Modal */}
+            {showEvents && (
+                <div className="fixed inset-0 z-[100] bg-gray-900/60 backdrop-blur-sm flex items-center justify-center p-6 animate-in fade-in duration-300">
+                    <div className="bg-white rounded-[3rem] shadow-2xl w-full max-w-2xl overflow-hidden relative animate-in zoom-in-95 duration-300 border border-white">
+                        <div className="bg-gradient-to-r from-blue-700 to-blue-500 p-10 text-white relative overflow-hidden">
+                            {/* Animated Pulse Orbs in Header */}
+                            <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-16 -mt-16 animate-pulse"></div>
+
+                            <button
+                                onClick={() => setShowEvents(false)}
+                                className="absolute top-8 right-8 w-12 h-12 bg-white shadow-2xl hover:bg-gray-100 rounded-full flex items-center justify-center transition-all z-[110] text-blue-600 active:scale-90"
+                                aria-label="Close modal"
+                            >
+                                <i className="fas fa-times text-xl"></i>
+                            </button>
+
+                            <div className="relative z-10 mb-2 flex items-center gap-3">
+                                <span className="bg-white/20 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest">Scheduled Drives</span>
+                                <div className="w-2 h-2 bg-blue-400 rounded-full animate-ping"></div>
+                            </div>
+
+                            <h3 className="text-3xl font-black uppercase tracking-tight mb-2 leading-none">{selectedOrg?.name}</h3>
+                            <p className="text-blue-100 text-xs font-bold uppercase tracking-[0.3em] flex items-center gap-2">
+                                <i className="fas fa-calendar-day"></i> Upcoming & Active Events
+                            </p>
+                        </div>
+
+                        <div className="p-10 max-h-[70vh] overflow-y-auto custom-scrollbar">
+                            {orgEvents && orgEvents.length > 0 ? (
+                                <div className="space-y-6">
+                                    {orgEvents.map((event, idx) => {
+                                        const isActive = event.status === 'Active';
+                                        return (
+                                            <div key={idx} className={`p-8 rounded-[2.5rem] border ${isActive ? 'bg-blue-50/50 border-blue-100 ring-2 ring-blue-500/10' : 'bg-gray-50/50 border-gray-100'} transition-all hover:shadow-xl duration-300 group`}>
+                                                <div className="flex justify-between items-start mb-6">
+                                                    <div>
+                                                        <div className={`text-[10px] font-black uppercase tracking-widest mb-2 flex items-center gap-2 ${isActive ? 'text-blue-600' : 'text-gray-400'}`}>
+                                                            {isActive ? (
+                                                                <span className="flex items-center gap-1.5">
+                                                                    <span className="w-1.5 h-1.5 bg-blue-600 rounded-full animate-pulse"></span>
+                                                                    Currently Active
+                                                                </span>
+                                                            ) : 'Scheduled Event'}
+                                                        </div>
+                                                        <h4 className="text-2xl font-black text-gray-900 leading-tight uppercase tracking-tight group-hover:text-blue-600 transition-colors">
+                                                            {event.event_name}
+                                                        </h4>
+                                                    </div>
+                                                    <div className="bg-white p-3 rounded-2xl shadow-sm border border-gray-100 text-center min-w-[80px]">
+                                                        <div className="text-[10px] font-black text-blue-500 uppercase">{new Date(event.start_date).toLocaleString('default', { month: 'short' })}</div>
+                                                        <div className="text-2xl font-black text-gray-900">{new Date(event.start_date).getDate()}</div>
+                                                    </div>
+                                                </div>
+
+                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                                                    <div className="flex items-center gap-3 text-gray-600 bg-white/60 p-3 rounded-2xl border border-gray-50">
+                                                        <div className="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center text-blue-500">
+                                                            <i className="far fa-clock"></i>
+                                                        </div>
+                                                        <div>
+                                                            <div className="text-[9px] font-black uppercase text-gray-400 tracking-wider">Time Window</div>
+                                                            <div className="text-xs font-bold">{event.start_time.slice(0, 5)} - {event.end_time.slice(0, 5)}</div>
+                                                        </div>
+                                                    </div>
+                                                    <div className="flex items-center gap-3 text-gray-600 bg-white/60 p-3 rounded-2xl border border-gray-50">
+                                                        <div className="w-8 h-8 rounded-lg bg-indigo-50 flex items-center justify-center text-indigo-500">
+                                                            <i className="fas fa-map-pin"></i>
+                                                        </div>
+                                                        <div>
+                                                            <div className="text-[9px] font-black uppercase text-gray-400 tracking-wider">Venue</div>
+                                                            <div className="text-xs font-bold line-clamp-1">{event.location}</div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+
+                                                {event.description && (
+                                                    <p className="text-sm text-gray-500 font-medium leading-relaxed bg-white/60 p-4 rounded-2xl border border-gray-50 italic">
+                                                        "{event.description}"
+                                                    </p>
+                                                )}
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            ) : (
+                                <div className="text-center py-16">
+                                    <div className="w-24 h-24 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-6 text-gray-200">
+                                        <i className="fas fa-calendar-times text-5xl"></i>
+                                    </div>
+                                    <h4 className="text-xl font-black text-gray-800 mb-2 uppercase tracking-tight">Quiet Season</h4>
+                                    <p className="text-gray-500 font-bold">No active or scheduled blood drives found for this facility.</p>
                                 </div>
                             )}
                         </div>

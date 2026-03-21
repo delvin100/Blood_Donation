@@ -105,3 +105,17 @@ exports.getOrgEmergencyRequests = async (req, res) => {
         res.status(500).json({ error: 'Server error' });
     }
 };
+
+exports.getOrgEvents = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const [rows] = await pool.query(
+            "SELECT id, event_name, start_date, start_time, end_date, end_time, location, description, status FROM blood_drives WHERE org_id = ? AND status IN ('Upcoming', 'Active') ORDER BY start_date ASC, start_time ASC",
+            [id]
+        );
+        res.json(rows);
+    } catch (err) {
+        console.error('Error fetching org events:', err);
+        res.status(500).json({ error: 'Server error' });
+    }
+};

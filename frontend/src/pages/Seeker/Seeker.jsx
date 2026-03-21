@@ -25,6 +25,7 @@ const Seeker = () => {
 
     const [isCompatibilityModalOpen, setIsCompatibilityModalOpen] = useState(false);
     const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
+    const [isDownloadModalOpen, setIsDownloadModalOpen] = useState(false);
     const [selectedDonor, setSelectedDonor] = useState(null);
     const [lat, setLat] = useState(null);
     const [lng, setLng] = useState(null);
@@ -483,6 +484,30 @@ const Seeker = () => {
             </section>
 
             <main className="container mx-auto px-6 pb-20">
+                {/* Mobile App Banner */}
+                <div className="max-w-6xl mx-auto mb-12">
+                    <div className="bg-gradient-to-r from-red-600 to-rose-500 rounded-[3rem] p-6 md:p-10 shadow-2xl shadow-red-200 relative overflow-hidden group">
+                        <div className="absolute top-0 right-0 w-64 h-64 bg-white opacity-10 rounded-full -translate-y-16 translate-x-16 blur-2xl group-hover:scale-110 transition-transform duration-700"></div>
+                        <div className="relative z-10 flex flex-col md:flex-row items-center justify-between gap-8">
+                            <div className="flex items-center gap-6">
+                                <div className="w-16 h-16 bg-white/20 backdrop-blur-md rounded-2xl flex items-center justify-center text-white shadow-lg animate-float">
+                                    <i className="fas fa-mobile-screen-button text-3xl"></i>
+                                </div>
+                                <div className="text-white">
+                                    <h3 className="text-2xl font-black uppercase tracking-tight">Need Help on the Go?</h3>
+                                    <p className="text-red-50/80 font-bold text-sm">Download our mobile app for instant donor matching & GPS tracking</p>
+                                </div>
+                            </div>
+                            <button 
+                                onClick={() => setIsDownloadModalOpen(true)}
+                                className="bg-white text-red-600 px-8 py-4 rounded-2xl font-black text-xs uppercase tracking-[0.2em] shadow-xl hover:bg-gray-50 transition-all hover:scale-105 active:scale-95 group/btn"
+                            >
+                                Get the App <i className="fas fa-arrow-right ml-2 group-hover/btn:translate-x-1 transition-transform"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
                 <div id="search-panel" className="max-w-6xl mx-auto">
                     {/* Search Panel */}
                     <div className="bg-white p-8 md:p-12 rounded-[2.5rem] shadow-2xl shadow-gray-200/50 mb-16 border border-white/60">
@@ -784,6 +809,64 @@ const Seeker = () => {
                     </div>
                 )
             }
+
+            {/* Mobile App Download Modal */}
+            {isDownloadModalOpen && (
+                <div className="fixed inset-0 bg-gray-900/40 backdrop-blur-md z-[200] flex items-center justify-center p-4 animate-in fade-in duration-300">
+                    <div className="bg-white rounded-[3rem] shadow-2xl w-full max-w-2xl overflow-hidden relative animate-in zoom-in-95 duration-300">
+                        <button 
+                            onClick={() => setIsDownloadModalOpen(false)}
+                            className="absolute top-8 right-8 w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center text-gray-400 hover:text-red-500 hover:bg-red-50 transition-all z-10 text-xl"
+                        >
+                            <i className="fas fa-times"></i>
+                        </button>
+
+                        <div className="p-12 lg:p-16">
+                            <div className="flex flex-col md:flex-row items-center gap-12">
+                                {/* Left Side: Mockup */}
+                                <div className="md:w-1/2 flex justify-center">
+                                    <div className="relative group/mockup">
+                                        <div className="absolute inset-0 bg-red-500/10 blur-[60px] rounded-full group-hover/mockup:bg-red-500/20 transition-all duration-700"></div>
+                                        <img 
+                                            src="/images/app-mockup.png" 
+                                            alt="App Mockup" 
+                                            className="w-48 md:w-56 relative z-10 drop-shadow-2xl animate-float" 
+                                        />
+                                    </div>
+                                </div>
+
+                                {/* Right Side: Links & QR */}
+                                <div className="md:w-1/2 text-center md:text-left">
+                                    <h3 className="text-3xl font-black text-gray-900 uppercase tracking-tight mb-4 leading-tight">
+                                        Download <br /><span className="text-red-600 italic">eBloodBank</span>
+                                    </h3>
+                                    <p className="text-gray-500 font-bold text-sm mb-8">Scan to download or use the store buttons below.</p>
+                                    
+                                    <div className="flex flex-col items-center md:items-start gap-6">
+                                        <div className="bg-white p-4 rounded-3xl shadow-xl border border-gray-100 inline-block hover:scale-105 transition-transform group/qr">
+                                            <img src="/images/qr-code.png" alt="QR Code" className="w-28 h-28" />
+                                            <div className="text-center mt-3">
+                                                <span className="text-[10px] font-black text-gray-300 uppercase tracking-widest group-hover/qr:text-red-500 transition-colors">Scan Now</span>
+                                            </div>
+                                        </div>
+
+                                        <div className="flex flex-col gap-3 w-full">
+                                            <button className="flex items-center justify-center gap-3 bg-gray-900 hover:bg-black text-white px-6 py-4 rounded-2xl transition-all shadow-xl shadow-gray-200 font-black text-xs uppercase tracking-widest group/btn">
+                                                <i className="fab fa-apple text-xl"></i>
+                                                <span>App Store</span>
+                                            </button>
+                                            <button className="flex items-center justify-center gap-3 bg-white border-2 border-gray-100 hover:border-red-500 hover:bg-red-50 text-gray-900 px-6 py-4 rounded-2xl transition-all font-black text-xs uppercase tracking-widest group/btn">
+                                                <i className="fab fa-google-play text-lg text-red-500"></i>
+                                                <span>Play Store</span>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {/* Donor Details Modal */}
             {selectedDonor && isDetailsModalOpen && (
