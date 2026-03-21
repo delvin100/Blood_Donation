@@ -6,11 +6,11 @@ import { getAuth, confirmPasswordReset, verifyPasswordResetCode } from 'firebase
 import toast from 'react-hot-toast';
 import '../assets/css/reset-password.css';
 
-// Initialize Firebase (only once)
+// Initialize Firebase (only once) using environment variables
 const firebaseConfig = {
-    apiKey: "AIzaSyCrD8eTxgRftMuIEl99ucCWnJJ9WC6riMk",
-    authDomain: "ebloodbank-fb878.firebaseapp.com",
-    projectId: "ebloodbank-fb878",
+    apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+    authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+    projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
 };
 const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApps()[0];
 const auth = getAuth(app);

@@ -6,7 +6,7 @@ const { calculateDonorAvailability } = require('../utils/donorUtils');
 const { addOrgLog } = require('../utils/logUtils');
 const https = require('https');
 const { getIndiaCoordinates } = require('../utils/matchUtils');
-const sendEmail = require('../utils/emailUtils');
+const pool = require('../config/database');
 
 const JWT_SECRET = process.env.JWT_SECRET || 'secret';
 exports.register = async (req, res) => {
@@ -798,7 +798,10 @@ exports.forgotPassword = async (req, res) => {
             </div>
         `;
 
-        await sendEmail({
+        // Switch to Brevo utility
+        const sendEmailViaBrevo = require('../utils/brevoUtils');
+
+        await sendEmailViaBrevo({
             email: org.email,
             subject: 'Organization Access Recovery - eBloodBank',
             html
@@ -807,7 +810,11 @@ exports.forgotPassword = async (req, res) => {
         res.json({ message: 'Verification code sent to facility email' });
     } catch (err) {
         console.error('Org forgot password error:', err);
-        res.status(500).json({ error: 'Failed to process request', details: err.message });
+        res.status(500).json({ 
+            error: 'Failed to process request', 
+            details: err.message,
+            tip: 'If this is the live server, ensure BREVO_API_KEY is set in environment variables.'
+        });
     }
 };
 

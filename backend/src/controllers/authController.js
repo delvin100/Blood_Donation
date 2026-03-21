@@ -2,9 +2,6 @@ const pool = require('../config/database');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const admin = require('../config/firebaseAdmin');
-const https = require('https');
-const { OAuth2Client } = require('google-auth-library');
-const sendEmail = require('../utils/emailUtils');
 
 const client = new OAuth2Client(process.env.GOOGLE_WEB_CLIENT_ID);
 
@@ -287,7 +284,10 @@ exports.forgotPassword = async (req, res) => {
             </div>
         `;
 
-        await sendEmail({
+        // Switch to Brevo utility
+        const sendEmailViaBrevo = require('../utils/brevoUtils');
+        
+        await sendEmailViaBrevo({
             email: donor.email,
             subject: 'Password Reset Request - eBloodBank',
             html
@@ -296,7 +296,11 @@ exports.forgotPassword = async (req, res) => {
         res.json({ message: 'Verification code sent to your email' });
     } catch (err) {
         console.error('Forgot password error:', err);
-        res.status(500).json({ error: 'Failed to process request' });
+        res.status(500).json({ 
+            error: 'Failed to process request', 
+            details: err.message,
+            tip: 'If this is the live server, ensure BREVO_API_KEY is set in environment variables.'
+        });
     }
 };
 
