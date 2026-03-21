@@ -398,7 +398,7 @@ export default function AdminDashboard() {
                     {/* CONTENT VIEWS */}
                     <div className="animate-fade-in-up">
                         {activeTab === 'dashboard' && (
-                            <DashboardHome stats={stats} data={data} setActiveTab={setActiveTab} />
+                            <DashboardHome stats={stats} data={data} setActiveTab={setActiveTab} mainRef={mainRef} />
                         )}
 
                         {activeTab === 'donors' && (
@@ -450,6 +450,7 @@ export default function AdminDashboard() {
                                     onBack={handleBackToOrgList}
                                     onVerify={() => handleVerifyOrg(selectedOrg.id)}
                                     onDelete={() => handleDeleteOrg(selectedOrg.id)}
+                                    mainRef={mainRef}
                                 />
                             ) : (
                                 <DataTable
@@ -700,7 +701,7 @@ export default function AdminDashboard() {
 
                         {/* Other tabs like Inventory and Requests can reuse DataTable or custom views */}
                         {activeTab === 'inventory' && (
-                            <InventoryMatrixView inventory={data.inventory} allOrganizations={data.organizations} allData={data} />
+                            <InventoryMatrixView inventory={data.inventory} allOrganizations={data.organizations} allData={data} mainRef={mainRef} />
                         )}
 
                         {activeTab === 'requests' && (
@@ -722,7 +723,7 @@ export default function AdminDashboard() {
 
 
                         {activeTab === 'logs' && (
-                            <ActivityLogsView logs={data.activityLogs} />
+                            <ActivityLogsView logs={data.activityLogs} mainRef={mainRef} />
                         )}
                     </div>
                 </div>
@@ -796,7 +797,7 @@ export default function AdminDashboard() {
 
 // --- SUB-COMPONENTS ---
 
-function OrgDetailView({ org, onBack, onVerify, onDelete }) {
+function OrgDetailView({ org, onBack, onVerify, onDelete, mainRef }) {
     const [showAllMembers, setShowAllMembers] = useState(false);
     const [showAllRequests, setShowAllRequests] = useState(false);
     const [showAllEvents, setShowAllEvents] = useState(false);
@@ -820,9 +821,11 @@ function OrgDetailView({ org, onBack, onVerify, onDelete }) {
             });
             setViewingEvent(response.data);
             // Scroll to top of the dashboard main content area when viewing event
-            if (mainRef.current) {
-                mainRef.current.scrollTo({ top: 0, behavior: 'smooth' });
-            }
+            setTimeout(() => {
+                if (mainRef?.current) {
+                    mainRef.current.scrollTo({ top: 0, behavior: 'smooth' });
+                }
+            }, 50);
         } catch (error) {
             console.error('Error fetching event details:', error);
             toast.error('Failed to load event details');
@@ -864,9 +867,9 @@ function OrgDetailView({ org, onBack, onVerify, onDelete }) {
                                 const st = getDriveStatus(viewingEvent);
                                 return (
                                     <span className={`px-5 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest border transition-all shadow-sm
-                                        ${st === 'Ended' ? 'bg-red-50 text-red-700 border-red-100' : 
-                                          st === 'Active' ? 'bg-green-50 text-green-700 border-green-100' : 
-                                          'bg-blue-50 text-blue-700 border-blue-100'}`}>
+                                        ${st === 'Ended' ? 'bg-red-100 text-red-700 border-red-200' : 
+                                          st === 'Active' ? 'bg-green-100 text-green-700 border-green-200' : 
+                                          'bg-blue-100 text-blue-700 border-blue-200'}`}>
                                         <i className={`fas ${st === 'Ended' ? 'fa-check-circle' : st === 'Active' ? 'fa-satellite-dish animate-pulse' : 'fa-clock'} mr-2`}></i>
                                         {st} Status
                                     </span>
@@ -970,14 +973,6 @@ function OrgDetailView({ org, onBack, onVerify, onDelete }) {
                                         </div>
                                     )}
 
-                                    <div className="flex justify-center pt-8 border-t border-gray-100">
-                                        <button 
-                                            onClick={() => window.print()}
-                                            className="px-10 py-5 bg-gray-900 hover:bg-black text-white rounded-2xl font-black text-xs uppercase tracking-[0.2em] transition-all shadow-xl shadow-gray-200 flex items-center justify-center gap-3 active:scale-95"
-                                        >
-                                            <i className="fas fa-print"></i> Generate Log Report
-                                        </button>
-                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -1332,7 +1327,7 @@ function OrgDetailView({ org, onBack, onVerify, onDelete }) {
     );
 }
 
-function DashboardHome({ stats, data, setActiveTab }) {
+function DashboardHome({ stats, data, setActiveTab, mainRef }) {
     // Process Data for Charts
     const recentRegistrations = useMemo(() => {
         const allUsers = [
@@ -1681,7 +1676,7 @@ function DeleteButton({ onClick }) {
     );
 }
 
-function InventoryMatrixView({ inventory = [], allOrganizations = [], allData = {} }) {
+function InventoryMatrixView({ inventory = [], allOrganizations = [], allData = {}, mainRef }) {
     const bloodGroups = useMemo(() => {
         // Start with standard groups to ensure they are always first/present
         const standard = [
@@ -1983,7 +1978,7 @@ function DonorDetailView({ donor, onBack }) {
 
 
 
-function ActivityLogsView({ logs }) {
+function ActivityLogsView({ logs, mainRef }) {
     return (
         <DataTable
             columns={['Time', 'Actor', 'Action', 'Description']}

@@ -233,6 +233,17 @@ CREATE TABLE blood_drives (
   INDEX idx_drive_date (start_date)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+-- Drive Collections (Breakdown of units per blood group for a specific drive)
+CREATE TABLE drive_collections (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  drive_id INT NOT NULL,
+  blood_group VARCHAR(50) NOT NULL,
+  units INT DEFAULT 0,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (drive_id) REFERENCES blood_drives(id) ON DELETE CASCADE,
+  UNIQUE KEY unique_drive_blood (drive_id, blood_group)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
 -- Donor Activity Logs
 CREATE TABLE donor_logs (
   id INT AUTO_INCREMENT PRIMARY KEY,
