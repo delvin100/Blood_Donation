@@ -14,6 +14,14 @@
       },
       "oauth_client": [
         {
+          "client_id": "280724731299-mq3okv1u9to11fcgsj0ent9ukpu8dgpu.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.delvin.blooddonation",
+            "certificate_hash": "8721d8c32810608a6ec6fb6d44818c4971e15cc3"
+          }
+        },
+        {
           "client_id": "280724731299-e648k1lk5p148b61fo13qp4q3n4gbmr2.apps.googleusercontent.com",
           "client_type": 3
         }
