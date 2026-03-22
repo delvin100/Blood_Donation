@@ -6,10 +6,7 @@
   "build": {
     "development": {
       "developmentClient": true,
-      "distribution": "internal",
-      "hooks": {
-        "postInstall": "cp ../google-services.json . || echo 'Secret file not found at root, skipping copy'"
-      }
+      "distribution": "internal"
     },
     "preview": {
       "distribution": "internal"
