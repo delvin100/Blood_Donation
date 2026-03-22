@@ -17,17 +17,24 @@ import DateTimePicker from '@react-native-community/datetimepicker';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
-import * as WebBrowser from 'expo-web-browser';
-import * as Google from 'expo-auth-session/providers/google';
-import * as AuthSession from 'expo-auth-session';
+import { GoogleSignin, statusCodes } from '@react-native-google-signin/google-signin';
 import apiService from '../../api/apiService';
 import { saveToken, saveUser } from '../../utils/storage';
 import GoogleIcon from '../../components/common/GoogleIcon';
 import { parseError, logError } from '../../utils/errors';
 
-WebBrowser.maybeCompleteAuthSession();
 
 
+// Native Google Auth Configuration (using environment variables with testgoogle fallbacks)
+const WEB_CLIENT_ID = process.env.EXPO_PUBLIC_GOOGLE_TEST_WEB_CLIENT_ID || '280724731299-e648k1lk5p148b61fo13qp4q3n4gbmr2.apps.googleusercontent.com';
+const ANDROID_CLIENT_ID = process.env.EXPO_PUBLIC_GOOGLE_TEST_ANDROID_CLIENT_ID || '280724731299-mq3okv1u9to11fcgsj0ent9ukpu8dgpu.apps.googleusercontent.com';
+
+GoogleSignin.configure({
+    webClientId: WEB_CLIENT_ID,
+    androidClientId: ANDROID_CLIENT_ID,
+    offlineAccess: true,
+    scopes: ['profile', 'email'],
+});
 
 const RegisterScreen = ({ navigation }) => {
     const [username, setUsername] = useState('');
@@ -41,12 +48,38 @@ const RegisterScreen = ({ navigation }) => {
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState('');
 
-    const handleGoogleLogin = () => {
-        Alert.alert(
-            'Coming Soon',
-            'Google sign up will be available soon!',
-            [{ text: 'OK' }]
-        );
+    const handleGoogleLogin = async () => {
+        try {
+            setIsLoading(true);
+            setError('');
+            
+            await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true });
+            
+            await GoogleSignin.signIn();
+            const tokens = await GoogleSignin.getTokens();
+            const idToken = tokens.idToken;
+
+            if (!idToken) {
+                setError('Failed to get ID token from Google');
+                return;
+            }
+
+            await handleBackendAuth(idToken);
+            
+        } catch (error) {
+            if (error.code === statusCodes.SIGN_IN_CANCELLED) {
+                // User cancelled — do nothing
+            } else if (error.code === statusCodes.IN_PROGRESS) {
+                Alert.alert('Info', 'Sign in already in progress');
+            } else if (error.code === statusCodes.PLAY_SERVICES_NOT_AVAILABLE) {
+                Alert.alert('Error', 'Google Play Services not available');
+            } else {
+                logError('Google Native Register Error', error);
+                setError(error.message || 'Something went wrong during Google Sign Up');
+            }
+        } finally {
+            setIsLoading(false);
+        }
     };
 
     useEffect(() => {
@@ -75,13 +108,13 @@ const RegisterScreen = ({ navigation }) => {
         confirmPassword: ''
     });
 
-    const handleBackendAuth = async (accessToken) => {
+    const handleBackendAuth = async (idToken) => {
         try {
             setIsLoading(true);
             setError('');
-            console.log('Exchanging Google access token with backend...');
+            console.log('Exchanging Google ID token with backend...');
             const res = await apiService.post('/auth/google', {
-                accessToken
+                idToken
             });
 
             console.log('Backend Google Auth Response:', res.data);
@@ -90,7 +123,13 @@ const RegisterScreen = ({ navigation }) => {
             await saveToken(token);
             await saveUser(user);
 
-            navigation.navigate('Dashboard');
+            // Check if profile is complete (e.g., has blood_type)
+            if (!user.blood_type || !user.dob) {
+                console.log('Incomplete profile detected, redirecting to complete profile...');
+                navigation.navigate('EditProfile', { user, isFirstTime: true });
+            } else {
+                navigation.navigate('Dashboard');
+            }
         } catch (err) {
             logError('Google Backend Auth Error', err);
             setError(parseError(err));

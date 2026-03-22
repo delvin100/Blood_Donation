@@ -24,7 +24,7 @@ import { stateDistrictMapping, bloodGroups, cityToDistrictMapping, districtAlias
 import { parseError, logError } from '../../utils/errors';
 
 const EditProfileScreen = ({ navigation, route }) => {
-    const { user } = route.params || {};
+    const { user, isFirstTime = false } = route.params || {};
 
     // Helper to format date as DD/MM/YYYY
     const formatDate = (date) => {
@@ -368,12 +368,24 @@ const EditProfileScreen = ({ navigation, route }) => {
     return (
         <SafeAreaView style={styles.container}>
             <LinearGradient colors={['#dc2626', '#b91c1c']} style={styles.header}>
-                <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-                    <Ionicons name="arrow-back" size={24} color="white" />
-                </TouchableOpacity>
-                <Text style={styles.headerTitle}>Edit Profile</Text>
-                <View style={{ width: 40 }} />
+                {!isFirstTime && (
+                    <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+                        <Ionicons name="arrow-back" size={24} color="white" />
+                    </TouchableOpacity>
+                )}
+                <Text style={styles.headerTitle}>{isFirstTime ? 'Complete Your Profile' : 'Edit Profile'}</Text>
+                {!isFirstTime ? <View style={{ width: 40 }} /> : null}
             </LinearGradient>
+
+            {isFirstTime && (
+                <View style={styles.welcomeBanner}>
+                    <Ionicons name="sparkles" size={24} color="#dc2626" />
+                    <View style={styles.welcomeTextContainer}>
+                        <Text style={styles.welcomeTitle}>Welcome to the community!</Text>
+                        <Text style={styles.welcomeSubtitle}>Please fill in a few more details to finish setting up your donor profile.</Text>
+                    </View>
+                </View>
+            )}
 
             <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
                 <View style={styles.profilePicSection}>
@@ -509,7 +521,7 @@ const EditProfileScreen = ({ navigation, route }) => {
                         {isSubmitting ? (
                             <ActivityIndicator color="white" />
                         ) : (
-                            <Text style={styles.submitText}>Save Changes</Text>
+                            <Text style={styles.submitText}>{isFirstTime ? 'Finish Setup' : 'Save Changes'}</Text>
                         )}
                     </LinearGradient>
                 </TouchableOpacity>
@@ -755,6 +767,31 @@ const styles = StyleSheet.create({
         fontWeight: 'bold',
         marginLeft: 8,
         fontSize: 14,
+    },
+    welcomeBanner: {
+        flexDirection: 'row',
+        backgroundColor: '#fee2e2',
+        margin: 20,
+        marginBottom: 10,
+        padding: 15,
+        borderRadius: 15,
+        alignItems: 'center',
+        borderWidth: 1,
+        borderColor: '#fca5a5',
+    },
+    welcomeTextContainer: {
+        marginLeft: 12,
+        flex: 1,
+    },
+    welcomeTitle: {
+        fontSize: 14,
+        fontWeight: 'bold',
+        color: '#991b1b',
+    },
+    welcomeSubtitle: {
+        fontSize: 12,
+        color: '#b91c1c',
+        marginTop: 2,
     },
 });
 
