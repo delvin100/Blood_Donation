@@ -41,7 +41,9 @@ const sendPushNotification = async (recipientId, recipientType, title, message, 
             title: title,
             body: message,
             data: data,
-            badge: unreadCount
+            badge: unreadCount,
+            channelId: 'default',
+            priority: 'high'
         }];
 
         // 3. Send via Expo
