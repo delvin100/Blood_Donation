@@ -58,4 +58,4 @@ mobile/android/
 *.sln
 *.sw? 
 # Firebase Config
-mobile/google-services.json
+# mobile/google-services.json
