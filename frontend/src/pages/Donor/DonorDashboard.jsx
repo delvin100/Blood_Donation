@@ -1379,12 +1379,12 @@ const Dashboard = () => {
 
                 <div className="flex flex-col sm:flex-row items-center gap-4 justify-center lg:justify-start">
                   <div className="bg-white p-3 rounded-[1.5rem] shadow-2xl transform hover:scale-110 transition-all duration-500 group/qr relative shrink-0">
-                    <img src="/images/qr-code.png" alt="Scan to Download" className="w-28 h-28 md:w-36 md:h-36" />
+                    <img src="https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=https://github.com/delvin100/eBloodBankApp/releases/download/v1.0/eBloodBank.apk" alt="Scan to Download" className="w-28 h-28 md:w-36 md:h-36" />
                     <div className="absolute inset-0 border-2 border-red-500/10 rounded-[1.5rem] pointer-events-none"></div>
                   </div>
 
                   <div className="flex flex-col gap-2 w-full sm:w-auto">
-                    <a href="#" className="flex items-center gap-3 bg-white text-gray-900 px-5 py-2.5 rounded-2xl hover:bg-gray-50 transition-all font-black text-[10px] uppercase tracking-widest shadow-xl group/btn">
+                    <a href="https://github.com/delvin100/eBloodBankApp/releases/download/v1.0/eBloodBank.apk" download="eBloodBank.apk" className="flex items-center gap-3 bg-white text-gray-900 px-5 py-2.5 rounded-2xl hover:bg-gray-50 transition-all font-black text-[10px] uppercase tracking-widest shadow-xl group/btn">
                       <div className="w-7 h-7 bg-gray-900 rounded-lg flex items-center justify-center text-white group-hover/btn:bg-red-600 transition-colors shrink-0">
                         <i className="fab fa-apple text-sm"></i>
                       </div>
@@ -1393,7 +1393,7 @@ const Dashboard = () => {
                         <span className="text-xs leading-none">App Store</span>
                       </div>
                     </a>
-                    <a href="#" className="flex items-center gap-3 bg-gray-900 border border-white/10 text-white px-5 py-2.5 rounded-2xl hover:bg-black transition-all font-black text-[10px] uppercase tracking-widest shadow-xl group/btn2">
+                    <a href="https://github.com/delvin100/eBloodBankApp/releases/download/v1.0/eBloodBank.apk" download="eBloodBank.apk" className="flex items-center gap-3 bg-gray-900 border border-white/10 text-white px-5 py-2.5 rounded-2xl hover:bg-black transition-all font-black text-[10px] uppercase tracking-widest shadow-xl group/btn2">
                       <div className="w-7 h-7 bg-white/10 rounded-lg flex items-center justify-center group-hover/btn2:bg-red-600 transition-colors shrink-0">
                         <i className="fab fa-google-play text-sm"></i>
                       </div>

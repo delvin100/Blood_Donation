@@ -492,7 +492,7 @@ export default function Home() {
                 </p>
 
                 <div className="flex flex-col sm:flex-row items-center gap-4 justify-center lg:justify-start">
-                  <a href="#" className="app-store-btn">
+                  <a href="https://github.com/delvin100/eBloodBankApp/releases/download/v1.0/eBloodBank.apk" className="app-store-btn" download="eBloodBank.apk">
                     <i className="fab fa-apple text-3xl"></i>
                     <div className="text-left">
                       <div className="text-[10px] font-bold uppercase tracking-widest text-gray-400 leading-none mb-1">Download on</div>
@@ -500,7 +500,7 @@ export default function Home() {
                     </div>
                   </a>
 
-                  <a href="#" className="app-store-btn !bg-gray-900 border border-white/10">
+                  <a href="https://github.com/delvin100/eBloodBankApp/releases/download/v1.0/eBloodBank.apk" className="app-store-btn !bg-gray-900 border border-white/10" download="eBloodBank.apk">
                     <i className="fab fa-google-play text-2xl"></i>
                     <div className="text-left">
                       <div className="text-[10px] font-bold uppercase tracking-widest text-gray-400 leading-none mb-1">Get it on</div>
@@ -524,7 +524,7 @@ export default function Home() {
                 <div className="flex flex-col items-center gap-4">
                   <div className="qr-container bg-white p-5 shadow-2xl rounded-[2.5rem] relative group/qr scale-110">
                     <img
-                      src="/images/qr-code.png"
+                      src="https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=https://github.com/delvin100/eBloodBankApp/releases/download/v1.0/eBloodBank.apk"
                       alt="Scan to Download"
                       className="w-32 h-32 md:w-40 md:h-40"
                     />

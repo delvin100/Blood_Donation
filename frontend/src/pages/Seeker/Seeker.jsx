@@ -830,21 +830,21 @@ const Seeker = () => {
                                 
                                 <div className="flex flex-col items-start gap-5">
                                     <div className="bg-white p-5 rounded-[2rem] shadow-2xl border border-gray-100 hover:scale-105 transition-transform group/qr self-center">
-                                        <img src="/images/qr-code.png" alt="QR Code" className="w-36 h-36 md:w-40 md:h-40" />
+                                        <img src="https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=https://github.com/delvin100/eBloodBankApp/releases/download/v1.0/eBloodBank.apk" alt="QR Code" className="w-36 h-36 md:w-40 md:h-40" />
                                         <div className="text-center mt-2">
                                             <span className="text-[9px] font-black text-gray-400 uppercase tracking-[0.2em]">Scan for Instant Access</span>
                                         </div>
                                     </div>
 
                                     <div className="flex flex-col gap-3 w-full">
-                                        <button className="w-full flex items-center justify-center gap-3 bg-gray-900 hover:bg-black text-white px-6 py-4 rounded-2xl transition-all shadow-xl font-black text-xs uppercase tracking-widest">
+                                        <a href="https://github.com/delvin100/eBloodBankApp/releases/download/v1.0/eBloodBank.apk" download="eBloodBank.apk" className="w-full flex items-center justify-center gap-3 bg-gray-900 hover:bg-black text-white px-6 py-4 rounded-2xl transition-all shadow-xl font-black text-xs uppercase tracking-widest">
                                             <i className="fab fa-apple text-xl"></i>
                                             <span>App Store</span>
-                                        </button>
-                                        <button className="w-full flex items-center justify-center gap-3 bg-white border-2 border-gray-100 hover:border-red-500 hover:bg-red-50 text-gray-900 px-6 py-4 rounded-2xl transition-all font-black text-xs uppercase tracking-widest">
+                                        </a>
+                                        <a href="https://github.com/delvin100/eBloodBankApp/releases/download/v1.0/eBloodBank.apk" download="eBloodBank.apk" className="w-full flex items-center justify-center gap-3 bg-white border-2 border-gray-100 hover:border-red-500 hover:bg-red-50 text-gray-900 px-6 py-4 rounded-2xl transition-all font-black text-xs uppercase tracking-widest">
                                             <i className="fab fa-google-play text-lg text-red-500"></i>
                                             <span>Play Store</span>
-                                        </button>
+                                        </a>
                                     </div>
                                 </div>
                             </div>
