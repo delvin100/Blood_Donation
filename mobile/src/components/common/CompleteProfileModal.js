@@ -375,9 +375,11 @@ const CompleteProfileModal = ({ visible, onClose, onSuccess }) => {
                                         onValueChange={(val) => { setState(val); setDistrict(''); }}
                                         style={styles.picker}
                                         enabled={!isFetchingLocation}
+                                        dropdownIconColor="#dc2626"
+                                        mode="dropdown"
                                     >
                                         <Picker.Item label="Select State" value="" color="#6b7280" />
-                                        {Object.keys(stateDistrictMapping).map(s => <Picker.Item key={s} label={s} value={s} />)}
+                                        {Object.keys(stateDistrictMapping).map(s => <Picker.Item key={s} label={s} value={s} color="#111827" />)}
                                     </Picker>
                                 </View>
 
@@ -390,9 +392,11 @@ const CompleteProfileModal = ({ visible, onClose, onSuccess }) => {
                                         onValueChange={(val) => { if (state) setDistrict(val); }}
                                         style={styles.picker}
                                         enabled={!!state && !isFetchingLocation}
+                                        dropdownIconColor="#dc2626"
+                                        mode="dropdown"
                                     >
                                         <Picker.Item label="Select District" value="" color="#6b7280" />
-                                        {districts.map(d => <Picker.Item key={d} label={d} value={d} />)}
+                                        {districts.map(d => <Picker.Item key={d} label={d} value={d} color="#111827" />)}
                                     </Picker>
                                 </View>
 
@@ -452,7 +456,7 @@ const styles = StyleSheet.create({
     bloodChipText: { fontSize: 14, fontWeight: '900', color: '#4b5563' },
     activeBloodChipText: { color: '#dc2626' },
     pickerContainer: { backgroundColor: '#f9fafb', borderRadius: 16, borderWidth: 1, borderColor: '#e5e7eb', overflow: 'hidden' },
-    picker: { flex: 1, marginLeft: -12, height: 56 },
+    picker: { flex: 1, marginLeft: -12, height: 56, color: '#111827' },
     disabledPicker: { opacity: 0.5, backgroundColor: '#f3f4f6' },
     locationBtn: { flexDirection: 'row', backgroundColor: '#3b82f6', borderRadius: 16, padding: 16, alignItems: 'center', justifyContent: 'center', marginTop: 10, elevation: 2 },
     locationBtnText: { color: 'white', fontWeight: '800', marginLeft: 8 },

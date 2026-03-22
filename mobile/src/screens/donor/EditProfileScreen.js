@@ -668,6 +668,7 @@ const styles = StyleSheet.create({
     },
     picker: {
         flex: 1,
+        color: '#1f2937',
     },
     errorText: {
         color: '#ef4444',
@@ -833,12 +834,14 @@ const SelectField = ({ label, name, icon, options, pickerKey, formData, errors, 
                 onValueChange={(val) => handleChange(name, val)}
                 style={styles.picker}
                 enabled={name === 'state' ? true : (!!formData.state)}
+                dropdownIconColor="#dc2626"
+                mode="dropdown"
             >
                 <Picker.Item label={`Select ${label}`} value="" color="#6b7280" />
                 {options.map((opt, i) => {
                     const optLabel = typeof opt === 'string' ? opt : opt.label;
                     const optValue = typeof opt === 'string' ? opt : opt.value;
-                    return <Picker.Item key={i} label={optLabel} value={optValue} />;
+                    return <Picker.Item key={i} label={optLabel} value={optValue} color="#1f2937" />;
                 })}
             </Picker>
         </View>
