@@ -122,7 +122,7 @@ const EditProfileScreen = ({ navigation, route }) => {
         if (!formData.state) newErrors.state = 'Required';
         if (!formData.district) newErrors.district = 'Required';
         if (!formData.city.trim()) newErrors.city = 'Required';
-        if (!formData.username.trim()) newErrors.username = 'Required';
+        if (!user?.google_id && !formData.username.trim()) newErrors.username = 'Required';
         if (!formData.dob || formData.dob === 'DD/MM/YYYY' || formData.dob === '00/00/0000') {
             newErrors.dob = 'Required';
         } else {
@@ -172,6 +172,10 @@ const EditProfileScreen = ({ navigation, route }) => {
             if (!submissionData.password) {
                 delete submissionData.password;
                 delete submissionData.confirm_password;
+            }
+
+            if (user?.google_id && !submissionData.username) {
+                delete submissionData.username;
             }
 
             const response = await apiService.put('/donor/profile', submissionData);
@@ -505,12 +509,14 @@ const EditProfileScreen = ({ navigation, route }) => {
                     <InputField label="City" name="city" icon="business" placeholder="Mumbai" formData={formData} errors={errors} handleChange={handleChange} styles={styles} />
                 </View>
 
-                <View style={styles.section}>
-                    <Text style={styles.sectionTitle}>Account Security</Text>
-                    <InputField label="Username" name="username" icon="person-circle" placeholder="johndoe123" formData={formData} errors={errors} handleChange={handleChange} styles={styles} />
-                    <InputField label="New Password" name="password" icon="lock-closed" secure placeholder="Leave blank to keep current" formData={formData} errors={errors} handleChange={handleChange} styles={styles} />
-                    <InputField label="Confirm Password" name="confirm_password" icon="lock-closed" secure placeholder="Repeat new password" formData={formData} errors={errors} handleChange={handleChange} styles={styles} />
-                </View>
+                {!user?.google_id && (
+                    <View style={styles.section}>
+                        <Text style={styles.sectionTitle}>Account Security</Text>
+                        <InputField label="Username" name="username" icon="person-circle" placeholder="johndoe123" formData={formData} errors={errors} handleChange={handleChange} styles={styles} />
+                        <InputField label="New Password" name="password" icon="lock-closed" secure placeholder="Leave blank to keep current" formData={formData} errors={errors} handleChange={handleChange} styles={styles} />
+                        <InputField label="Confirm Password" name="confirm_password" icon="lock-closed" secure placeholder="Repeat new password" formData={formData} errors={errors} handleChange={handleChange} styles={styles} />
+                    </View>
+                )}
 
                 <TouchableOpacity
                     style={styles.submitButton}

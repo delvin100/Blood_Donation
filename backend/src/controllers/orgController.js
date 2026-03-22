@@ -367,7 +367,8 @@ exports.createRequest = async (req, res) => {
             const org = orgRows[0];
 
             // Get all available donors with push tokens
-            const [donors] = await pool.query('SELECT id, push_token, blood_type, city, district FROM donors WHERE availability = "Available" AND push_token IS NOT NULL');
+            // Get all donors with push tokens (for now include even unavailable ones as an extra alert)
+            const [donors] = await pool.query('SELECT id, push_token, blood_type, city, district, availability FROM donors WHERE push_token IS NOT NULL');
 
             const compatibilityMap = {
                 'O-': ['O-', 'O+', 'A-', 'A+', 'B-', 'B+', 'AB-', 'AB+'],

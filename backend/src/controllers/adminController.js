@@ -303,13 +303,34 @@ exports.createBroadcast = async (req, res) => {
 
     try {
         if (['all', 'donors', 'organizations'].includes(target)) {
-            // New Global Broadcast System
+            // 1. Record broadcast in DB
             await pool.query(
                 'INSERT INTO broadcasts (target, title, message) VALUES (?, ?, ?)',
                 [target, title, message]
             );
 
-            res.json({ message: `Global broadcast "${title}" sent to ${target}.` });
+            // 2. Send Push Notifications to the target group
+            const { sendPushNotification } = require('../utils/notificationUtils');
+            
+            let query = '';
+            if (target === 'donors') {
+                query = 'SELECT id FROM donors WHERE push_token IS NOT NULL';
+            } else if (target === 'organizations') {
+                query = 'SELECT id FROM organizations WHERE push_token IS NOT NULL';
+            } else {
+                // target === 'all'
+                query = '(SELECT id, "Donor" as type FROM donors WHERE push_token IS NOT NULL) UNION (SELECT id, "Organization" as type FROM organizations WHERE push_token IS NOT NULL)';
+            }
+
+            const [recipients] = await pool.query(query);
+            
+            // Send in parallel (limit if necessary, but for now loop)
+            for (let r of recipients) {
+                const type = r.type || (target === 'donors' ? 'Donor' : 'Organization');
+                await sendPushNotification(r.id, type, title, message, { type: 'BROADCAST' });
+            }
+
+            res.json({ message: `Global broadcast "${title}" sent to ${target} (${recipients.length} recipients).` });
             await addAdminLog(req.adminId, 'BROADCAST', title, `Sent global broadcast: "${title}" target: ${target}`);
             return;
         }

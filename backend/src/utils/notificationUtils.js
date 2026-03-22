@@ -47,16 +47,18 @@ const sendPushNotification = async (recipientId, recipientType, title, message, 
         }];
 
         // 3. Send via Expo
+        console.log(`[PUSH] Dispatching to ${pushToken}: "${title}"`);
         let chunks = expo.chunkPushNotifications(messages);
         for (let chunk of chunks) {
             try {
-                await expo.sendPushNotificationsAsync(chunk);
+                let ticketChunk = await expo.sendPushNotificationsAsync(chunk);
+                console.log('[PUSH] Expo Receipt:', ticketChunk);
             } catch (error) {
-                console.error('Error sending push notification chunk:', error);
+                console.error('[PUSH] Error sending chunk:', error);
             }
         }
     } catch (err) {
-        console.error('sendPushNotification error:', err);
+        console.error('[PUSH] Global utility error:', err);
     }
 };
 

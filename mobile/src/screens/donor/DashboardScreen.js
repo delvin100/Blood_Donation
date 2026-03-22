@@ -20,6 +20,7 @@ import * as ImagePicker from 'expo-image-picker';
 import apiService from '../../api/apiService';
 import { removeToken, removeUser } from '../../utils/storage';
 import { parseError, logError } from '../../utils/errors';
+import { GoogleSignin } from '@react-native-google-signin/google-signin';
 import CompleteProfileModal from '../../components/common/CompleteProfileModal';
 import UrgentNeedsModal from '../../components/donor/UrgentNeedsModal';
 import MedicalReportsModal from '../../components/donor/MedicalReportsModal';
@@ -260,6 +261,11 @@ const DashboardScreen = ({ navigation }) => {
     }, []);
 
     const handleLogout = async () => {
+        try {
+            await GoogleSignin.signOut();
+        } catch (err) {
+            console.log('Google SignOut Error (Safe to ignore if not Google user):', err);
+        }
         await removeToken();
         await removeUser();
         navigation.navigate('Login');
