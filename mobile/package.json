@@ -7,7 +7,7 @@
     "android": "expo start --android",
     "ios": "expo start --ios",
     "web": "expo start --web",
-    "eas-build-pre-install": "if [ -f \"$GOOGLE_SERVICES_JSON\" ]; then cp \"$GOOGLE_SERVICES_JSON\" google-services.json; else echo \"$GOOGLE_SERVICES_JSON\" > google-services.json; fi"
+    "eas-build-pre-install": "node -e \"const fs = require('fs'); fs.writeFileSync('google-services.json', process.env.GOOGLE_SERVICES_JSON)\""
   },
   "dependencies": {
     "@expo/metro-runtime": "~6.1.2",
