@@ -7,7 +7,7 @@
     "android": "expo start --android",
     "ios": "expo start --ios",
     "web": "expo start --web",
-    "eas-build-pre-install": "cp ../google-services.json . || echo 'Secret file not found at root, skipping copy'"
+    "eas-build-pre-install": "echo $GOOGLE_SERVICES_JSON > google-services.json"
   },
   "dependencies": {
     "@expo/metro-runtime": "~6.1.2",
