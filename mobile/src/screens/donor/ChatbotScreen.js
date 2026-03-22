@@ -214,7 +214,7 @@ const ChatbotScreen = ({ navigation, route }) => {
                             placeholder="Type a message..."
                             value={inputValue}
                             onChangeText={setInputValue}
-                            placeholderTextColor="#9ca3af"
+                            placeholderTextColor="#6b7280"
                         />
                         <TouchableOpacity
                             onPress={handleSendMessage}

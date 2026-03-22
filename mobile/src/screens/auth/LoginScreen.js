@@ -30,8 +30,8 @@ import { parseError, logError } from '../../utils/errors';
 const { width } = Dimensions.get('window');
 
 // Native Google Auth Configuration (using environment variables with testgoogle fallbacks)
-const WEB_CLIENT_ID = process.env.EXPO_PUBLIC_GOOGLE_TEST_WEB_CLIENT_ID || '280724731299-e648k1lk5p148b61fo13qp4q3n4gbmr2.apps.googleusercontent.com';
-const ANDROID_CLIENT_ID = process.env.EXPO_PUBLIC_GOOGLE_TEST_ANDROID_CLIENT_ID || '280724731299-mq3okv1u9to11fcgsj0ent9ukpu8dgpu.apps.googleusercontent.com';
+const WEB_CLIENT_ID = process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID || process.env.EXPO_PUBLIC_GOOGLE_TEST_WEB_CLIENT_ID || '280724731299-e648k1lk5p148b61fo13qp4q3n4gbmr2.apps.googleusercontent.com';
+const ANDROID_CLIENT_ID = process.env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID || process.env.EXPO_PUBLIC_GOOGLE_TEST_ANDROID_CLIENT_ID || '280724731299-mq3okv1u9to11fcgsj0ent9ukpu8dgpu.apps.googleusercontent.com';
 
 GoogleSignin.configure({
     webClientId: WEB_CLIENT_ID,
@@ -215,6 +215,7 @@ const LoginScreen = ({ navigation }) => {
                                 <TextInput
                                     style={styles.input}
                                     placeholder="Enter your username"
+                                    placeholderTextColor="#6b7280"
                                     value={username}
                                     onChangeText={setUsername}
                                     autoCapitalize="none"
@@ -229,6 +230,7 @@ const LoginScreen = ({ navigation }) => {
                                 <TextInput
                                     style={styles.input}
                                     placeholder="Enter your password"
+                                    placeholderTextColor="#6b7280"
                                     value={password}
                                     onChangeText={setPassword}
                                     secureTextEntry={!showPassword}

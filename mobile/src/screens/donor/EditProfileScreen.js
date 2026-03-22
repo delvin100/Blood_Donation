@@ -812,6 +812,7 @@ const InputField = ({ label, name, icon, type = 'default', secure = false, place
                     keyboardType={type}
                     secureTextEntry={secure}
                     placeholder={placeholder}
+                    placeholderTextColor="#6b7280"
                     editable={editable}
                 />
                 {children}
@@ -833,7 +834,7 @@ const SelectField = ({ label, name, icon, options, pickerKey, formData, errors, 
                 style={styles.picker}
                 enabled={name === 'state' ? true : (!!formData.state)}
             >
-                <Picker.Item label={`Select ${label}`} value="" color="#9ca3af" />
+                <Picker.Item label={`Select ${label}`} value="" color="#6b7280" />
                 {options.map((opt, i) => {
                     const optLabel = typeof opt === 'string' ? opt : opt.label;
                     const optValue = typeof opt === 'string' ? opt : opt.value;

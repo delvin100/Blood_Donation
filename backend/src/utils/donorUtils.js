@@ -1,4 +1,5 @@
 const pool = require('../config/database');
+const { createAndSendNotification } = require('./notificationUtils');
 
 /**
  * Calculates a donor's availability based on their last donation date.
@@ -49,15 +50,12 @@ const calculateDonorAvailability = async (donorId, connection = null) => {
                 hundredDaysAgo.setDate(hundredDaysAgo.getDate() - 100);
                 
                 if (lastDonationDate > hundredDaysAgo) {
-                    await db.query(
-                        "INSERT INTO notifications (recipient_id, recipient_type, type, title, message) VALUES (?, ?, ?, ?, ?)",
-                        [
-                            donorId, 
-                            'Donor', 
-                            'ELIGIBILITY', 
-                            'Ready to Save Lives Again! 🩸', 
-                            'Great news! Your 90-day rest period is over. You are now eligible to donate blood and help those in need. Visit a nearby center today!'
-                        ]
+                    await createAndSendNotification(
+                        donorId,
+                        'Donor',
+                        'ELIGIBILITY',
+                        'Ready to Save Lives Again! 🩸',
+                        'Great news! Your 90-day rest period is over. You are now eligible to donate blood and help those in need. Visit a nearby center today!'
                     );
                 }
             }

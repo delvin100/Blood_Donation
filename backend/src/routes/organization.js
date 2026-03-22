@@ -44,4 +44,6 @@ router.put('/drives/:id', authMiddleware, orgController.updateDrive);
 router.get('/drives/:id/inventory', authMiddleware, orgController.getDriveInventory);
 router.post('/drives/inventory', authMiddleware, orgController.addDriveInventory);
 
+router.put('/push-token', authMiddleware, orgController.updatePushToken);
+
 module.exports = router;

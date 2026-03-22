@@ -302,7 +302,7 @@ const SeekerScreen = ({ navigation }) => {
 
                         <Text style={styles.label}>City/Town</Text>
                         <View style={styles.inputWrapper}>
-                            <TextInput style={styles.input} placeholder="Enter city name" value={city} onChangeText={setCity} placeholderTextColor="#94a3b8" />
+                            <TextInput style={styles.input} placeholder="Enter city name" value={city} onChangeText={setCity} placeholderTextColor="#6b7280" />
                         </View>
 
                         <TouchableOpacity style={styles.searchBtn} onPress={handleSearch} disabled={loading}>
@@ -454,7 +454,7 @@ const styles = StyleSheet.create({
     dropdownTextPlaceholder: {
         flex: 1,
         fontSize: 15,
-        color: '#94a3b8',
+        color: '#6b7280',
     },
     dropdownTextActive: {
         flex: 1,

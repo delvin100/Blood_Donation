@@ -7,6 +7,7 @@ const { addOrgLog } = require('../utils/logUtils');
 const https = require('https');
 const { getIndiaCoordinates } = require('../utils/matchUtils');
 const { Expo } = require('expo-server-sdk');
+const { createAndSendNotification } = require('../utils/notificationUtils');
 
 let expo = new Expo();
 
@@ -360,59 +361,40 @@ exports.createRequest = async (req, res) => {
         await addOrgLog(req.user.id, 'REQUEST_CREATE', blood_group, `Created ${urgency_level} request for ${units_required} units of ${blood_group}`);
         res.json({ message: 'Request created' });
 
-        // Push Notification Logic
+        // Push Notification Logic using Central Utility
         try {
             const [orgRows] = await pool.query('SELECT name, city, district FROM organizations WHERE id = ?', [req.user.id]);
             const org = orgRows[0];
 
             // Get all available donors with push tokens
-            const [donors] = await pool.query('SELECT push_token, blood_type, city, district FROM donors WHERE availability = "Available" AND push_token IS NOT NULL');
+            const [donors] = await pool.query('SELECT id, push_token, blood_type, city, district FROM donors WHERE availability = "Available" AND push_token IS NOT NULL');
 
-            const map = {
+            const compatibilityMap = {
                 'O-': ['O-', 'O+', 'A-', 'A+', 'B-', 'B+', 'AB-', 'AB+'],
                 'O+': ['O+', 'A+', 'B+', 'AB+'],
                 'A-': ['A-', 'A+', 'AB-', 'AB+'],
-                'A+': ['A+', 'AB+'],
+                'A+': ['A+','AB+'],
                 'B-': ['B-', 'B+', 'AB-', 'AB+'],
-                'B+': ['B+', 'AB+'],
+                'B+': ['B+','AB+'],
                 'AB-': ['AB-', 'AB+'],
                 'AB+': ['AB+']
             };
 
-            let messages = [];
             for (let donor of donors) {
                 const nType = donor.blood_type ? donor.blood_type.replace(/1/, '') : null;
-                const canGiveToRecipients = map[nType] || [donor.blood_type];
+                const canGiveToRecipients = compatibilityMap[nType] || [donor.blood_type];
                 
-                // If donor can give to the requested blood group
                 if (canGiveToRecipients.includes(blood_group)) {
-                    // Check if expo token is valid
-                    if (!Expo.isExpoPushToken(donor.push_token)) {
-                        continue;
-                    }
-
-                    // For simplicity, notifying donors in the same city or district
                     if (donor.city === org.city || donor.district === org.district) {
-                        messages.push({
-                            to: donor.push_token,
-                            sound: 'default',
-                            title: `🚨 Urgent Need: ${blood_group}`,
-                            body: `${org.name} urgently needs ${units_required} units of ${blood_group}. Tap to help!`,
-                            data: { requestId: requestId },
-                            badge: 1
-                        });
-                    }
-                }
-            }
-
-            if (messages.length > 0) {
-                let chunks = expo.chunkPushNotifications(messages);
-                for (let chunk of chunks) {
-                    try {
-                        let ticketChunk = await expo.sendPushNotificationsAsync(chunk);
-                        console.log('Push notifications sent:', ticketChunk);
-                    } catch (error) {
-                        console.error('Error sending push chunk', error);
+                        await createAndSendNotification(
+                            donor.id,
+                            'Donor',
+                            'EMERGENCY',
+                            `🚨 Urgent Need: ${blood_group}`,
+                            `${org.name} urgently needs ${units_required} units of ${blood_group}. Tap to help!`,
+                            requestId,
+                            { urgency: urgency_level }
+                        );
                     }
                 }
             }
@@ -1124,6 +1106,18 @@ exports.getDriveInventory = async (req, res) => {
         res.json(collections);
     } catch (err) {
         console.error('Org getDriveInventory Error:', err);
+        res.status(500).json({ error: 'Server error', details: err.message });
+    }
+};
+exports.updatePushToken = async (req, res) => {
+    try {
+        const { token } = req.body;
+        const orgId = req.user.id;
+        if (!token) return res.status(400).json({ error: 'Push token is required' });
+        await pool.query('UPDATE organizations SET push_token = ? WHERE id = ?', [token, orgId]);
+        res.json({ message: 'Push token updated successfully' });
+    } catch (err) {
+        console.error('Update Org Push Token Error:', err);
         res.status(500).json({ error: 'Server error', details: err.message });
     }
 };

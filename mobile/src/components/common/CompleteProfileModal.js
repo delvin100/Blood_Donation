@@ -318,6 +318,7 @@ const CompleteProfileModal = ({ visible, onClose, onSuccess }) => {
                                     <TextInput
                                         style={styles.input}
                                         placeholder="10 digit mobile number"
+                                        placeholderTextColor="#6b7280"
                                         value={phone}
                                         onChangeText={(val) => setPhone(val.replace(/[^0-9]/g, ''))}
                                         keyboardType="numeric"
@@ -335,7 +336,7 @@ const CompleteProfileModal = ({ visible, onClose, onSuccess }) => {
                                 >
                                     <View style={[styles.inputWrapper, showErrors && (dob === 'DD/MM/YYYY' || !dob) && styles.inputWrapperError]} pointerEvents="none">
                                         <Ionicons name="calendar-outline" size={20} color="#6b7280" style={styles.inputIcon} />
-                                        <TextInput style={styles.input} placeholder="DD/MM/YYYY" value={dob} editable={false} maxLength={10} />
+                                        <TextInput style={styles.input} placeholder="DD/MM/YYYY" placeholderTextColor="#6b7280" value={dob} editable={false} maxLength={10} />
                                         <View style={styles.datePickerBtn}>
                                             <Ionicons name="chevron-down" size={20} color="#dc2626" />
                                         </View>
@@ -375,7 +376,7 @@ const CompleteProfileModal = ({ visible, onClose, onSuccess }) => {
                                         style={styles.picker}
                                         enabled={!isFetchingLocation}
                                     >
-                                        <Picker.Item label="Select State" value="" />
+                                        <Picker.Item label="Select State" value="" color="#6b7280" />
                                         {Object.keys(stateDistrictMapping).map(s => <Picker.Item key={s} label={s} value={s} />)}
                                     </Picker>
                                 </View>
@@ -390,7 +391,7 @@ const CompleteProfileModal = ({ visible, onClose, onSuccess }) => {
                                         style={styles.picker}
                                         enabled={!!state && !isFetchingLocation}
                                     >
-                                        <Picker.Item label="Select District" value="" />
+                                        <Picker.Item label="Select District" value="" color="#6b7280" />
                                         {districts.map(d => <Picker.Item key={d} label={d} value={d} />)}
                                     </Picker>
                                 </View>
@@ -398,7 +399,7 @@ const CompleteProfileModal = ({ visible, onClose, onSuccess }) => {
                                 <Text style={styles.label}>City</Text>
                                 <View style={[styles.inputWrapper, showErrors && !city.trim() && styles.inputWrapperError]}>
                                     <Ionicons name="business-outline" size={20} color="#6b7280" style={styles.inputIcon} />
-                                    <TextInput style={styles.input} placeholder="Enter your city/town" value={city} onChangeText={setCity} />
+                                    <TextInput style={styles.input} placeholder="Enter your city/town" placeholderTextColor="#6b7280" value={city} onChangeText={setCity} />
                                 </View>
                             </>
                         )}

@@ -43,11 +43,11 @@
         }
       ]
     ],
+    "owner": "delvin1000",
     "extra": {
       "eas": {
-        "projectId": "f4068de3-08a6-45f9-bd57-fe91b241b803"
+        "projectId": "f2e8f65f-3e5f-4c47-9ecc-e85c58859785"
       }
-    },
-    "owner": "delvin1000"
+    }
   }
 }

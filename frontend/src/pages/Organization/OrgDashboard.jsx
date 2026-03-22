@@ -2154,7 +2154,7 @@ export default function OrgDashboard() {
                                         </span>
                                     </div>
 
-                                    <div className="space-y-6 max-h-[900px] overflow-y-auto pr-2 scrollbar-hide flex flex-col items-center justify-center min-h-[500px]">
+                                    <div className="space-y-6 max-h-[900px] overflow-y-auto pr-2 flex flex-col min-h-[500px]">
                                         {requests.filter(r => r.status === 'Active').length === 0 ? (
                                             <div className="w-full h-full border-2 border-dashed border-gray-100 rounded-[3.5rem] bg-gray-50/50 text-center flex flex-col items-center justify-center min-h-[500px] space-y-8">
                                                 <div className="w-32 h-32 bg-white rounded-full flex items-center justify-center text-gray-200 mx-auto shadow-inner">
@@ -2167,7 +2167,7 @@ export default function OrgDashboard() {
                                             </div>
                                         ) : (
                                             requests.filter(r => r.status === 'Active').map(req => (
-                                                <div key={req.id} className="group bg-white p-8 rounded-[3rem] border border-gray-100 shadow-xl shadow-gray-200/20 transition-all hover:border-red-500/30 animate-in slide-in-from-right-4 duration-500 hover:-translate-y-1">
+                                                <div key={req.id} className="w-full group bg-white p-8 rounded-[3rem] border border-gray-100 shadow-xl shadow-gray-200/20 transition-all hover:border-red-500/30 animate-in slide-in-from-right-4 duration-500 hover:-translate-y-1">
                                                     <div className="flex justify-between items-start mb-8">
                                                         <span className="text-[10px] font-black text-gray-300 uppercase tracking-widest bg-gray-50 px-3 py-1.5 rounded-lg">
                                                             {new Date(req.created_at).toLocaleDateString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}

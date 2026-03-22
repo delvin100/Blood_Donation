@@ -176,6 +176,7 @@ const ForgotPasswordModal = ({ visible, onClose }) => {
                                         <TextInput
                                             style={styles.input}
                                             placeholder="you@example.com"
+                                            placeholderTextColor="#6b7280"
                                             value={email}
                                             onChangeText={(val) => { setEmail(val); setError(''); setSuccess(''); }}
                                             keyboardType="email-address"
@@ -201,6 +202,7 @@ const ForgotPasswordModal = ({ visible, onClose }) => {
                                         <TextInput
                                             style={styles.input}
                                             placeholder="0 0 0 0"
+                                            placeholderTextColor="#6b7280"
                                             value={otp}
                                             onChangeText={(val) => { setOtp(val); setError(''); }}
                                             keyboardType="number-pad"
@@ -233,6 +235,7 @@ const ForgotPasswordModal = ({ visible, onClose }) => {
                                         <TextInput
                                             style={styles.input}
                                             placeholder="Minimum 8 characters"
+                                            placeholderTextColor="#6b7280"
                                             value={newPassword}
                                             onChangeText={(val) => { setNewPassword(val); setError(''); }}
                                             secureTextEntry={!showPassword}
@@ -256,6 +259,7 @@ const ForgotPasswordModal = ({ visible, onClose }) => {
                                         <TextInput
                                             style={styles.input}
                                             placeholder="Repeat password"
+                                            placeholderTextColor="#6b7280"
                                             value={confirmPassword}
                                             onChangeText={(val) => { setConfirmPassword(val); setError(''); }}
                                             secureTextEntry={!showConfirmPassword}

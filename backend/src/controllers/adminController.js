@@ -2,6 +2,7 @@ const pool = require('../config/database');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const { addAdminLog } = require('../utils/logUtils');
+const { createAndSendNotification } = require('../utils/notificationUtils');
 
 const JWT_SECRET = process.env.JWT_SECRET || 'secret';
 
@@ -59,9 +60,21 @@ exports.verifyOrganization = async (req, res) => {
         if (result.affectedRows === 0) {
             return res.status(404).json({ error: 'Organization not found.' });
         }
-        const [org] = await pool.query('SELECT name FROM organizations WHERE id = ?', [req.params.id]);
+        const [org] = await pool.query('SELECT name, verified FROM organizations WHERE id = ?', [req.params.id]);
+        const isNowVerified = org[0]?.verified;
+        
+        await createAndSendNotification(
+            req.params.id,
+            'Organization',
+            'SYSTEM',
+            isNowVerified ? 'Facility Verified! ✅' : 'Verification Revoked ⚠️',
+            isNowVerified 
+                ? 'Your healthcare facility has been verified by the administrator. You now have full access to create emergency broadcasts and manage inventory.'
+                : 'Your facility verification has been temporarily revoked. Please contact the administrator for details.'
+        );
+
         res.json({ message: 'Organization verification status updated.' });
-        await addAdminLog(req.adminId, 'ORG_VERIFY', org[0]?.name, `Toggled verification status for ${org[0]?.name}`);
+        await addAdminLog(req.adminId, 'ORG_VERIFY', org[0]?.name, `Toggled verification status for ${org[0]?.name} (New status: ${isNowVerified ? 'Verified' : 'Unverified'})`);
     } catch (err) {
         console.error('Update verification failed:', err);
         res.status(500).json({ error: err.message || 'Server error' });
@@ -311,7 +324,7 @@ exports.createBroadcast = async (req, res) => {
             return res.status(400).json({ error: 'No recipients found' });
         }
 
-        // Bulk insert notifications
+        // Bulk insert notifications to database
         const values = recipients.map(r => [
             r.id,
             r.type,
@@ -324,6 +337,13 @@ exports.createBroadcast = async (req, res) => {
             'INSERT INTO notifications (recipient_id, recipient_type, type, title, message) VALUES ?',
             [values]
         );
+
+        // Send individual push notifications via utility
+        for (let r of recipients) {
+            // Note: We use the existing sendPushNotification here since we already inserted into DB
+            const { sendPushNotification } = require('../utils/notificationUtils');
+            await sendPushNotification(r.id, r.type, title, message, { type: 'BROADCAST' });
+        }
 
         res.json({ message: `Broadcast sent successfully to ${recipients.length} recipients.` });
         await addAdminLog(req.adminId, 'BROADCAST', title, `Sent broadcast: "${title}" to ${recipients.length} specific recipients`);

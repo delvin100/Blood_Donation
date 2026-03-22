@@ -1,26 +1,36 @@
 {
   "project_info": {
-    "project_number": "867603093607",
-    "project_id": "ebloodbank-fb878",
-    "storage_bucket": "ebloodbank-fb878.firebasestorage.app"
+    "project_number": "280724731299",
+    "project_id": "my-project-7123-454223",
+    "storage_bucket": "my-project-7123-454223.firebasestorage.app"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:867603093607:android:2170be2b9167f57dc69cc2",
+        "mobilesdk_app_id": "1:280724731299:android:88915cb725f039c9661616",
         "android_client_info": {
           "package_name": "com.delvin.blooddonation"
         }
       },
-      "oauth_client": [],
+      "oauth_client": [
+        {
+          "client_id": "280724731299-e648k1lk5p148b61fo13qp4q3n4gbmr2.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
       "api_key": [
         {
-          "current_key": "AIzaSyBwFyRNZCR75p0wBBT_cEPRcGhjfCCc2L4"
+          "current_key": "AIzaSyA_6Yx3_QyOY5aW8OQstozq7iWFBbKs1tE"
         }
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": []
+          "other_platform_oauth_client": [
+            {
+              "client_id": "280724731299-e648k1lk5p148b61fo13qp4q3n4gbmr2.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
         }
       }
     }

@@ -26,8 +26,8 @@ import { parseError, logError } from '../../utils/errors';
 
 
 // Native Google Auth Configuration (using environment variables with testgoogle fallbacks)
-const WEB_CLIENT_ID = process.env.EXPO_PUBLIC_GOOGLE_TEST_WEB_CLIENT_ID || '280724731299-e648k1lk5p148b61fo13qp4q3n4gbmr2.apps.googleusercontent.com';
-const ANDROID_CLIENT_ID = process.env.EXPO_PUBLIC_GOOGLE_TEST_ANDROID_CLIENT_ID || '280724731299-mq3okv1u9to11fcgsj0ent9ukpu8dgpu.apps.googleusercontent.com';
+const WEB_CLIENT_ID = process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID || process.env.EXPO_PUBLIC_GOOGLE_TEST_WEB_CLIENT_ID || '280724731299-e648k1lk5p148b61fo13qp4q3n4gbmr2.apps.googleusercontent.com';
+const ANDROID_CLIENT_ID = process.env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID || process.env.EXPO_PUBLIC_GOOGLE_TEST_ANDROID_CLIENT_ID || '280724731299-mq3okv1u9to11fcgsj0ent9ukpu8dgpu.apps.googleusercontent.com';
 
 GoogleSignin.configure({
     webClientId: WEB_CLIENT_ID,
@@ -295,6 +295,7 @@ const RegisterScreen = ({ navigation }) => {
                                 <TextInput
                                     style={styles.input}
                                     placeholder="Choose a username"
+                                    placeholderTextColor="#6b7280"
                                     value={username}
                                     onChangeText={(val) => {
                                         setUsername(val);
@@ -313,6 +314,7 @@ const RegisterScreen = ({ navigation }) => {
                                 <TextInput
                                     style={styles.input}
                                     placeholder="Enter your full name"
+                                    placeholderTextColor="#6b7280"
                                     value={fullName}
                                     onChangeText={(val) => {
                                         setFullName(val);
@@ -331,6 +333,7 @@ const RegisterScreen = ({ navigation }) => {
                                 <TextInput
                                     style={styles.input}
                                     placeholder="Enter your email"
+                                    placeholderTextColor="#6b7280"
                                     value={email}
                                     onChangeText={(val) => {
                                         setEmail(val);
@@ -352,6 +355,7 @@ const RegisterScreen = ({ navigation }) => {
                                 <TextInput
                                     style={styles.input}
                                     placeholder="Minimum 8 characters"
+                                    placeholderTextColor="#6b7280"
                                     value={password}
                                     onChangeText={(val) => {
                                         handlePasswordChange(val);
@@ -394,6 +398,7 @@ const RegisterScreen = ({ navigation }) => {
                                 <TextInput
                                     style={styles.input}
                                     placeholder="Repeat your password"
+                                    placeholderTextColor="#6b7280"
                                     value={confirmPassword}
                                     onChangeText={(val) => {
                                         setConfirmPassword(val);
